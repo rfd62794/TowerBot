@@ -1,0 +1,97 @@
+# context.yaml — PrivyBot bootstrap seed
+# Edit this file. Run: uv run python seed.py
+# Saves directly to privy.db (INSERT OR REPLACE, idempotent).
+
+identity:
+  name: Robert Floyd Dugger
+  location: South Florida
+  role: Junior Data Administrator at Consumr Buzz
+  company: RFD IT Services Ltd
+  credentials: Self-taught. Google certs. Shipped projects.
+
+goals:
+  - key: palm_beach_goal
+    content: Office on Palm Beach Island by June 27 2036. Age 42.
+    layer: personal
+  - key: first_saas_goal
+    content: First ReactReel paying customer within 10 weeks.
+    layer: business
+  - key: title_goal
+    content: Automation Engineer title within 12 months.
+    layer: business
+
+projects:
+  - key: privybot_status
+    content: Built May 29 2026. Running on laptop. Tower deploy this weekend.
+    layer: project
+  - key: reactreel_status
+    content: Planned YouTube Shorts SaaS. OAuth hardening this weekend. Robert is User 1.
+    layer: project
+  - key: contentpipeline_status
+    content: Active. 15+ Shorts live. YouTube calendar through June 15.
+    layer: project
+  - key: voiddrift_status
+    content: On ice. Shipped Android+WASM. Chassis reused for AntColony.
+    layer: project
+  - key: webgamecapture_status
+    content: Planned this weekend. Chrome Extension. getDisplayMedia. WebM/MP4 output.
+    layer: project
+  - key: rfditservices_status
+    content: rfditservices.com live. Blog pipeline being built.
+    layer: project
+
+technical:
+  - key: default_model
+    content: Free Llama via OpenRouter for casual. DeepSeek for structured. Claude intentional only.
+    layer: technical
+  - key: coding_agents
+    content: Antigravity (Windsurf+Gemini) for code. Claude for architecture and design.
+    layer: technical
+  - key: tower_setup
+    content: Windows tower, always-on, South Florida home. Laptop for development.
+    layer: technical
+  - key: primitive_philosophy
+    content: Build primitives open source free. Sell the guide cheap. Sell the time expensive.
+    layer: technical
+  - key: rfd_methodology
+    content: Spec-Driven Development. Phase directives. Stop rules. Test anchors. ADRs.
+    layer: technical
+
+personal:
+  - key: working_style
+    content: Warrior sessions nights and weekends. Direct answers. No filler. Clarifying questions before output.
+    layer: personal
+  - key: daughter
+    content: Has a daughter. Sees her nightly. Core motivation.
+    layer: personal
+  - key: current_situation
+    content: Lives at parents house. Fold-out cot. 10 year plan to Palm Beach Island.
+    layer: personal
+  - key: learning_style
+    content: Text-based learning. Handwritten notes. Coursera for certs. Practice before cert.
+    layer: personal
+
+business:
+  - key: consumr_buzz
+    content: Day job. Digital Marketing Fulfillment Agency. IT Dept. Nearly 2 years.
+    layer: business
+  - key: nda_nca
+    content: NDA and Non-Compete block commercializing work tools. No Convoso freelance.
+    layer: business
+  - key: cert_arc
+    content: IT Automation with Python current. UX Design next. Project Management. Associate Data Practitioner. ML Engineer.
+    layer: business
+  - key: consulting_pitch
+    content: I help small business owners get back time they waste on things that should happen automatically.
+    layer: business
+
+content:
+  - key: youtube_channel
+    content: Robert Floyd Dugger. 18 subscribers. 2029 views last 28 days. Three series — EIC, Scritchy Scratchy, Dune.
+    layer: content
+  - key: content_series
+    content: EIC performing best. Scritchy Scratchy recovering. Dune unproven. Raccoin next after June 15.
+    layer: content
+  - key: content_pipeline
+    content: YAML-driven FFmpeg assembly. review_session.py for Whisper transcription. OBS WebSocket integration.
+    layer: content
