@@ -42,7 +42,7 @@ projects:
 
 technical:
   - key: default_model
-    content: Free Llama via OpenRouter for casual. DeepSeek for structured. Claude intentional only.
+    content: DeepSeek V4 Flash (free) as default. DeepSeek Chat for /think. Claude Sonnet for /claude.
     layer: technical
   - key: coding_agents
     content: Antigravity (Windsurf+Gemini) for code. Claude for architecture and design.
