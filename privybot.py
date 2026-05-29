@@ -619,7 +619,6 @@ class PrivyBot:
         )
 
         self.current_thread: Optional[str] = None
-        self.bootstrap_pending = False
         self._proc_lock = threading.Lock()
 
     # ── lifecycle ──
@@ -628,10 +627,9 @@ class PrivyBot:
         self.tg.start()
 
         if self.db.memory_empty():
-            self.bootstrap_pending = True
-            self.tg.send(
-                "🚀 First run detected.\n"
-                "Send me your context document and I'll learn who you are."
+            Logger.warning(
+                "[MEMORY] No memories found. Seed the database first: "
+                "`uv run python seed.py` (edits live in context.yaml)."
             )
 
     def _ensure_thread(self):
@@ -659,7 +657,7 @@ class PrivyBot:
             Logger.debug(f"[REPORT] {e}")
 
     # ── system prompt ──
-    def _system_prompt(self, bootstrap: bool = False) -> str:
+    def _system_prompt(self) -> str:
         memories = self.db.active_memories()
         if memories:
             mem_text = "\n".join(
@@ -682,14 +680,6 @@ class PrivyBot:
             "goals, people, technical choices.\n"
             "6. Always accept corrections immediately. User correction = update_memory() now."
         )
-
-        if bootstrap:
-            base += (
-                "\n\nBOOTSTRAP MODE: The user is sending their context document. "
-                "Read it carefully and call save_memory() repeatedly to store every "
-                "durable fact as structured memories across the correct layers. "
-                "Then give a short summary of what you learned."
-            )
         return base
 
     # ── tool execution ──
@@ -745,13 +735,13 @@ class PrivyBot:
             raise
 
     # ── core agent loop ──
-    def _run_agent(self, user_text: str, model: str, bootstrap: bool = False) -> str:
+    def _run_agent(self, user_text: str, model: str) -> str:
         self._ensure_thread()
         tid = self.current_thread
 
         self.db.add_message(tid, "user", user_text)
 
-        messages = [{"role": "system", "content": self._system_prompt(bootstrap)}]
+        messages = [{"role": "system", "content": self._system_prompt()}]
         messages.extend(self.db.last_messages(tid, 10))
 
         active_model = model
@@ -807,13 +797,6 @@ class PrivyBot:
                 return f"🔴 Error: {e}"
 
     def _handle(self, text: str, command: Optional[str], args: str) -> str:
-        # Bootstrap: first message after first-run prompt
-        if self.bootstrap_pending and not command:
-            self.bootstrap_pending = False
-            Logger.info("🚀 [SYSTEM] Bootstrap input received (CLAUDE_MODEL)")
-            reply = self._run_agent(text, self.claude_model, bootstrap=True)
-            return reply or "✅ Bootstrap complete. Reverting to default model."
-
         if command == "new":
             self.current_thread = self.db.create_thread(name="New conversation")
             self.report("name_thread", name="New conversation")
