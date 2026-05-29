@@ -221,8 +221,13 @@ class TelegramManager:
     def _run_async_loop(self):
         """Main async loop running in background thread (kept from PhantomArbiter).
         Drives the PTB lifecycle manually (initialize/start/start_polling) since
-        run_polling() is not safe to call outside the main thread."""
-        self.loop = asyncio.new_event_loop()
+        run_polling() is not safe to call outside the main thread.
+
+        Uses a SelectorEventLoop: on Windows the default ProactorEventLoop
+        breaks async TLS via anyio/httpx (BrokenResourceError during the
+        handshake), which blocks all Telegram polling. The selector loop
+        connects cleanly."""
+        self.loop = asyncio.SelectorEventLoop()
         asyncio.set_event_loop(self.loop)
 
         self.application = ApplicationBuilder().token(self.token).build()
@@ -715,6 +720,30 @@ class PrivyBot:
             self.report("error", error=str(e))
             return f"tool error: {e}"
 
+    # ── credit-aware completion ──
+    def _chat(self, model: str, messages: list):
+        """Call OpenRouter. On 402 (insufficient credits) for a paid model,
+        auto-retry once on the free DEFAULT_MODEL and notify via Telegram.
+        Returns (response, model_actually_used)."""
+        try:
+            resp = self.client.chat.completions.create(
+                model=model, messages=messages, tools=TOOLS,
+            )
+            return resp, model
+        except Exception as e:
+            is_402 = "402" in str(e) or "Insufficient credits" in str(e)
+            if is_402 and model != self.default_model:
+                Logger.warning(f"[MODEL] {model} hit 402; falling back to free model")
+                self.report(
+                    "error",
+                    error=f"{model} needs OpenRouter credits — using free model instead.",
+                )
+                resp = self.client.chat.completions.create(
+                    model=self.default_model, messages=messages, tools=TOOLS,
+                )
+                return resp, self.default_model
+            raise
+
     # ── core agent loop ──
     def _run_agent(self, user_text: str, model: str, bootstrap: bool = False) -> str:
         self._ensure_thread()
@@ -725,13 +754,10 @@ class PrivyBot:
         messages = [{"role": "system", "content": self._system_prompt(bootstrap)}]
         messages.extend(self.db.last_messages(tid, 10))
 
+        active_model = model
         final_text = ""
         for _ in range(6):  # cap tool-call rounds
-            resp = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                tools=TOOLS,
-            )
+            resp, active_model = self._chat(active_model, messages)
             msg = resp.choices[0].message
 
             if msg.tool_calls:
