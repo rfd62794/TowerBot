@@ -208,29 +208,20 @@ class TelegramManager:
         if not self.enabled:
             return
         Logger.info("📡 [TG] Manager Stopping...")
+        # _serve() polls self.running each second and shuts down cleanly.
         self.running = False
         try:
-            if self.loop and self.loop.is_running() and self.application:
-                future_stop = asyncio.run_coroutine_threadsafe(
-                    self.application.stop(), self.loop
-                )
-                future_shutdown = asyncio.run_coroutine_threadsafe(
-                    self.application.shutdown(), self.loop
-                )
-                try:
-                    future_stop.result(timeout=2)
-                    future_shutdown.result(timeout=2)
-                except Exception:
-                    pass
             if self.thread and self.thread.is_alive():
-                self.thread.join(timeout=2)
+                self.thread.join(timeout=10)
             self.thread = None
             Logger.info("📡 [TG] Manager Stopped.")
         except Exception as e:
             Logger.debug(f"[TG] Stop Error: {e}")
 
     def _run_async_loop(self):
-        """Main async loop running in background thread (kept from PhantomArbiter)."""
+        """Main async loop running in background thread (kept from PhantomArbiter).
+        Drives the PTB lifecycle manually (initialize/start/start_polling) since
+        run_polling() is not safe to call outside the main thread."""
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
 
@@ -243,13 +234,8 @@ class TelegramManager:
 
         while self.running:
             try:
-                if not self.application.initialized:
-                    self.loop.run_until_complete(self.application.initialize())
-
-                Logger.info("✅ [TG] Manager READY (Polling...)")
-                self.application.run_polling(
-                    stop_signals=None, drop_pending_updates=True, close_loop=False
-                )
+                self.loop.run_until_complete(self._serve())
+                break  # clean shutdown requested via stop()
             except Exception as e:
                 if not self.running:
                     break
@@ -258,22 +244,35 @@ class TelegramManager:
                 import time
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 60)
-            finally:
-                pass
 
         try:
-            if self.application:
-                self.loop.run_until_complete(self.application.shutdown())
-            pending = asyncio.all_tasks(self.loop)
-            for task in pending:
-                task.cancel()
-            if pending:
-                self.loop.run_until_complete(
-                    asyncio.gather(*pending, return_exceptions=True)
-                )
             self.loop.close()
         except Exception as e:
             Logger.debug(f"[TG] Cleanup error: {e}")
+
+    async def _serve(self):
+        """Manual PTB lifecycle: initialize, start, poll until stopped."""
+        app = self.application
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling(drop_pending_updates=True)
+        Logger.info("✅ [TG] Manager READY (Polling...)")
+        try:
+            while self.running:
+                await asyncio.sleep(1)
+        finally:
+            try:
+                await app.updater.stop()
+            except Exception:
+                pass
+            try:
+                await app.stop()
+            except Exception:
+                pass
+            try:
+                await app.shutdown()
+            except Exception:
+                pass
 
     def _register_commands(self):
         app = self.application
