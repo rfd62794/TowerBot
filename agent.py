@@ -128,9 +128,9 @@ async def _rotate_fallbacks(messages: list, tools, failed_model: str):
             await report("model_routed", model=m, reason="fallback on 429")
             return resp, m
         except Exception as e:
-            if _is_429(e):
-                continue
-            raise
+            # Skip any unavailable model (throttled, invalid id, etc.).
+            await report("model_routed", model=m, reason=f"skip: {e}")
+            continue
     raise _AllRateLimited()
 
 
