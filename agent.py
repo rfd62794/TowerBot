@@ -58,12 +58,29 @@ NAME_THREAD_TOOL = {
 ALL_TOOLS = TOOL_DEFINITIONS + [NAME_THREAD_TOOL]
 
 
+FREE_MODEL_FALLBACKS = [
+    "deepseek/deepseek-v4-flash:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "nousresearch/hermes-3-405b-instruct:free",
+    "google/gemma-4-31b:free",
+    "moonshotai/kimi-k2.6:free",
+]
+
+
 class _CreditsExhausted(Exception):
+    pass
+
+
+class _AllRateLimited(Exception):
     pass
 
 
 def _is_402(e: Exception) -> bool:
     return "402" in str(e) or "Insufficient credits" in str(e)
+
+
+def _is_429(e: Exception) -> bool:
+    return "429" in str(e) or "rate-limited" in str(e) or "Rate limit" in str(e)
 
 
 def _system_prompt() -> str:
@@ -102,10 +119,27 @@ def _call(model: str, messages: list, tools):
     return client.chat.completions.create(**kwargs)
 
 
+async def _rotate_fallbacks(messages: list, tools, failed_model: str):
+    for m in FREE_MODEL_FALLBACKS:
+        if m == failed_model:
+            continue
+        try:
+            resp = _call(m, messages, tools)
+            await report("model_routed", model=m, reason="fallback on 429")
+            return resp, m
+        except Exception as e:
+            if _is_429(e):
+                continue
+            raise
+    raise _AllRateLimited()
+
+
 async def _chat(model: str, messages: list, tools):
     try:
         return _call(model, messages, tools), model
     except Exception as e:
+        if _is_429(e):
+            return await _rotate_fallbacks(messages, tools, failed_model=model)
         if not _is_402(e):
             raise
         if model == MODELS["default"]:
@@ -201,6 +235,11 @@ async def respond(message: str, thread_id: str, model_key: str = "default") -> s
 
     except _CreditsExhausted:
         return "OpenRouter credits exhausted. Check your account."
+    except _AllRateLimited:
+        return (
+            "All free models rate-limited. Try /think or /claude, "
+            "or wait 60 seconds."
+        )
     except Exception as e:
         await report("error", message=str(e))
         return "Something went wrong. Try again."
