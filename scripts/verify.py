@@ -40,6 +40,7 @@ TEST_FILES = [
     "tests/test_gmail.py",
     "tests/test_offline_cache.py",
     "tests/test_cache_manager.py",
+    "tests/test_base_classes.py",
 ]
 
 
