@@ -85,10 +85,19 @@ if __name__ == "__main__":
     # Layer 5 — database
     init_db()
 
+    async def _initial_sync():
+        await asyncio.sleep(5)
+        try:
+            from tools.sync_tasks import run_sync
+            run_sync()
+        except Exception:
+            pass
+
     # Build PTB app with post_init hook for scheduler
     async def post_init(application):
         asyncio.create_task(run_scheduler(send_to_telegram))
         asyncio.create_task(check_missed_briefing(send_to_telegram))
+        asyncio.create_task(_initial_sync())
 
     app = (ApplicationBuilder()
            .token(os.getenv("TELEGRAM_BOT_TOKEN"))

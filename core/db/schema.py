@@ -191,13 +191,24 @@ CREATE TABLE IF NOT EXISTS personal_tasks (
     reminder_minutes INTEGER DEFAULT 30,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
-    next_due DATETIME
+    next_due DATETIME,
+    google_task_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS task_reminders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id INTEGER NOT NULL,
     reminded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tasks_sync (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    last_pull DATETIME,
+    last_push DATETIME,
+    tasklist_id TEXT,
+    pull_count INTEGER DEFAULT 0,
+    push_count INTEGER DEFAULT 0,
+    error_count INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS deploy_history (
