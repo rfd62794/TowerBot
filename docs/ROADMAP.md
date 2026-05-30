@@ -131,9 +131,9 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 **Status**: Complete
 **Duration**: 2 weeks
 **Key Deliverables**:
-- Google Calendar API integration (tools/api/google_calendar_api.py)
-- Google Tasks API integration (tools/api/google_tasks_api.py)
-- Gmail API integration (tools/api/gmail_api.py)
+- Google Calendar API integration (api/google_calendar_api.py)
+- Google Tasks API integration (api/google_tasks_api.py)
+- Gmail API integration (api/gmail_api.py)
 - Dual Gmail account support (personal + RFD IT Services)
 - Calendar tools: get_today_schedule, get_upcoming_events, check_availability
 - Gmail tools: get_inbox_summary, search_email, check_sender
@@ -171,7 +171,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 - config/goals.yaml with 4 active goals
 - config/plans.yaml with current week plan
 - scripts/seed_goals.py for idempotent seeding
-- tools/goals.py with 7 functions
+- tools/productivity/goals.py with 7 functions
 - 7 Telegram commands (/goals, /goal, /tasks, /plan, /task done, /confirm, /reject)
 - Heartbeat task reminders (scheduled in 60 min, overdue detection)
 - Morning briefing enriched with today's tasks and weekly focus
@@ -309,16 +309,16 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
   - record_preload_result() — writes to tool_cache + preload_log
   - get_preload_status() — metadata on last fetch per tool
   - preload_log table — tracks fetch attempts, success, duration
-  - tools/api/_base.py — cached_api_call() wrapper pattern
+  - api/_base.py — cached_api_call() wrapper pattern
   - stale_notice() — human-readable staleness formatting
   - 15 tests, 124/124 passing
 - Phase 2 (Complete): Wire all API files to use cached_api_call()
   - **Infrastructure Complete**:
-    - CacheManager (core/cache.py) — single owner of all cache behavior
-    - DBManager (core/db/manager.py) — single owner of database access with retry logic
-    - BaseAPIHandler (tools/api/_handler.py) — base class for API clients
-    - BaseTool (tools/api/_handler.py) — base class for tool functions
-    - RateLimitManager (core/rate_limits.py) — proactive API rate limit tracking
+    - CacheManager (infra/cache.py) — single owner of all cache behavior
+    - DBManager (infra/db/manager.py) — single owner of database access with retry logic
+    - BaseAPIHandler (api/_handler.py) — base class for API clients
+    - BaseTool (api/_handler.py) — base class for tool functions
+    - RateLimitManager (infra/rate_limits.py) — proactive API rate limit tracking
     - WAL mode enabled for concurrent access
     - 179/179 tests passing
   - **Migrated API files** (11/11):
@@ -372,7 +372,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 **Status**: Planned
 **Duration**: 1 week
 **Key Deliverables**:
-- RateLimitManager (core/rate_limits.py) — API rate limit tracking and quota awareness
+- RateLimitManager (infra/rate_limits.py) — API rate limit tracking and quota awareness
   - DB tables: api_rate_limits, api_call_log
   - Singleton: rate_limits = RateLimitManager()
   - BaseAPIHandler integration before live calls
@@ -413,7 +413,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 **Status**: In Progress
 **Duration**: 1 week
 **Key Deliverables**:
-- DBManager (core/db/manager.py) — DONE
+- DBManager (infra/db/manager.py) — DONE
   - Single owner of database access with retry logic
   - Exponential backoff for lock errors (0.1s, 0.2s, 0.4s, 0.8s, 1.6s)
   - WAL mode coordination
@@ -475,7 +475,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 **Status**: Planned
 **Duration**: 1 week
 **Key Deliverables**:
-- PollingManager (core/polling.py) — single owner of all polling behavior
+- PollingManager (infra/polling.py) — single owner of all polling behavior
   - Layer 7c — parallel to CacheManager (7) and RateLimitManager (7b)
   - Singleton: polling_manager
   - Each data source registered with interval matching CacheManager TTL

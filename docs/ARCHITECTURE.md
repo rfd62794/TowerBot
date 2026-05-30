@@ -53,12 +53,12 @@ This document is supplemented by ADRs that capture key architectural decisions:
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 5: Database (core/db/)                                │
+│ Layer 5: Database (infra/db/)                               │
 │ SQLite persistence, schema, migrations                      │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 5b: DBManager (core/db/manager.py)                   │
+│ Layer 5b: DBManager (infra/db/manager.py)                  │
 │ Single owner of database access, retry logic, WAL mode      │
 └─────────────────────────────────────────────────────────────┘
                               ↓
@@ -69,29 +69,29 @@ This document is supplemented by ADRs that capture key architectural decisions:
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 7: CacheManager (core/cache.py)                       │
+│ Layer 7: CacheManager (infra/cache.py)                     │
 │ Single owner of cache behavior, TTL policy, stale fallback  │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 7b: RateLimitManager (core/rate_limits.py)            │
+│ Layer 7b: RateLimitManager (infra/rate_limits.py)           │
 │ API rate limit tracking, quota awareness, call logging      │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 7c: PollingManager (core/polling.py)                  │
+│ Layer 7c: PollingManager (infra/polling.py)                 │
 │ Single owner of polling behavior, per-key intervals         │
-│ (planned, not yet built)                                     │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 8: API Clients (tools/api/*.py)                       │
+│ Layer 8: API Clients (api/*.py)                             │
 │ Raw HTTP calls, auth, response parsing                      │
 │ BaseAPIHandler: CACHE_PREFIX, call(), hash()                │
+│ Organized by source: google/, steam/, web/, weather/        │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 9: Meta Tools (tools/meta.py)                         │
+│ Layer 9: Meta Tools (tools/meta/meta.py)                   │
 │ Scratchpad tools, no API calls, no caching                  │
 │ think() — context continuity across model switches          │
 └─────────────────────────────────────────────────────────────┘
@@ -116,11 +116,11 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - No business logic — only transport
 
 **Imports:**
-- `router.route` (Layer 1)
-- `report.report` (Layer 3) for error reporting
+- `bot.router.route` (Layer 1)
+- `bot.report.report` (Layer 3) for error reporting
 
 **Never imports:**
-- `agent`, `memory`, `db` (business logic layers)
+- `bot.agent`, `bot.memory`, `infra.db` (business logic layers)
 
 ### Layer 1: Router (`router.py`)
 
@@ -132,14 +132,14 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - Returns status reports for `/models` and `/status`
 
 **Imports:**
-- `agent.respond`, `agent.get_last_model` (Layer 2)
-- `db.create_thread`, `db.list_memories`, `db.list_threads` (Layer 5)
-- `report.report` (Layer 3)
-- `model_manager.get_status_report`, `model_manager.get_throttled_models` (model_manager)
+- `bot.agent.respond`, `bot.agent.get_last_model` (Layer 2)
+- `infra.db.create_thread`, `infra.db.list_memories`, `infra.db.list_threads` (Layer 5)
+- `bot.report.report` (Layer 3)
+- `bot.model_manager.get_status_report`, `bot.model_manager.get_throttled_models` (model_manager)
 
 **Never imports:**
-- `transport` (Layer 0) — no Telegram knowledge
-- `memory` (Layer 4) — tools are called by agent, not router
+- `bot.transport` (Layer 0) — no Telegram knowledge
+- `bot.memory` (Layer 4) — tools are called by agent, not router
 
 ### Layer 2: Agent (`agent.py`)
 
@@ -152,13 +152,13 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - Tracks last model used for `/status`
 
 **Imports:**
-- `db.get_context`, `db.add_message`, `db.update_thread_name`, etc. (Layer 5)
-- `memory.TOOL_DEFINITIONS`, `memory.tool_*` (Layer 4)
-- `report.report` (Layer 3)
-- `model_manager.get_available_model`, `model_manager.handle_429`, etc. (model_manager)
+- `infra.db.get_context`, `infra.db.add_message`, `infra.db.update_thread_name`, etc. (Layer 5)
+- `bot.memory.TOOL_DEFINITIONS`, `bot.memory.tool_*` (Layer 4)
+- `bot.report.report` (Layer 3)
+- `bot.model_manager.get_available_model`, `bot.model_manager.handle_429`, etc. (model_manager)
 
 **Never imports:**
-- `transport`, `router` (Layers 0-1) — no Telegram or command knowledge
+- `bot.transport`, `bot.router` (Layers 0-1) — no Telegram or command knowledge
 
 ### Layer 3: Report (`report.py`)
 
@@ -174,7 +174,7 @@ This document is supplemented by ADRs that capture key architectural decisions:
 **Never imports:**
 - `transport`, `router`, `agent`, `memory`, `db` (no business logic)
 
-### API Layer (`tools/api/`)
+### API Layer (`api/`)
 
 **Responsibility:** External service clients
 
@@ -230,12 +230,12 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - `search.py` — Search tools (web, news, wiki, reddit)
 
 **Imports:**
-- `tools/api/*` — API clients
+- `api/*` — API clients
 - `core.db.*` — database functions
 - `core.db.cache` — cache functions
 
 **Never imports:**
-- `core/agent`, `core/router`, `core/transport` — no bot infrastructure
+- `bot/agent`, `bot/router`, `bot/transport` — no bot infrastructure
 
 ### Core Layer (`core/`)
 
@@ -260,9 +260,9 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - `core.db/*` — database functions
 
 **Never imports:**
-- `tools/api/` — API layer accessed via tools only
+- `api/` — API layer accessed via tools only
 
-### DB Layer (`core/db/`)
+### DB Layer (`infra/db/`)
 
 **Responsibility:** SQLite persistence
 
@@ -284,7 +284,7 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - `goals.py` — Goals, milestones, tasks, weekly plans
 - `queue.py` — Task queue
 
-### Layer 5b: DBManager (`core/db/manager.py`)
+### Layer 5b: DBManager (`infra/db/manager.py`)
 
 **Responsibility:** Single owner of database access
 
@@ -346,7 +346,7 @@ This document is supplemented by ADRs that capture key architectural decisions:
 **Never imports:**
 - `transport`, `router`, `agent` (higher layers)
 
-### Layer 7: CacheManager (`core/cache.py`)
+### Layer 7: CacheManager (`infra/cache.py`)
 
 **Responsibility:** Single owner of cache behavior
 
@@ -379,7 +379,7 @@ This document is supplemented by ADRs that capture key architectural decisions:
 **Never imports:**
 - API layers, tool layers
 
-### Layer 7b: RateLimitManager (`core/rate_limits.py`)
+### Layer 7b: RateLimitManager (`infra/rate_limits.py`)
 
 **Responsibility:** API rate limit tracking and quota awareness
 
@@ -403,7 +403,7 @@ This document is supplemented by ADRs that capture key architectural decisions:
 **Never imports:**
 - API layers, tool layers
 
-### Layer 7c: PollingManager (`core/polling.py`)
+### Layer 7c: PollingManager (`infra/polling.py`)
 
 **Responsibility:** Single owner of polling behavior
 
@@ -449,7 +449,7 @@ The three infrastructure managers form a coherent group:
 
 All three are singletons, consulted by BaseAPIHandler, have DB backing, and visible in `/status`.
 
-### Layer 8: API Clients (`tools/api/*.py`)
+### Layer 8: API Clients (`api/*.py`)
 
 **Responsibility:** Raw HTTP calls only
 
@@ -489,7 +489,7 @@ class WeatherAPIHandler(BaseAPIHandler):
 **Never imports:**
 - Tool layers, business logic
 
-### Layer 9: Meta Tools (`tools/meta.py`)
+### Layer 9: Meta Tools (`tools/meta/meta.py`)
 
 **Responsibility:** Scratchpad tools for agent reasoning
 

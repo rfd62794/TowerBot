@@ -85,7 +85,7 @@ def api_function(params: dict) -> dict:
 
 ### File Structure
 
-**tools/api/_base.py**
+**api/_base.py**
 ```python
 # Shared API call pattern
 def cached_api_call(tool_name: str, params_hash: str, live_fn: Callable,
@@ -94,7 +94,7 @@ def stale_notice(result: dict) -> str | None
 def make_params_hash(*args, **kwargs) -> str
 ```
 
-**tools/api/youtube_api.py**
+**api/youtube_api.py**
 ```python
 # YouTube Analytics API
 def get_channel_data(days: int) -> dict
@@ -111,7 +111,7 @@ def _build_analytics_client() -> Resource
 def _build_data_client() -> Resource
 ```
 
-**tools/api/steam_api.py**
+**api/steam_api.py**
 ```python
 # Steam Web API
 def get_owned_games() -> dict
@@ -122,7 +122,7 @@ def get_app_details(appid: int) -> dict
 def _get_steam_api() -> str
 ```
 
-**tools/api/steamspy_api.py**
+**api/steamspy_api.py**
 ```python
 # SteamSpy API
 def get_app_details(appid: int) -> dict
@@ -133,7 +133,7 @@ def get_players(appid: int) -> dict
 def _get_steamspy_api() -> str
 ```
 
-**tools/api/itad_api.py**
+**api/itad_api.py**
 ```python
 # IsThereAnyDeal API
 def search_games(title: str) -> dict
@@ -145,7 +145,7 @@ def _get_itad_api() -> str
 def _get_api_key() -> str
 ```
 
-**tools/api/gmail_api.py**
+**api/gmail_api.py**
 ```python
 # Gmail API (dual account support)
 def get_personal_inbox_summary() -> dict
@@ -160,7 +160,7 @@ def _get_credentials(token_file: str) -> Credentials | None
 def _build_service(credentials: Credentials) -> Resource
 ```
 
-**tools/api/google_calendar_api.py**
+**api/google_calendar_api.py**
 ```python
 # Google Calendar API
 def get_events(days: int = 7) -> dict
@@ -172,7 +172,7 @@ def _get_credentials(token_file: str) -> Credentials | None
 def _build_service(credentials: Credentials) -> Resource
 ```
 
-**tools/api/google_tasks_api.py**
+**api/google_tasks_api.py**
 ```python
 # Google Tasks API
 def get_default_tasklist_id() -> dict
@@ -185,7 +185,7 @@ def _get_credentials(token_file: str) -> Credentials | None
 def _build_service(credentials: Credentials) -> Resource
 ```
 
-**tools/api/weather_api.py**
+**api/weather_api.py**
 ```python
 # Open-Meteo Weather API
 def get_current_weather(location: str) -> dict
@@ -194,7 +194,7 @@ def get_current_weather(location: str) -> dict
 def _get_api_base() -> str
 ```
 
-**tools/api/ddg_api.py**
+**api/ddg_api.py**
 ```python
 # DuckDuckGo Search API
 def search_web(query: str) -> dict
@@ -204,7 +204,7 @@ def search_news(query: str) -> dict
 def _get_api_base() -> str
 ```
 
-**tools/api/wikipedia_api.py**
+**api/wikipedia_api.py**
 ```python
 # Wikipedia API
 def get_summary(title: str) -> dict
@@ -213,7 +213,7 @@ def get_summary(title: str) -> dict
 def _get_api_base() -> str
 ```
 
-**tools/api/reddit_api.py**
+**api/reddit_api.py**
 ```python
 # Reddit API
 def search_reddit(query: str) -> dict
@@ -287,7 +287,7 @@ TOOL_REGISTRY = {
 }
 ```
 
-**tools/calendar.py**
+**tools/productivity/calendar.py**
 ```python
 from tools.api.google_calendar_api import get_events, get_events_today, get_upcoming_events
 
@@ -299,7 +299,7 @@ def check_availability(start: str, end: str) -> dict
 def _format_event(event: dict) -> dict
 ```
 
-**tools/gmail.py**
+**tools/communication/gmail.py**
 ```python
 from tools.api.gmail_api import (
     get_personal_inbox_summary, get_rfd_inbox_summary,
@@ -316,7 +316,7 @@ def check_sender_all(sender: str) -> dict
 def _format_message(msg: dict) -> dict
 ```
 
-**tools/personal.py**
+**tools/productivity/personal.py**
 ```python
 from core.db import (
     add_personal_task, list_personal_tasks, complete_personal_task,
@@ -334,7 +334,7 @@ def parse_natural_deadline(text: str) -> dict
 def parse_recurrence(text: str) -> str
 ```
 
-**tools/sync_tasks.py**
+**tools/productivity/sync.py**
 ```python
 from tools.api.google_tasks_api import get_default_tasklist_id, pull_tasks, push_task, delete_task
 from core.db import get_tasks, upsert_task, update_task_status
@@ -347,7 +347,7 @@ def push_new_tasks() -> dict
 def _sync_task(google_task: dict) -> dict
 ```
 
-**tools/goals.py**
+**tools/productivity/goals.py**
 ```python
 from core.db import (
     get_goals, get_goal, upsert_goal,
@@ -365,7 +365,7 @@ def save_commitment(description: str, deadline: str = None) -> dict
 def list_commitments() -> dict
 ```
 
-**tools/youtube/channel.py**
+**tools/content/channel.py**
 ```python
 from tools.api.youtube_api import get_channel_data, get_top_videos_data, get_video_data
 
@@ -377,7 +377,7 @@ def get_video_analytics(video_id: str, days: int = 28) -> dict
 def _hash_params(params: dict) -> str
 ```
 
-**tools/youtube/discovery.py**
+**tools/content/discovery.py**
 ```python
 from tools.api.youtube_api import search_videos, get_video_statistics
 
@@ -387,14 +387,14 @@ def get_content_recommendations(limit: int = 5, min_playtime: float = 1.0) -> di
 def score_game(game: dict, steam_data: dict, yt_data: dict) -> float
 ```
 
-**tools/youtube/videos.py**
+**tools/content/videos.py**
 ```python
 from tools.api.youtube_api import get_video_data
 
 def get_video_details(video_id: str) -> dict
 ```
 
-**tools/games.py**
+**tools/games/metrics.py**
 ```python
 from tools.api.steam_api import get_owned_games, get_app_list
 from tools.api.steamspy_api import get_app_details
@@ -425,7 +425,7 @@ def get_weather(location: str) -> dict
 def fetch_url(url: str, max_chars: int = 3000) -> dict
 ```
 
-**tools/meta.py**
+**tools/meta/meta.py**
 ```python
 # Meta tools — scratchpad for agent reasoning
 def think(thought: str) -> dict
@@ -544,7 +544,7 @@ think("I need to find the top video first, then check its retention curve to see
 
 ### Step 1: Create API Client
 ```python
-# tools/api/new_api.py
+# api/new_api.py
 import os
 import requests
 
@@ -795,17 +795,17 @@ result = TOOL_REGISTRY["tool_name"]["fn"](**params)
 
 ### Current State
 - `tools/youtube.py` — mixed API + tool logic
-- `tools/games.py` — mixed API + tool logic
+- `tools/games/metrics.py` — mixed API + tool logic
 - `tools/recommendations.py` — mixed API + tool logic
 - `tools/__init__.py` — TOOL_REGISTRY with direct imports
 
 ### Target State
-- `tools/api/` — pure API clients
+- `api/` — pure API clients
 - `tools/tools/` — pure tool logic
 - `tools/__init__.py` — TOOL_REGISTRY only
 
 ### Migration Steps
-1. Create `tools/api/` directory
+1. Create `api/` directory
 2. Extract API calls from existing files
 3. Create `tools/tools/` directory
 4. Refactor tool functions to use API layer
