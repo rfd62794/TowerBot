@@ -9,4 +9,5 @@ from api.steam.itad_api import (
     ITADAPIHandler, itad_api,
     lookup_game, get_prices)
 from api.steam.catalog_api import (
-    get_appid_from_catalog)
+    get_full_catalog,
+    fuzzy_match_catalog)
