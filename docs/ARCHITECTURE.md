@@ -43,13 +43,27 @@ This document is supplemented by ADRs that capture key architectural decisions:
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 4: Memory (memory.py)                                 │
-│ Tool definitions, tool implementations                       │
+│ API Layer (tools/api/)                                      │
+│ External service clients (YouTube, Steam, Gmail, etc.)     │
+│ _base.py: cached_api_call() pattern                        │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 5: Database (db.py)                                   │
-│ SQLite operations, schema, persistence                      │
+│ Tool Layer (tools/)                                         │
+│ Business logic, tool implementations                        │
+│ calendar.py, gmail.py, personal.py, goals.py, etc.         │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Core Layer (core/)                                          │
+│ Bot infrastructure                                          │
+│ agent.py, router.py, scheduler.py, model_manager.py        │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ DB Layer (core/db/)                                         │
+│ SQLite persistence                                          │
+│ schema.py, cache.py, personal_tasks.py, history.py, etc.    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -130,28 +144,116 @@ This document is supplemented by ADRs that capture key architectural decisions:
 **Never imports:**
 - `transport`, `router`, `agent`, `memory`, `db` (no business logic)
 
-### Layer 4: Memory (`memory.py`)
+### API Layer (`tools/api/`)
 
-**Responsibility:** Tool definitions and implementations
+**Responsibility:** External service clients
 
-- Defines `TOOL_DEFINITIONS` for OpenRouter function calling
-- Implements tool functions: `save_memory`, `update_memory`, `retire_memory`, `get_memories`, `name_thread`
-- Calls `db` functions for persistence
+- HTTP communication with external APIs (YouTube, Steam, Gmail, Google Calendar, etc.)
+- Authentication and credential management
+- Request/response parsing and normalization
+- API-specific error handling and retry logic
+- Cached API call pattern via `_base.py`
+
+**Files:**
+- `_base.py` — `cached_api_call()`, `stale_notice()`, `make_params_hash()`
+- `youtube_api.py` — YouTube Analytics + Data API
+- `steam_api.py` — Steam Web API
+- `steamspy_api.py` — SteamSpy API
+- `itad_api.py` — IsThereAnyDeal API
+- `gmail_api.py` — Gmail API (dual account support)
+- `google_calendar_api.py` — Google Calendar API
+- `google_tasks_api.py` — Google Tasks API
+- `weather_api.py` — Open-Meteo weather API
+- `ddg_api.py` — DuckDuckGo search API
+- `wikipedia_api.py` — Wikipedia API
+- `reddit_api.py` — Reddit API
 
 **Imports:**
-- `db.save_memory`, `db.update_memory`, `db.retire_memory`, `db.get_memories`, `db.update_thread_name` (Layer 5)
+- `core.db.cache` — for cache functions
+- External libraries: `googleapiclient`, `requests`, `httpx`
 
 **Never imports:**
-- `transport`, `router`, `agent`, `report` (Layers 0-3)
+- `tools/` (tool layer) — no business logic
+- `core/` (core layer) — no bot infrastructure
 
-### Layer 5: Database (`db.py`)
+### Tool Layer (`tools/`)
+
+**Responsibility:** Business logic and tool implementations
+
+- Domain-specific processing and data transformation
+- Scoring, ranking, and verdict generation
+- Fuzzy matching and search logic
+- Combining data from multiple API calls
+- Tool registration in `__init__.py` (TOOL_REGISTRY)
+
+**Files:**
+- `__init__.py` — TOOL_REGISTRY (single source of truth)
+- `calendar.py` — Calendar tools (get_today_schedule, get_upcoming_events)
+- `gmail.py` — Gmail tools (get_inbox_summary, search_email, check_sender)
+- `personal.py` — Personal task tools (add_personal_task, complete_personal_task)
+- `sync_tasks.py` — Google Tasks sync orchestration
+- `goals.py` — Goals and plans tools
+- `youtube/channel.py` — Channel metrics tools
+- `youtube/discovery.py` — Content discovery tools
+- `youtube/videos.py` — Video analytics tools
+- `games.py` — Game metrics tools
+- `search.py` — Search tools (web, news, wiki, reddit)
+
+**Imports:**
+- `tools/api/*` — API clients
+- `core.db.*` — database functions
+- `core.db.cache` — cache functions
+
+**Never imports:**
+- `core/agent`, `core/router`, `core/transport` — no bot infrastructure
+
+### Core Layer (`core/`)
+
+**Responsibility:** Bot infrastructure
+
+- Agent logic (OpenRouter calls, tool execution)
+- Router logic (command parsing, thread management)
+- Scheduler logic (heartbeat, morning briefing, proactive checks)
+- Model management (model discovery, throttle tracking)
+- Report layer (event logging, notifications)
+
+**Files:**
+- `agent.py` — OpenRouter client, tool execution
+- `router.py` — Command parsing, delegation
+- `scheduler.py` — Heartbeat, morning briefing, proactive scheduling
+- `model_manager.py` — Model discovery, throttle tracking
+- `report.py` — Event logging, notifications
+- `transport.py` — Telegram Bot API integration
+
+**Imports:**
+- `tools/` — tool functions
+- `core.db/*` — database functions
+
+**Never imports:**
+- `tools/api/` — API layer accessed via tools only
+
+### DB Layer (`core/db/`)
 
 **Responsibility:** SQLite persistence
 
-- Defines schema (threads, messages, memory, model_status, kv_cache)
-- Provides CRUD functions for all tables
+- Schema definition and migrations
+- CRUD functions for all tables
+- Cache management (tool_cache, preload_log)
 - Thread-safe connection management
 - Pure database — no business logic
+
+**Files:**
+- `schema.py` — Schema, migrations, _exec
+- `cache.py` — Cache functions (get_stale_cached_result, record_preload_result)
+- `memory.py` — Memory CRUD
+- `threads.py` — Thread CRUD
+- `messages.py` — Message CRUD
+- `personal_tasks.py` — Personal tasks CRUD
+- `history.py` — Historical data (channel, video, game, weather)
+- `deployments.py` — Deploy history
+- `goals.py` — Goals, milestones, tasks, weekly plans
+- `queue.py` — Task queue
+- `models.py` — Model status tracking
 
 **Imports:**
 - None (pure SQLite, no external services)

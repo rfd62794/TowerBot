@@ -7,16 +7,31 @@ PrivyBot's tools system is organized into two distinct layers with clear separat
 ```
 tools/
   api/                    ← API Layer
+    _base.py             ← Shared cached_api_call pattern
     youtube_api.py        ← YouTube Analytics + Data API
     steam_api.py          ← Steam Web API
     steamspy_api.py       ← SteamSpy API
     itad_api.py           ← IsThereAnyDeal API
-  
-  tools/                  ← Tool Layer
-    channel_tools.py      ← Channel metrics tools
-    game_tools.py         ← Game metrics tools
-    recommendation_tools.py  ← Content recommendation tools
-  
+    gmail_api.py          ← Gmail API (dual account)
+    google_calendar_api.py ← Google Calendar API
+    google_tasks_api.py   ← Google Tasks API
+    weather_api.py        ← Open-Meteo Weather API
+    ddg_api.py            ← DuckDuckGo Search API
+    wikipedia_api.py      ← Wikipedia API
+    reddit_api.py         ← Reddit API
+
+  calendar.py             ← Calendar tools
+  gmail.py                ← Gmail tools
+  personal.py             ← Personal task tools
+  sync_tasks.py           ← Google Tasks sync
+  goals.py                ← Goals and plans tools
+  youtube/
+    channel.py            ← Channel metrics tools
+    discovery.py          ← Content discovery tools
+    videos.py             ← Video analytics tools
+  games.py                ← Game metrics tools
+  search.py               ← Search tools
+
   __init__.py             ← Tool Registry (TOOL_REGISTRY)
 ```
 
@@ -70,6 +85,15 @@ def api_function(params: dict) -> dict:
 
 ### File Structure
 
+**tools/api/_base.py**
+```python
+# Shared API call pattern
+def cached_api_call(tool_name: str, params_hash: str, live_fn: Callable,
+                    ttl_seconds: int, stale_ok: bool = True) -> dict
+def stale_notice(result: dict) -> str | None
+def make_params_hash(*args, **kwargs) -> str
+```
+
 **tools/api/youtube_api.py**
 ```python
 # YouTube Analytics API
@@ -119,6 +143,83 @@ def get_historical_low(game_id: str) -> dict
 # Internal
 def _get_itad_api() -> str
 def _get_api_key() -> str
+```
+
+**tools/api/gmail_api.py**
+```python
+# Gmail API (dual account support)
+def get_personal_inbox_summary() -> dict
+def get_rfd_inbox_summary() -> dict
+def search_personal_email(query: str) -> dict
+def search_rfd_email(query: str) -> dict
+def get_personal_unread_count() -> dict
+def get_rfd_unread_count() -> dict
+
+# Internal
+def _get_credentials(token_file: str) -> Credentials | None
+def _build_service(credentials: Credentials) -> Resource
+```
+
+**tools/api/google_calendar_api.py**
+```python
+# Google Calendar API
+def get_events(days: int = 7) -> dict
+def get_events_today() -> dict
+def get_upcoming_events(limit: int = 10) -> dict
+
+# Internal
+def _get_credentials(token_file: str) -> Credentials | None
+def _build_service(credentials: Credentials) -> Resource
+```
+
+**tools/api/google_tasks_api.py**
+```python
+# Google Tasks API
+def get_default_tasklist_id() -> dict
+def pull_tasks() -> dict
+def push_task(task: dict) -> dict
+def delete_task(task_id: str) -> dict
+
+# Internal
+def _get_credentials(token_file: str) -> Credentials | None
+def _build_service(credentials: Credentials) -> Resource
+```
+
+**tools/api/weather_api.py**
+```python
+# Open-Meteo Weather API
+def get_current_weather(location: str) -> dict
+
+# Internal
+def _get_api_base() -> str
+```
+
+**tools/api/ddg_api.py**
+```python
+# DuckDuckGo Search API
+def search_web(query: str) -> dict
+def search_news(query: str) -> dict
+
+# Internal
+def _get_api_base() -> str
+```
+
+**tools/api/wikipedia_api.py**
+```python
+# Wikipedia API
+def get_summary(title: str) -> dict
+
+# Internal
+def _get_api_base() -> str
+```
+
+**tools/api/reddit_api.py**
+```python
+# Reddit API
+def search_reddit(query: str) -> dict
+
+# Internal
+def _get_api_base() -> str
 ```
 
 ### Error Handling
@@ -175,14 +276,98 @@ def tool_function(params: dict) -> dict:
 
 ### File Structure
 
-**tools/tools/channel_tools.py**
+**tools/__init__.py**
 ```python
-from tools.api.youtube_api import (
-    get_channel_data,
-    get_top_videos_data,
-    get_video_data
+# Tool Registry (single source of truth)
+TOOL_REGISTRY = {
+    "tool_name": {
+        "fn": function_reference,
+        "definition": {...}
+    }
+}
+```
+
+**tools/calendar.py**
+```python
+from tools.api.google_calendar_api import get_events, get_events_today, get_upcoming_events
+
+def get_today_schedule() -> dict
+def get_upcoming_events(limit: int = 10) -> dict
+def check_availability(start: str, end: str) -> dict
+
+# Internal
+def _format_event(event: dict) -> dict
+```
+
+**tools/gmail.py**
+```python
+from tools.api.gmail_api import (
+    get_personal_inbox_summary, get_rfd_inbox_summary,
+    search_personal_email, search_rfd_email
 )
-from core.db import cache_tool_result, get_cached_tool_result
+
+def get_inbox_summary() -> dict
+def get_all_inbox_summary() -> dict
+def search_email(query: str, account: str = "personal") -> dict
+def check_sender(sender: str, account: str = "personal") -> dict
+def check_sender_all(sender: str) -> dict
+
+# Internal
+def _format_message(msg: dict) -> dict
+```
+
+**tools/personal.py**
+```python
+from core.db import (
+    add_personal_task, list_personal_tasks, complete_personal_task,
+    snooze_personal_task, get_tasks_due_soon
+)
+
+def add_personal_task(title: str, notes: str = None, due_date: str = None,
+                     due_time: str = None, recurrence: str = None) -> dict
+def list_personal_tasks(filter: str = "all") -> dict
+def complete_personal_task(task_id: int) -> dict
+def snooze_personal_task(task_id: int, minutes: int = 30) -> dict
+
+# Internal
+def parse_natural_deadline(text: str) -> dict
+def parse_recurrence(text: str) -> str
+```
+
+**tools/sync_tasks.py**
+```python
+from tools.api.google_tasks_api import get_default_tasklist_id, pull_tasks, push_task, delete_task
+from core.db import get_tasks, upsert_task, update_task_status
+
+def run_sync() -> dict
+def pull_from_google() -> dict
+def push_new_tasks() -> dict
+
+# Internal
+def _sync_task(google_task: dict) -> dict
+```
+
+**tools/goals.py**
+```python
+from core.db import (
+    get_goals, get_goal, upsert_goal,
+    get_tasks, get_task, upsert_task, update_task_status,
+    get_current_weekly_plan, upsert_weekly_plan
+)
+
+def get_goals_list() -> dict
+def get_current_plan() -> dict
+def get_tasks_today() -> dict
+def get_upcoming_tasks(days: int = 7) -> dict
+def add_new_task(title: str, milestone_id: str = None, due_date: str = None) -> dict
+def update_task(task_id: str, status: str = None) -> dict
+def save_commitment(description: str, deadline: str = None) -> dict
+def list_commitments() -> dict
+```
+
+**tools/youtube/channel.py**
+```python
+from tools.api.youtube_api import get_channel_data, get_top_videos_data, get_video_data
 
 def get_channel_summary(days: int = 7) -> dict
 def get_top_videos(days: int = 7, limit: int = 10) -> dict
@@ -192,12 +377,28 @@ def get_video_analytics(video_id: str, days: int = 28) -> dict
 def _hash_params(params: dict) -> str
 ```
 
-**tools/tools/game_tools.py**
+**tools/youtube/discovery.py**
+```python
+from tools.api.youtube_api import search_videos, get_video_statistics
+
+def get_content_recommendations(limit: int = 5, min_playtime: float = 1.0) -> dict
+
+# Internal
+def score_game(game: dict, steam_data: dict, yt_data: dict) -> float
+```
+
+**tools/youtube/videos.py**
+```python
+from tools.api.youtube_api import get_video_data
+
+def get_video_details(video_id: str) -> dict
+```
+
+**tools/games.py**
 ```python
 from tools.api.steam_api import get_owned_games, get_app_list
 from tools.api.steamspy_api import get_app_details
 from tools.api.itad_api import search_games, get_prices
-from core.db import cache_tool_result, get_cached_tool_result
 
 def get_game_metrics(game_name: str) -> dict
 def get_installed_games() -> dict
@@ -208,18 +409,18 @@ def resolve_appid(game_name: str) -> dict | None
 def _hash_params(params: dict) -> str
 ```
 
-**tools/tools/recommendation_tools.py**
+**tools/search.py**
 ```python
-from tools.api.steam_api import get_owned_games
-from tools.api.steamspy_api import get_app_details
-from tools.api.youtube_api import search_videos, get_video_statistics
-from core.db import cache_tool_result, get_cached_tool_result
+from tools.api.ddg_api import search_web, search_news
+from tools.api.wikipedia_api import get_summary
+from tools.api.reddit_api import search_reddit
+from tools.api.weather_api import get_current_weather
 
-def get_content_recommendations(limit: int = 5, min_playtime: float = 1.0) -> dict
-
-# Internal
-def score_game(game: dict, steam_data: dict, yt_data: dict) -> float
-def _hash_params(params: dict) -> str
+def web_search(query: str) -> dict
+def news_search(query: str) -> dict
+def wiki_lookup(topic: str) -> dict
+def reddit_search(query: str) -> dict
+def get_weather(location: str) -> dict
 ```
 
 ### Response Format
