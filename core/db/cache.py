@@ -3,11 +3,11 @@
 import json
 import datetime
 
-from core.db.schema import _exec
+from core.db.manager import db
 
 
 def cache_model_list(models: list) -> None:
-    _exec(
+    db.exec(
         "INSERT OR REPLACE INTO kv_cache (key, value, updated) "
         "VALUES ('free_tool_models', ?, CURRENT_TIMESTAMP)",
         (json.dumps(models),), commit=True,
@@ -15,7 +15,7 @@ def cache_model_list(models: list) -> None:
 
 
 def get_cached_model_list() -> list | None:
-    row = _exec(
+    row = db.exec(
         "SELECT value FROM kv_cache WHERE key = 'free_tool_models' "
         "AND datetime(updated, '+24 hours') > datetime('now')"
     ).fetchone()
@@ -25,7 +25,7 @@ def get_cached_model_list() -> list | None:
 def cache_tool_result(tool_name: str, params_hash: str, result: dict, ttl_hours: float) -> None:
     """Cache a tool result with TTL."""
     expires_at = (datetime.datetime.now() + datetime.timedelta(hours=ttl_hours)).isoformat()
-    _exec(
+    db.exec(
         "INSERT OR REPLACE INTO tool_cache (tool_name, params_hash, result, expires_at) "
         "VALUES (?, ?, ?, ?)",
         (tool_name, params_hash, json.dumps(result), expires_at), commit=True,
@@ -34,7 +34,7 @@ def cache_tool_result(tool_name: str, params_hash: str, result: dict, ttl_hours:
 
 def get_cached_tool_result(tool_name: str, params_hash: str) -> dict | None:
     """Get cached tool result if not expired."""
-    row = _exec(
+    row = db.exec(
         "SELECT result FROM tool_cache WHERE tool_name = ? AND params_hash = ? "
         "AND expires_at > datetime('now')",
         (tool_name, params_hash),
@@ -48,7 +48,7 @@ def get_stale_cached_result(tool_name: str, params_hash: str) -> dict | None:
     Returns None only if no record exists at all.
     Adds metadata to returned dict: _stale, _cached_at, _age_minutes.
     """
-    row = _exec(
+    row = db.exec(
         "SELECT result, fetched_at FROM tool_cache "
         "WHERE tool_name = ? AND params_hash = ? "
         "ORDER BY fetched_at DESC LIMIT 1",
@@ -89,7 +89,7 @@ def record_preload_result(
     if success:
         cache_tool_result(tool_name, params_hash, result, ttl_hours)
 
-    _exec(
+    db.exec(
         "INSERT INTO preload_log (tool_name, params_hash, fetched_at, success, duration_ms, error_msg) "
         "VALUES (?, ?, ?, ?, ?, ?)",
         (tool_name, params_hash, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1 if success else 0, duration_ms, error_msg),
@@ -102,7 +102,7 @@ def get_preload_status() -> list[dict]:
     Returns last fetch attempt per tool_name from preload_log.
     One row per tool. Includes age in minutes.
     """
-    rows = _exec(
+    rows = db.exec(
         "SELECT tool_name, fetched_at, success, duration_ms, error_msg "
         "FROM preload_log "
         "WHERE (tool_name, fetched_at) IN (SELECT tool_name, MAX(fetched_at) FROM preload_log GROUP BY tool_name) "
