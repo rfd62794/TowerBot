@@ -489,7 +489,7 @@ async def health_check(send_fn) -> None:
 
     # Check 2 — YouTube credentials accessible?
     try:
-        from tools.youtube import _get_credentials
+        from tools.api.youtube_api import _get_credentials
         creds = _get_credentials()
         if creds is None:
             issues.append("YouTube credentials missing")
