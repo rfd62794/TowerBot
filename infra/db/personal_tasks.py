@@ -82,7 +82,7 @@ def add_personal_task(
 ) -> int:
     due_datetime = _compute_due_datetime(due_date, due_time)
     cur = _exec(
-        "INSERT INTO personal_tasks "
+        "INSERT OR IGNORE INTO personal_tasks "
         "(title, notes, due_date, due_time, due_datetime, recurrence, "
         "reminder_minutes, next_due) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

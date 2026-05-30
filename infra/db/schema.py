@@ -214,6 +214,8 @@ CREATE TABLE IF NOT EXISTS personal_tasks (
     google_task_id TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS ux_personal_tasks_title_date ON personal_tasks(title, due_date);
+
 CREATE TABLE IF NOT EXISTS task_reminders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id INTEGER NOT NULL,
