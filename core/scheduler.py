@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from tools.youtube import get_channel_summary, get_channel_summary_range
 from tools.calendar import get_today_schedule
 from tools.api.google_calendar_api import get_events_soon
-from tools.gmail import get_inbox_summary
+from tools.gmail import get_all_inbox_summary
 
 from core.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
@@ -152,18 +152,28 @@ async def morning_briefing(send_fn) -> None:
         except Exception as e:
             logger.debug(f"Calendar check failed: {e}")
 
-        # Add email unread count
+        # Add email unread counts (both accounts)
         try:
-            inbox = get_inbox_summary()
-            if inbox["unread_count"] > 0:
-                line = f"\U0001f4ec Unread: {inbox['unread_count']}"
-                if inbox["recent"]:
-                    senders = list({
-                        msg["from"].split("<")[0].strip()
-                        for msg in inbox["recent"]
-                    })[:3]
-                    line += f" \u2014 {', '.join(senders)}"
-                msg += f"\n{line}"
+            inbox = get_all_inbox_summary()
+            lines = []
+            personal_count = inbox["personal"]["unread_count"]
+            if personal_count > 0:
+                senders = list({
+                    m["from"].split("<")[0].strip()[:20]
+                    for m in inbox["personal"]["recent"]
+                })[:2]
+                sender_str = f" \u2014 {', '.join(senders)}" if senders else ""
+                lines.append(f"Personal: {personal_count} unread{sender_str}")
+            rfd_count = inbox["professional"]["unread_count"]
+            if rfd_count > 0:
+                senders = list({
+                    m["from"].split("<")[0].strip()[:20]
+                    for m in inbox["professional"]["recent"]
+                })[:2]
+                sender_str = f" \u2014 {', '.join(senders)}" if senders else ""
+                lines.append(f"RFD IT: {rfd_count} unread{sender_str}")
+            if lines:
+                msg += "\n" + "\n".join(f"\U0001f4ec {l}" for l in lines)
         except Exception as e:
             logger.debug(f"Gmail check failed: {e}")
 

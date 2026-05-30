@@ -7,4 +7,5 @@ __pycache__/
 venv/
 config/client_secret.json
 config/youtube_token.json
+config/rfd_token.json
 config/steam_catalog.json
