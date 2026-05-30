@@ -42,8 +42,72 @@ class BaseAPIHandler:
         Subclasses never call cache directly.
         """
         from core.cache import cache
+        from core.rate_limits import rate_limits
+        import logging
+        import re
 
-        return cache.call(self.cache_key(suffix), params_hash, live_fn, stale_ok=stale_ok)
+        logger = logging.getLogger("privy.handler")
+        key = self.cache_key(suffix)
+
+        # Step 1 — fresh cache hit
+        cached = cache.get(key, params_hash)
+        if cached is not None:
+            return cached
+
+        # Step 2 — rate limit check
+        if not rate_limits.can_call(self.CACHE_PREFIX):
+            wait = rate_limits.time_until_available(self.CACHE_PREFIX)
+            logger.warning(f"[handler] {self.CACHE_PREFIX} rate limited, {wait}s wait")
+
+            stale = cache.get_or_stale(key, params_hash)
+            if stale is not None:
+                return stale
+
+            return {
+                "error": f"{self.CACHE_PREFIX} rate limited",
+                "_rate_limited": True,
+                "_retry_after": wait,
+                "_stale": False
+            }
+
+        # Step 3 — live call
+        try:
+            result = live_fn()
+            rate_limits.record_call(self.CACHE_PREFIX)
+            cache.set(key, params_hash, result)
+            return result
+
+        except Exception as e:
+            err_str = str(e)
+
+            # Detect 429 and extract retry_after
+            if "429" in err_str:
+                retry_after = 60  # default
+
+                # Try retry_after_seconds pattern
+                m = re.search(r'retry.after.seconds[\'"\s:]+(\d+)', err_str, re.IGNORECASE)
+                if m:
+                    retry_after = int(m.group(1))
+                else:
+                    # Try Retry-After header pattern
+                    m = re.search(r'retry.after[\'"\s:]+(\d+)', err_str, re.IGNORECASE)
+                    if m:
+                        retry_after = int(m.group(1))
+
+                rate_limits.record_limit(self.CACHE_PREFIX, retry_after)
+
+            logger.warning(f"[handler] {self.CACHE_PREFIX} live failed: {e}")
+
+            if stale_ok:
+                stale = cache.get_or_stale(key, params_hash)
+                if stale is not None:
+                    return stale
+
+            return {
+                "error": err_str,
+                "_live_failed": True,
+                "_stale": False
+            }
 
     def hash(self, *args, **kwargs) -> str:
         """Convenience — delegates to cache.hash()."""

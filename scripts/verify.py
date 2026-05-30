@@ -42,6 +42,7 @@ TEST_FILES = [
     "tests/test_cache_manager.py",
     "tests/test_base_classes.py",
     "tests/test_fetch_think.py",
+    "tests/test_rate_limits.py",
 ]
 
 
