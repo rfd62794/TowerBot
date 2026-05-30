@@ -60,7 +60,9 @@ def get_stale_cached_result(tool_name: str, params_hash: str) -> dict | None:
     result = json.loads(row["result"])
     fetched_at_str = row["fetched_at"]
 
-    fetched_at = datetime.datetime.fromisoformat(fetched_at_str)
+    # SQLite CURRENT_TIMESTAMP uses space separator, Python isoformat uses T
+    # Normalize to T separator for parsing
+    fetched_at = datetime.datetime.fromisoformat(fetched_at_str.replace(" ", "T"))
     now = datetime.datetime.now()
     age_minutes = int((now - fetched_at).total_seconds() / 60)
 
@@ -90,7 +92,7 @@ def record_preload_result(
     _exec(
         "INSERT INTO preload_log (tool_name, params_hash, fetched_at, success, duration_ms, error_msg) "
         "VALUES (?, ?, ?, ?, ?, ?)",
-        (tool_name, params_hash, datetime.datetime.now().isoformat(), 1 if success else 0, duration_ms, error_msg),
+        (tool_name, params_hash, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1 if success else 0, duration_ms, error_msg),
         commit=True,
     )
 
@@ -109,7 +111,8 @@ def get_preload_status() -> list[dict]:
 
     results = []
     for row in rows:
-        last_fetch = datetime.datetime.fromisoformat(row["fetched_at"])
+        # Normalize space separator to T for parsing
+        last_fetch = datetime.datetime.fromisoformat(row["fetched_at"].replace(" ", "T"))
         age_minutes = int((datetime.datetime.now() - last_fetch).total_seconds() / 60)
 
         results.append({

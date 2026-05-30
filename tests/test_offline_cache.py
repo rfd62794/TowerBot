@@ -38,7 +38,7 @@ def test_stale_expired():
     import json
 
     # Insert a record with expires_at in the past
-    past = (datetime.datetime.now() - datetime.timedelta(hours=2)).isoformat()
+    past = (datetime.datetime.now() - datetime.timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")
     _exec(
         "INSERT OR REPLACE INTO tool_cache (tool_name, params_hash, result, fetched_at, expires_at) "
         "VALUES (?, ?, ?, ?, ?)",
@@ -60,7 +60,7 @@ def test_stale_metadata():
     from core.db import get_stale_cached_result
     import json
 
-    past = (datetime.datetime.now() - datetime.timedelta(minutes=30)).isoformat()
+    past = (datetime.datetime.now() - datetime.timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
     _exec(
         "INSERT OR REPLACE INTO tool_cache (tool_name, params_hash, result, fetched_at, expires_at) "
         "VALUES (?, ?, ?, ?, ?)",
@@ -211,7 +211,7 @@ def test_cached_stale_fallback():
     import json
 
     # Insert stale record
-    past = (datetime.datetime.now() - datetime.timedelta(hours=1)).isoformat()
+    past = (datetime.datetime.now() - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
     _exec(
         "INSERT OR REPLACE INTO tool_cache (tool_name, params_hash, result, fetched_at, expires_at) "
         "VALUES (?, ?, ?, ?, ?)",
@@ -250,7 +250,7 @@ def test_cached_stale_not_ok():
     import json
 
     # Insert stale record
-    past = (datetime.datetime.now() - datetime.timedelta(hours=1)).isoformat()
+    past = (datetime.datetime.now() - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
     _exec(
         "INSERT OR REPLACE INTO tool_cache (tool_name, params_hash, result, fetched_at, expires_at) "
         "VALUES (?, ?, ?, ?, ?)",
