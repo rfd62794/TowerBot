@@ -35,11 +35,12 @@ SEED_FREE_MODELS = [
     "nvidia/nemotron-nano-12b-v2-vl:free",
     "openai/gpt-oss-120b:free",
     "openai/gpt-oss-20b:free",
+    "z-ai/glm-4.5-air:free",
 ]
 
 # Models with tool-calling format incompatibilities (leak raw tool-call text)
 # Populated after test_models.py validation
-TOOL_INCOMPATIBLE = {"z-ai/glm-4.5-air:free"}
+TOOL_INCOMPATIBLE = set()
 
 
 def fetch_free_tool_models() -> list:
