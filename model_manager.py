@@ -24,14 +24,22 @@ logger = logging.getLogger("privy.models")
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
 # Known tool-capable free models, used only if the API call fails.
+# Prioritized by test results (PASS models from test_models.py)
 SEED_FREE_MODELS = [
-    "deepseek/deepseek-v4-flash:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "moonshotai/kimi-k2.6:free",
+    "deepseek/deepseek-v4-flash:free",  # default, may throttle temporarily
+    "openrouter/owl-alpha",
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "poolside/laguna-xs.2:free",
+    "poolside/laguna-m.1:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "nvidia/nemotron-nano-12b-v2-vl:free",
+    "openai/gpt-oss-120b:free",
+    "openai/gpt-oss-20b:free",
 ]
 
 # Models with tool-calling format incompatibilities (leak raw tool-call text)
-TOOL_INCOMPATIBLE = {"openrouter/owl-alpha"}
+# Populated after test_models.py validation
+TOOL_INCOMPATIBLE = {"z-ai/glm-4.5-air:free"}
 
 
 def fetch_free_tool_models() -> list:
