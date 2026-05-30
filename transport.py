@@ -5,6 +5,7 @@ delegates to router.route(), and replies. No business logic here.
 """
 
 import os
+import asyncio
 
 from telegram import Update
 from telegram.ext import (
@@ -36,9 +37,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     response = await route(chat_id, text)
 
-    # Markdown safety + transient-network resilience: retry the send a few times,
-    # falling back to plain text if Markdown parsing fails.
-    for attempt in range(3):
+    # Markdown safety + transient-network resilience: retry the send with a
+    # short backoff (the Windows TLS handshake can intermittently reset), and
+    # fall back to plain text if Markdown parsing fails.
+    for attempt in range(4):
         try:
             await update.message.reply_text(response, parse_mode="Markdown")
             return
@@ -47,8 +49,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 await update.message.reply_text(response, parse_mode=None)
                 return
             except Exception:
-                if attempt == 2:
+                if attempt == 3:
                     raise
+                await asyncio.sleep(1.5)
 
 
 def build_app():
