@@ -202,9 +202,9 @@ class CacheManager:
         Clear cached data.
         params_hash=None clears all entries for that key.
         """
-        from core.db.schema import _exec
+        from core.db.manager import db
         if params_hash:
-            _exec(
+            db.exec(
                 """
                 DELETE FROM tool_cache
                 WHERE tool_name = ?
@@ -213,7 +213,7 @@ class CacheManager:
                 [key, params_hash],
             )
         else:
-            _exec(
+            db.exec(
                 """
                 DELETE FROM tool_cache
                 WHERE tool_name = ?

@@ -83,9 +83,6 @@ def test_handler_call():
 
     result = handler.call("test", handler.hash(), live_fn)
     assert result["value"] == 42, "Expected live data"
-    # Clean up
-    from core.cache import cache
-    cache.invalidate("mock_test", handler.hash())
 
 
 @test("handler: call with stale_ok=False")
@@ -97,9 +94,6 @@ def test_handler_call_stale_not_ok():
 
     result = handler.call("test2", handler.hash(), live_fn, stale_ok=False)
     assert result["value"] == 99, "Expected live data"
-    # Clean up
-    from core.cache import cache
-    cache.invalidate("mock_test2", handler.hash())
 
 
 # ─── BaseTool tests ──────────────────────────────
