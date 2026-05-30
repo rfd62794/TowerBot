@@ -2,15 +2,18 @@
 
 import asyncio
 import logging
+import subprocess
 import pytz
 from datetime import datetime, timedelta
 
 from tools.youtube import get_channel_summary, get_channel_summary_range
+
 from core.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
     queue_observation, get_pending_observations, mark_sent, flush_morning_queue,
     get_upcoming_scheduled, get_tasks_due_today, get_current_weekly_plan,
-    get_channel_history, get_tasks
+    get_channel_history, get_tasks,
+    get_last_stable_commit, get_last_deploy, record_deploy, mark_verify_passed, mark_stable,
 )
 
 logger = logging.getLogger("privy.scheduler")
@@ -302,6 +305,96 @@ async def heartbeat_check(send_fn) -> None:
         logger.error(f"Heartbeat check failed: {e}")
 
 
+async def auto_rollback(send_fn) -> None:
+    """
+    Called by health_check when critical failure detected.
+    Reverts to last stable commit, verifies, restarts service.
+    """
+    stable = get_last_stable_commit()
+    if not stable:
+        await send_fn("🔴 Auto-rollback failed: no stable commit recorded.")
+        return
+
+    await send_fn(
+        f"⚠️ Health check failed. "
+        f"Auto-rolling back to {stable['commit_hash'][:7]}..."
+    )
+
+    result = subprocess.run(
+        ["git", "checkout", stable["commit_hash"]],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        await send_fn(f"🔴 Auto-rollback failed: {result.stderr.strip()}")
+        return
+
+    try:
+        subprocess.run(["nssm", "restart", "PrivyBot"], capture_output=True)
+    except FileNotFoundError:
+        pass
+
+    deploy_id = record_deploy(stable["commit_hash"], f"auto-rollback: {stable['commit_message']}")
+    mark_verify_passed(deploy_id)
+    mark_stable(deploy_id)
+
+    await send_fn(
+        f"↩️ Auto-rolled back to {stable['commit_hash'][:7]}. "
+        f"Service restarted."
+    )
+
+
+async def health_check(send_fn) -> None:
+    """
+    Runs every hour alongside heartbeat.
+    Checks model availability, YouTube credentials, database, and last deploy status.
+    Auto-rolls back on critical failure.
+    """
+    issues = []
+
+    # Check 1 — can we reach OpenRouter (any model available)?
+    try:
+        from core.model_manager import get_available_model
+        model = get_available_model()
+        if model is None:
+            issues.append("No free models available")
+    except Exception as e:
+        issues.append(f"Model manager error: {e}")
+
+    # Check 2 — YouTube credentials accessible?
+    try:
+        from tools.youtube import _get_credentials
+        creds = _get_credentials()
+        if creds is None:
+            issues.append("YouTube credentials missing")
+    except Exception as e:
+        issues.append(f"YouTube credentials error: {e}")
+
+    # Check 3 — database accessible?
+    try:
+        from core.db import list_memories
+        list_memories()
+    except Exception as e:
+        issues.append(f"Database error: {e}")
+
+    # Check 4 — did last deploy pass verify?
+    try:
+        last_deploy = get_last_deploy()
+        if last_deploy and not last_deploy["verify_passed"]:
+            issues.append("Last deploy did not pass verify")
+            await auto_rollback(send_fn)
+            return
+    except Exception as e:
+        issues.append(f"Deploy history error: {e}")
+
+    if issues:
+        msg = "🟡 Health check: " + ", ".join(issues)
+        await send_fn(msg)
+        logger.warning(f"Health check issues: {issues}")
+    else:
+        logger.info("Health check clean")
+
+
 async def run_scheduler(send_fn) -> None:
     """
     Run the scheduler with fixed tasks and hourly heartbeat.
@@ -355,13 +448,17 @@ async def run_scheduler(send_fn) -> None:
                 except Exception as e:
                     logger.error(f"Task {task_name} failed: {e}")
         
-        # Heartbeat — run every 60 minutes
+        # Heartbeat + health check — run every 60 minutes
         if last_heartbeat is None or (now - last_heartbeat).total_seconds() >= 3600:
             try:
                 await heartbeat_check(send_fn)
                 last_heartbeat = now
             except Exception as e:
                 logger.error(f"Heartbeat failed: {e}")
+            try:
+                await health_check(send_fn)
+            except Exception as e:
+                logger.error(f"Health check failed: {e}")
         
         # Sleep for 1 minute before next check
         await asyncio.sleep(60)

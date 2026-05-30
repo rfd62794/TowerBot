@@ -33,6 +33,7 @@ TEST_FILES = [
     "tests/test_tools_search.py",
     "tests/test_tools_goals.py",
     "tests/test_api.py",
+    "tests/test_deployments.py",
 ]
 
 
