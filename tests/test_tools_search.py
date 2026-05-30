@@ -35,6 +35,8 @@ def test_web_search():
     assert "count" in result, "Expected 'count' key"
     assert result["count"] >= 0, "Expected count >= 0"
     assert "results" in result, "Expected 'results' key"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("search: news_search returns count >= 0")
@@ -44,6 +46,8 @@ def test_news_search():
     assert "count" in result, "Expected 'count' key"
     assert result["count"] >= 0, "Expected count >= 0"
     assert "results" in result, "Expected 'results' key"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("search: wiki_lookup finds Python article")
@@ -52,6 +56,8 @@ def test_wiki_lookup_found():
     result = wiki_lookup("Python_(programming_language)")
     assert isinstance(result, dict), "Expected dict return"
     assert "found" in result, "Expected 'found' key"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("search: wiki_lookup handles unknown topic (not exception)")
@@ -63,6 +69,8 @@ def test_wiki_lookup_not_found():
     assert "found" in result, "Expected 'found' key — never raise"
     assert result["found"] is False, \
         "Expected found=False for unknown topic"
+    assert result.get("ok") == True, "Expected ok=True (found=False is valid)"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("search: reddit_search returns count >= 0")
@@ -72,6 +80,8 @@ def test_reddit_search():
     assert "count" in result, "Expected 'count' key"
     assert result["count"] >= 0, "Expected count >= 0"
     assert "results" in result, "Expected 'results' key"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("search: get_weather returns temp_f")

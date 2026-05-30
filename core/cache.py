@@ -49,9 +49,13 @@ class CacheManager:
         "itad_prices": 7200,  # 2h
         "itad_lookup": 7200,  # 2h
         "weather": 3600,  # 1h
-        "ddg_search": 1800,  # 30min
-        "wikipedia": 86400,  # 24h
-        "reddit": 900,  # 15min
+        "ddg_web_search": 1800,  # 30min
+        "ddg_news_search": 1800,  # 30min
+        "wikipedia_summary": 604800,  # 7 days
+        "reddit_search": 900,  # 15min
+        "ddg_search": 1800,  # 30min (legacy key)
+        "wikipedia": 86400,  # 24h (legacy key)
+        "reddit": 900,  # 15min (legacy key)
     }
 
     # ─── Staleness budget ─────────────────
@@ -64,6 +68,10 @@ class CacheManager:
         "calendar_today": 900,
         "google_tasks": 300,
         "weather": 3600,
+        "ddg_web_search": 1800,
+        "ddg_news_search": 1800,
+        "wikipedia_summary": 604800,
+        "reddit_search": 900,
         "ddg_search": 1800,
         "reddit": 900,
         "youtube_channel": 86400,
