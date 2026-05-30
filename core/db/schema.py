@@ -169,6 +169,15 @@ CREATE TABLE IF NOT EXISTS weekly_plans (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS commitments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    description TEXT NOT NULL,
+    deadline TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME
+);
+
 CREATE TABLE IF NOT EXISTS deploy_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     commit_hash TEXT,

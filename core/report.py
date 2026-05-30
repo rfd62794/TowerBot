@@ -38,6 +38,9 @@ def _format(event_type: str, kwargs: dict):
         return f"📎 Thread: {kwargs.get('name')}"
     if event_type == "thread_new":
         return "🔄 New thread started"
+    if event_type == "commitment_saved":
+        deadline = kwargs.get("deadline") or "no deadline set"
+        return f"📋 Commitment: {kwargs.get('description')}\nDue: {deadline}"
     if event_type == "tool_called":
         return f"🔧 Tool: {kwargs.get('tool_name')}"
     if event_type == "error":

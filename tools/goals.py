@@ -12,6 +12,8 @@ from core.db import (
     get_upcoming_scheduled,
     get_current_weekly_plan,
     upsert_task,
+    add_commitment,
+    list_commitments,
 )
 
 
@@ -167,6 +169,27 @@ def add_new_task(title: str, due_date: str, scheduled_at: str = None,
     )
     
     return get_task(task_id)
+
+
+def save_commitment(description: str, deadline: str = None) -> dict:
+    """
+    Save a commitment Robert has made.
+
+    Args:
+        description: What Robert committed to do
+        deadline: When — YYYY-MM-DD or natural language like
+                  "this weekend", "after June 15", "end of month". Optional.
+
+    Returns:
+        Dict with status, description, deadline, commitment_id
+    """
+    commitment_id = add_commitment(description=description, deadline=deadline)
+    return {
+        "status": "saved",
+        "description": description,
+        "deadline": deadline or "no deadline set",
+        "commitment_id": commitment_id,
+    }
 
 
 def suggest_goal_progress(milestone_id: str) -> dict:

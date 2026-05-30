@@ -14,6 +14,7 @@ from .youtube import (
 from .recommendations import get_content_recommendations
 from .games import get_game_metrics, get_installed_games, get_sale_info
 from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather
+from .goals import save_commitment
 
 TOOL_REGISTRY = {
     "get_youtube_stats": {
@@ -410,6 +411,30 @@ TOOL_REGISTRY = {
                     "type": "object",
                     "properties": {},
                     "required": [],
+                },
+            },
+        },
+    },
+    "save_commitment": {
+        "fn": save_commitment,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "save_commitment",
+                "description": "WHEN: Robert says he WILL do something with a time reference or clear intention. Triggers: 'I'm going to X', 'I'll do X this weekend', 'I need to do X by Y', 'planning to X after Z', 'going to record X', 'will finish X by Y', 'I want to X before Y'.\n\nRETURNS: status ('saved'), description, deadline, commitment_id. Fires 📋 report to Telegram.\n\nDO NOT CALL: for tasks already in the weekly plan — use add_task instead. DO NOT CALL: for vague intentions with no time reference — acknowledge in response only.\n\nDIFFERENT FROM add_task: add_task = specific item in the weekly plan. save_commitment = promise Robert made that needs follow-up tracking.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "What Robert committed to do",
+                        },
+                        "deadline": {
+                            "type": "string",
+                            "description": "When — YYYY-MM-DD or natural language. Optional.",
+                        },
+                    },
+                    "required": ["description"],
                 },
             },
         },

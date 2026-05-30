@@ -132,3 +132,25 @@ def get_current_weekly_plan() -> dict | None:
         (today,),
     ).fetchone()
     return dict(row) if row else None
+
+
+def add_commitment(description: str, deadline: str = None) -> int:
+    cur = _exec(
+        "INSERT INTO commitments (description, deadline) VALUES (?, ?)",
+        (description, deadline),
+        commit=True,
+    )
+    return cur.lastrowid
+
+
+def list_commitments(status: str = None) -> list[dict]:
+    if status:
+        rows = _exec(
+            "SELECT * FROM commitments WHERE status = ? ORDER BY id DESC",
+            (status,),
+        ).fetchall()
+    else:
+        rows = _exec(
+            "SELECT * FROM commitments ORDER BY id DESC"
+        ).fetchall()
+    return [dict(r) for r in rows]
