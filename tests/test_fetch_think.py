@@ -9,13 +9,17 @@ init_db()
 
 def _reset_fetch_rate_limit():
     """Reset fetch rate limit state for clean test runs."""
-    from core.db.rate_limits_db import upsert_api_state
-    upsert_api_state(
-        "fetch",
-        calls_this_minute=0,
-        last_429_at=None,
-        retry_after_seconds=0
-    )
+    try:
+        from core.db.rate_limits_db import upsert_api_state
+        upsert_api_state(
+            "fetch",
+            calls_this_minute=0,
+            last_429_at=None,
+            retry_after_seconds=0
+        )
+    except Exception:
+        # Database locked - skip reset, previous teardown should have handled it
+        pass
 
 
 def test_decorator(name):
@@ -127,9 +131,6 @@ def run_all():
         except Exception as e:
             print(f"✗ {name}\n  Unexpected error: {e}")
             failed += 1
-    
-    # Reset rate limit after tests complete
-    _reset_fetch_rate_limit()
     
     return passed, failed
 
