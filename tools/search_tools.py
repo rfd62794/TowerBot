@@ -8,6 +8,7 @@ from tools.api.reddit_api import search_reddit
 from tools.api.weather_api import get_current_weather
 from core.db import cache_tool_result, get_cached_tool_result, record_weather_day
 from core.cache import cache
+from tools._tool import BaseTool
 
 
 def web_search(query: str, max_results: int = 5) -> dict:
@@ -110,26 +111,42 @@ def reddit_search(query: str, subreddit: str = None, limit: int = 10) -> dict:
     return result
 
 
-def get_weather() -> dict:
-    """
-    Get current weather for South Florida.
+class SearchTools(BaseTool):
+    def get_weather(self) -> dict:
+        """
+        Get current weather for South Florida.
 
-    Returns:
-        Dict with current weather data
-    """
-    result = get_current_weather()
+        Returns:
+            Dict with current weather data
+        """
+        raw = get_current_weather()
 
-    # Ensure stale_notice key always present
-    if "stale_notice" not in result:
-        result["stale_notice"] = None
+        if raw.get("_live_failed"):
+            return self.error("Weather unavailable", code="api_failed")
 
-    # Record to weather history if valid
-    if "error" not in result and "temp_f" in result:
-        record_weather_day(
-            datetime.now().strftime("%Y-%m-%d"),
-            result.get("temp_f", 0),
-            result.get("condition", ""),
-            result.get("wind_mph", 0),
+        # Record to weather history if fresh
+        if not raw.get("_stale"):
+            record_weather_day(
+                datetime.now().strftime("%Y-%m-%d"),
+                raw.get("temp_f", 0),
+                raw.get("condition", ""),
+                raw.get("wind_mph", 0),
+            )
+
+        return self.success(
+            {
+                "temp_f": raw.get("temp_f"),
+                "condition": raw.get("condition"),
+                "wind_mph": raw.get("wind_mph"),
+                "precipitation_mm": raw.get("precipitation_mm"),
+            },
+            stale_result=raw,
         )
 
-    return result
+
+# Module-level instance
+_search = SearchTools()
+
+# Backwards compat function
+def get_weather() -> dict:
+    return _search.get_weather()
