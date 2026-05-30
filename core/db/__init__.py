@@ -38,6 +38,9 @@ from core.db.cache import (
     get_cached_model_list,
     cache_tool_result,
     get_cached_tool_result,
+    get_stale_cached_result,
+    record_preload_result,
+    get_preload_status,
 )
 
 from core.db.history import (
@@ -116,6 +119,7 @@ __all__ = [
     "save_memory", "update_memory", "retire_memory", "get_memories", "list_memories",
     "record_throttle", "record_success", "get_throttled_models", "get_model_status_all",
     "cache_model_list", "get_cached_model_list", "cache_tool_result", "get_cached_tool_result",
+    "get_stale_cached_result", "record_preload_result", "get_preload_status",
     "record_channel_day", "get_channel_history", "record_video_day", "get_video_history",
     "record_game_day", "get_game_history", "record_weather_day", "get_weather_history",
     "upsert_video_metadata", "get_video_metadata", "get_all_video_metadata",
