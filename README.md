@@ -59,6 +59,36 @@ nssm set PrivyBot AppDirectory "C:\Github\PrivyBot"
 nssm start PrivyBot
 ```
 
+## Development Workflow
+
+Branches:
+- `main` — Tower production, never commit directly
+- `dev` — active development on laptop
+- `experimental` — risky ideas, may never merge
+
+Standard workflow:
+```bash
+git checkout dev
+# [make changes]
+uv run python scripts/verify.py
+git checkout main
+git merge dev
+git push origin main
+# /deploy from Telegram
+```
+
+Hotfix workflow:
+```bash
+git checkout main
+git checkout -b hotfix/description
+# [fix the issue]
+uv run python scripts/verify.py
+git checkout main
+git merge hotfix/description
+git push origin main
+# /deploy from Telegram
+```
+
 ## Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Layered architecture and import rules
