@@ -190,6 +190,38 @@ uv sync
 nssm restart PrivyBot
 ```
 
+## Development Workflow
+
+Branches:
+- `main` — Tower production, never commit directly
+- `dev` — active development on laptop
+- `experimental` — risky ideas, may never merge
+
+**Tower pulls from main only.** The tower runs the main branch exclusively. All development happens on dev, then merges to main for deployment.
+
+Standard workflow:
+```bash
+git checkout dev
+# [make changes]
+uv run python scripts/verify.py
+git checkout main
+git merge dev
+git push origin main
+# /deploy from Telegram
+```
+
+Hotfix workflow:
+```bash
+git checkout main
+git checkout -b hotfix/description
+# [fix the issue]
+uv run python scripts/verify.py
+git checkout main
+git merge hotfix/description
+git push origin main
+# /deploy from Telegram
+```
+
 ## Troubleshooting
 
 ### Service Won't Start
