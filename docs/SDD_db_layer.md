@@ -2,7 +2,7 @@
 
 ## 1. Architecture Overview
 
-PrivyBot's database layer is a single SQLite database (`privy.db`) with 17 tables organized by domain. All database access is centralized through `DBManager` for retry logic and connection management. CRUD functions are split into domain-specific modules for maintainability.
+PrivyBot's database layer is a single SQLite database (`privy.db`) with 26 tables organized by domain. All database access is centralized through `DBManager` for retry logic and connection management. CRUD functions are split into domain-specific modules for maintainability.
 
 ```
 infra/db/
