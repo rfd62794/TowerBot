@@ -6,10 +6,10 @@ import subprocess
 import pytz
 from datetime import datetime, timedelta
 
-from tools.youtube import get_channel_summary, get_channel_summary_range
-from tools.calendar import get_today_schedule
+from tools.content.channel import get_channel_summary, get_channel_summary_range
+from tools.productivity.calendar import get_today_schedule
 from tools.api.google_calendar_api import get_events_soon
-from tools.gmail import get_all_inbox_summary
+from tools.communication.gmail import get_all_inbox_summary
 from infra.polling import polling_manager
 
 from infra.db import (
@@ -126,7 +126,7 @@ async def morning_briefing(send_fn) -> None:
         # Tracked games: Raccoin (appid from prior calls), Duckov, etc.
         # For now, check games with recent history
         try:
-            from tools.games import get_game_metrics
+            from tools.games.metrics import get_game_metrics
             tracked_games = ["Raccoin", "Duckov", "Scritchy Scratchy"]
             for game_name in tracked_games:
                 try:
@@ -303,7 +303,7 @@ async def heartbeat_check(send_fn) -> None:
         # Check 3 — game trend spike
         try:
             from infra.db import get_game_history
-            from tools.games import get_game_metrics
+            from tools.games.metrics import get_game_metrics
             tracked_games = ["Raccoin", "Duckov"]
             
             for game_name in tracked_games:

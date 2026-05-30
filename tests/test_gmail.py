@@ -73,7 +73,7 @@ def test_messages_from():
 
 @test("gmail: get_inbox_summary returns dict with required keys")
 def test_inbox_summary():
-    from tools.gmail import get_inbox_summary
+    from tools.communication.gmail import get_inbox_summary
     result = get_inbox_summary()
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "unread_count" in result, "Missing 'unread_count'"
@@ -85,7 +85,7 @@ def test_inbox_summary():
 
 @test("gmail: search_email returns dict with count")
 def test_search_email():
-    from tools.gmail import search_email
+    from tools.communication.gmail import search_email
     result = search_email("in:inbox", max_results=3)
     assert isinstance(result, dict)
     assert "count" in result
@@ -95,7 +95,7 @@ def test_search_email():
 
 @test("gmail: check_sender returns has_messages bool")
 def test_check_sender():
-    from tools.gmail import check_sender
+    from tools.communication.gmail import check_sender
     result = check_sender("noreply@github.com", unread_only=False)
     assert isinstance(result, dict)
     assert "has_messages" in result
@@ -117,7 +117,7 @@ def test_rfd_no_token():
 
 @test("gmail: get_all_inbox_summary returns dict with personal and professional keys")
 def test_all_inbox_summary_shape():
-    from tools.gmail import get_all_inbox_summary
+    from tools.communication.gmail import get_all_inbox_summary
     result = get_all_inbox_summary()
     assert isinstance(result, dict)
     assert "personal" in result, "Missing 'personal' key"
@@ -133,7 +133,7 @@ def test_all_inbox_summary_no_rfd():
     import os
     from unittest.mock import patch
     with patch.dict(os.environ, {"RFD_GMAIL_TOKEN_PATH": "config/nonexistent_rfd_token.json"}):
-        from tools.gmail import get_all_inbox_summary
+        from tools.communication.gmail import get_all_inbox_summary
         # Should not raise exception
         result = get_all_inbox_summary()
         assert isinstance(result, dict)
@@ -141,7 +141,7 @@ def test_all_inbox_summary_no_rfd():
 
 @test("gmail: check_sender_all returns count and has_messages keys")
 def test_check_sender_all():
-    from tools.gmail import check_sender_all
+    from tools.communication.gmail import check_sender_all
     result = check_sender_all("noreply@github.com", unread_only=False)
     assert isinstance(result, dict)
     assert "count" in result

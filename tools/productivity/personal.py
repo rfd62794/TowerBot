@@ -134,7 +134,7 @@ def add_personal_task(
 
     # Event-driven push to Google Tasks
     try:
-        from tools.sync_tasks import get_or_cache_tasklist_id
+        from tools.productivity.sync import get_or_cache_tasklist_id
         from tools.api.google_tasks_api import push_task as _push_gtask
         from infra.db.personal_tasks import set_google_task_id
         tasklist_id = get_or_cache_tasklist_id()
@@ -185,7 +185,7 @@ def complete_personal_task(task_id: int) -> dict:
     # Event-driven push completion to Google Tasks
     if result.get("status") == "completed" and result.get("google_task_id"):
         try:
-            from tools.sync_tasks import get_or_cache_tasklist_id
+            from tools.productivity.sync import get_or_cache_tasklist_id
             from tools.api.google_tasks_api import complete_task as _complete_gtask
             tasklist_id = get_or_cache_tasklist_id()
             if tasklist_id:

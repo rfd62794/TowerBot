@@ -36,7 +36,7 @@ TESTS = []
 
 @test("fetch: fetch_url returns dict with content key")
 def test_fetch_url_content():
-    from tools.search_tools import fetch_url
+    from tools.search.search_tools import fetch_url
     result = fetch_url("https://en.wikipedia.org/wiki/Python_(programming_language)")
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "content" in result, "Expected 'content' key"
@@ -47,7 +47,7 @@ def test_fetch_url_content():
 
 @test("fetch: fetch_url returns error dict for invalid URL")
 def test_fetch_url_invalid():
-    from tools.search_tools import fetch_url
+    from tools.search.search_tools import fetch_url
     result = fetch_url("https://this-domain-does-not-exist-xyz.com")
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert result.get("ok") == False, "Expected ok=False for invalid URL"
@@ -56,7 +56,7 @@ def test_fetch_url_invalid():
 
 @test("fetch: fetch_url content is truncated at max_chars")
 def test_fetch_url_truncation():
-    from tools.search_tools import fetch_url
+    from tools.search.search_tools import fetch_url
     result = fetch_url("https://en.wikipedia.org/wiki/Python_(programming_language)", max_chars=100)
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     content = result.get("content", "")
@@ -67,7 +67,7 @@ def test_fetch_url_truncation():
 
 @test("fetch: fetch_url cached on second call")
 def test_fetch_url_cache():
-    from tools.search_tools import fetch_url
+    from tools.search.search_tools import fetch_url
     from infra.db.schema import _exec
     # Clear cache for this URL
     _exec("DELETE FROM tool_cache WHERE tool_name LIKE 'fetch%'", commit=True)
@@ -85,7 +85,7 @@ def test_fetch_url_cache():
 
 @test("think: think returns ok=True")
 def test_think_ok():
-    from tools.meta import think
+    from tools.meta.meta import think
     result = think("Testing the think tool")
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert result.get("ok") == True, "Expected ok=True"
@@ -93,7 +93,7 @@ def test_think_ok():
 
 @test("think: think returns thought in result")
 def test_think_content():
-    from tools.meta import think
+    from tools.meta.meta import think
     test_content = "Testing the think tool"
     result = think(test_content)
     assert result.get("thought") == test_content, f"Expected thought '{test_content}', got {result.get('thought')}"
@@ -101,7 +101,7 @@ def test_think_content():
 
 @test("think: think with empty string returns ok=True")
 def test_think_empty():
-    from tools.meta import think
+    from tools.meta.meta import think
     result = think("")
     assert result.get("ok") == True, "Expected ok=True for empty thought"
     assert result.get("thought") == "", "Expected empty thought"
@@ -109,7 +109,7 @@ def test_think_empty():
 
 @test("think: think result has stale_notice=None")
 def test_think_stale_notice():
-    from tools.meta import think
+    from tools.meta.meta import think
     result = think("Testing stale_notice")
     assert result.get("stale_notice") is None, "Expected stale_notice=None for think tool"
 

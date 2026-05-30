@@ -94,7 +94,7 @@ def test_add_task_recurrence():
 @test("personal: list_personal_tasks today filter works")
 def test_list_today():
     from infra.db.personal_tasks import add_personal_task
-    from tools.personal import list_personal_tasks
+    from tools.productivity.personal import list_personal_tasks
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
     add_personal_task("Filter test task", due_date=today)
@@ -165,7 +165,7 @@ def test_tasks_due_soon():
 
 @test("personal: parse_natural_deadline 'tomorrow' works")
 def test_parse_tomorrow():
-    from tools.personal import parse_natural_deadline
+    from tools.productivity.personal import parse_natural_deadline
     from datetime import datetime, timedelta
     result = parse_natural_deadline("tomorrow")
     expected = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
@@ -175,7 +175,7 @@ def test_parse_tomorrow():
 
 @test("personal: parse_natural_deadline 'Friday at 6PM' works")
 def test_parse_friday_6pm():
-    from tools.personal import parse_natural_deadline
+    from tools.productivity.personal import parse_natural_deadline
     from datetime import datetime, timedelta
     result = parse_natural_deadline("Friday at 6PM")
     assert result["date"] is not None, "Expected a date"
@@ -186,14 +186,14 @@ def test_parse_friday_6pm():
 
 @test("personal: parse_recurrence 'every Monday' works")
 def test_parse_recurrence_weekly():
-    from tools.personal import parse_recurrence
+    from tools.productivity.personal import parse_recurrence
     result = parse_recurrence("every Monday")
     assert result == "weekly:monday", f"Expected 'weekly:monday', got {result}"
 
 
 @test("personal: parse_recurrence 'every day' works")
 def test_parse_recurrence_daily():
-    from tools.personal import parse_recurrence
+    from tools.productivity.personal import parse_recurrence
     result = parse_recurrence("every day")
     assert result == "daily", f"Expected 'daily', got {result}"
 

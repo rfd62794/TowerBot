@@ -84,7 +84,7 @@ def test_tasks_sync_table():
 
 @test("sync: run_sync returns status ok")
 def test_run_sync():
-    from tools.sync_tasks import run_sync
+    from tools.productivity.sync import run_sync
     result = run_sync()
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert result.get("status") == "ok", \
@@ -93,14 +93,14 @@ def test_run_sync():
 
 @test("sync: pull_from_google returns int")
 def test_pull_from_google():
-    from tools.sync_tasks import pull_from_google
+    from tools.productivity.sync import pull_from_google
     result = pull_from_google()
     assert isinstance(result, int), f"Expected int, got {type(result)}"
 
 
 @test("sync: push_new_tasks returns int")
 def test_push_new_tasks():
-    from tools.sync_tasks import push_new_tasks
+    from tools.productivity.sync import push_new_tasks
     result = push_new_tasks()
     assert isinstance(result, int), f"Expected int, got {type(result)}"
 
