@@ -13,6 +13,7 @@ from .youtube import (
 )
 from .recommendations import get_content_recommendations
 from .games import get_game_metrics, get_installed_games, get_sale_info
+from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather
 
 TOOL_REGISTRY = {
     "get_youtube_stats": {
@@ -294,6 +295,120 @@ TOOL_REGISTRY = {
                             "default": 28,
                         }
                     },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "web_search": {
+        "fn": web_search,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "web_search",
+                "description": "Search the web via DuckDuckGo. Call before answering factual questions about current events, games, people, or anything you are uncertain about. Never guess — search first.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query",
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default: 5)",
+                            "default": 5,
+                        }
+                    },
+                    "required": ["query"],
+                },
+            },
+        },
+    },
+    "news_search": {
+        "fn": news_search,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "news_search",
+                "description": "Search recent news via DuckDuckGo. Call when asked about recent events, game updates, or trending topics.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query",
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default: 5)",
+                            "default": 5,
+                        }
+                    },
+                    "required": ["query"],
+                },
+            },
+        },
+    },
+    "wiki_lookup": {
+        "fn": wiki_lookup,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "wiki_lookup",
+                "description": "Look up a Wikipedia article summary. Call when asked about games, people, places, companies, or concepts to get factual grounding.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Topic to look up",
+                        }
+                    },
+                    "required": ["topic"],
+                },
+            },
+        },
+    },
+    "reddit_search": {
+        "fn": reddit_search,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "reddit_search",
+                "description": "Search Reddit posts. Call when asked about community sentiment, player opinions, or what people are saying about a game. Use subreddit parameter for targeted searches: incremental_games, patientgamers, indiegaming, gamedev.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query",
+                        },
+                        "subreddit": {
+                            "type": "string",
+                            "description": "Optional subreddit to search within",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default: 10)",
+                            "default": 10,
+                        }
+                    },
+                    "required": ["query"],
+                },
+            },
+        },
+    },
+    "get_weather": {
+        "fn": get_weather,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get current weather for South Florida. Call when asked about weather or when providing morning context.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
                     "required": [],
                 },
             },
