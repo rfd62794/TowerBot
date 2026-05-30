@@ -52,6 +52,25 @@ CREATE TABLE IF NOT EXISTS kv_cache (
     value TEXT,
     updated DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS tool_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tool_name TEXT,
+    params_hash TEXT,
+    result TEXT,
+    fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tool_cache ON tool_cache(tool_name, params_hash);
+
+CREATE TABLE IF NOT EXISTS channel_history (
+    date TEXT PRIMARY KEY,
+    views INTEGER,
+    watch_time_minutes REAL,
+    subscribers_gained INTEGER,
+    recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 _conn: sqlite3.Connection | None = None
@@ -221,3 +240,47 @@ def get_cached_model_list() -> list | None:
         "AND datetime(updated, '+24 hours') > datetime('now')"
     ).fetchone()
     return json.loads(row["value"]) if row else None
+
+
+# ── Tool cache ──
+def cache_tool_result(tool_name: str, params_hash: str, result: dict, ttl_hours: float) -> None:
+    """Cache a tool result with TTL."""
+    import datetime
+    expires_at = (datetime.datetime.now() + datetime.timedelta(hours=ttl_hours)).isoformat()
+    _exec(
+        "INSERT OR REPLACE INTO tool_cache (tool_name, params_hash, result, expires_at) "
+        "VALUES (?, ?, ?, ?)",
+        (tool_name, params_hash, json.dumps(result), expires_at), commit=True,
+    )
+
+
+def get_cached_tool_result(tool_name: str, params_hash: str) -> dict | None:
+    """Get cached tool result if not expired."""
+    row = _exec(
+        "SELECT result FROM tool_cache WHERE tool_name = ? AND params_hash = ? "
+        "AND expires_at > datetime('now')",
+        (tool_name, params_hash),
+    ).fetchone()
+    return json.loads(row["result"]) if row else None
+
+
+# ── Channel history ──
+def record_channel_day(date: str, views: int, watch_time: float, subs: int) -> None:
+    """Record daily channel metrics."""
+    _exec(
+        "INSERT OR REPLACE INTO channel_history (date, views, watch_time_minutes, subscribers_gained) "
+        "VALUES (?, ?, ?, ?)",
+        (date, views, watch_time, subs), commit=True,
+    )
+
+
+def get_channel_history(days: int = 30) -> list[dict]:
+    """Get channel history for last N days."""
+    rows = _exec(
+        "SELECT date, views, watch_time_minutes, subscribers_gained, recorded_at "
+        "FROM channel_history "
+        "WHERE date >= date('now', '-' || ? || ' days') "
+        "ORDER BY date ASC",
+        (days,),
+    ).fetchall()
+    return [dict(r) for r in rows]
