@@ -37,11 +37,7 @@ def get_current_weather() -> dict:
     Returns:
         Dict with temperature, condition, wind, precipitation, and staleness metadata
     """
-    from tools.api._base import cached_api_call, make_params_hash, stale_notice
-
-    tool_name = "weather_current"
-    params_hash = make_params_hash("south_florida")
-    ttl_seconds = 3600  # 1 hour
+    from core.cache import cache
 
     def _live() -> dict:
         try:
@@ -70,10 +66,10 @@ def get_current_weather() -> dict:
         except Exception as e:
             return {"error": str(e)}
 
-    result = cached_api_call(tool_name, params_hash, _live, ttl_seconds, stale_ok=True)
+    result = cache.call("weather", cache.hash(), _live, stale_ok=True)
 
     # Add stale_notice to result
-    notice = stale_notice(result)
+    notice = cache.stale_notice(result)
     result["stale_notice"] = notice
 
     return result

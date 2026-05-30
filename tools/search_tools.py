@@ -7,6 +7,7 @@ from tools.api.wikipedia_api import get_summary
 from tools.api.reddit_api import search_reddit
 from tools.api.weather_api import get_current_weather
 from core.db import cache_tool_result, get_cached_tool_result, record_weather_day
+from core.cache import cache
 
 
 def web_search(query: str, max_results: int = 5) -> dict:

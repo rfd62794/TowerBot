@@ -39,6 +39,7 @@ TEST_FILES = [
     "tests/test_google_calendar.py",
     "tests/test_gmail.py",
     "tests/test_offline_cache.py",
+    "tests/test_cache_manager.py",
 ]
 
 
