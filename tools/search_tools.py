@@ -2,88 +2,12 @@
 
 import hashlib
 from datetime import datetime
-from tools.api.ddg_api import search_web, search_news
-from tools.api.wikipedia_api import get_summary
-from tools.api.reddit_api import search_reddit
+from tools.api.ddg_api import ddg_api
+from tools.api.wikipedia_api import wikipedia_api
+from tools.api.reddit_api import reddit_api
 from tools.api.weather_api import get_current_weather
 from core.db import record_weather_day
 from tools._tool import BaseTool
-
-
-def web_search(query: str, max_results: int = 5) -> dict:
-    """
-    Search the web via DuckDuckGo.
-
-    Args:
-        query: Search query
-        max_results: Maximum results to return
-
-    Returns:
-        Dict with query, count, and results
-    """
-    results = search_web(query, max_results)
-    result = {
-        "query": query,
-        "count": len(results),
-        "results": results,
-    }
-    return result
-
-
-def news_search(query: str, max_results: int = 5) -> dict:
-    """
-    Search recent news via DuckDuckGo.
-
-    Args:
-        query: Search query
-        max_results: Maximum results to return
-
-    Returns:
-        Dict with query, count, and results
-    """
-    results = search_news(query, max_results)
-    result = {
-        "query": query,
-        "count": len(results),
-        "results": results,
-    }
-    return result
-
-
-def wiki_lookup(topic: str) -> dict:
-    """
-    Look up a Wikipedia article summary.
-
-    Args:
-        topic: Topic to look up
-
-    Returns:
-        Dict with Wikipedia summary data
-    """
-    result = get_summary(topic)
-    return result
-
-
-def reddit_search(query: str, subreddit: str = None, limit: int = 10) -> dict:
-    """
-    Search Reddit posts.
-
-    Args:
-        query: Search query
-        subreddit: Optional subreddit to search within
-        limit: Maximum results to return
-
-    Returns:
-        Dict with query, subreddit, count, and results
-    """
-    results = search_reddit(query, subreddit, limit=limit)
-    result = {
-        "query": query,
-        "subreddit": subreddit,
-        "count": len(results),
-        "results": results,
-    }
-    return result
 
 
 class SearchTools(BaseTool):
@@ -129,7 +53,7 @@ class SearchTools(BaseTool):
         Returns:
             Dict with query, count, and results
         """
-        raw = search_web(query, max_results)
+        raw = ddg_api.search_web(query, max_results)
         if raw.get("_live_failed"):
             return self.error("Web search unavailable", code="api_failed")
         results = raw.get("results", [])
@@ -150,7 +74,7 @@ class SearchTools(BaseTool):
         Returns:
             Dict with query, count, and results
         """
-        raw = search_news(query, max_results)
+        raw = ddg_api.search_news(query, max_results)
         if raw.get("_live_failed"):
             return self.error("News search unavailable", code="api_failed")
         results = raw.get("results", [])
@@ -170,7 +94,7 @@ class SearchTools(BaseTool):
         Returns:
             Dict with Wikipedia summary data
         """
-        raw = get_summary(topic)
+        raw = wikipedia_api.get_summary(topic)
         if raw.get("_live_failed"):
             return self.error("Wikipedia unavailable", code="api_failed")
         # found=False is valid, not an error
@@ -193,7 +117,7 @@ class SearchTools(BaseTool):
         Returns:
             Dict with query, subreddit, count, and results
         """
-        raw = search_reddit(query, subreddit, limit=limit)
+        raw = reddit_api.search_reddit(query, subreddit, limit=limit)
         if raw.get("_live_failed"):
             return self.error("Reddit search unavailable", code="api_failed")
         results = raw.get("results", [])
@@ -208,18 +132,63 @@ class SearchTools(BaseTool):
 # Module-level instance
 _search = SearchTools()
 
-# Backwards compat functions
-def get_weather() -> dict:
-    return _search.get_weather()
 
+# Backwards compat functions
 def web_search(query: str, max_results: int = 5) -> dict:
+    """
+    Search the web via DuckDuckGo.
+
+    Args:
+        query: Search query
+        max_results: Maximum results to return
+
+    Returns:
+        Dict with query, count, and results
+    """
     return _search.web_search(query, max_results)
 
+
 def news_search(query: str, max_results: int = 5) -> dict:
+    """
+    Search recent news via DuckDuckGo.
+
+    Args:
+        query: Search query
+        max_results: Maximum results to return
+
+    Returns:
+        Dict with query, count, and results
+    """
     return _search.news_search(query, max_results)
 
+
 def wiki_lookup(topic: str) -> dict:
+    """
+    Look up a Wikipedia article summary.
+
+    Args:
+        topic: Topic to look up
+
+    Returns:
+        Dict with Wikipedia summary data
+    """
     return _search.wiki_lookup(topic)
 
+
 def reddit_search(query: str, subreddit: str = None, limit: int = 10) -> dict:
+    """
+    Search Reddit posts.
+
+    Args:
+        query: Search query
+        subreddit: Optional subreddit to search within
+        limit: Maximum results to return
+
+    Returns:
+        Dict with query, subreddit, count, and results
+    """
     return _search.reddit_search(query, subreddit, limit)
+
+
+def get_weather() -> dict:
+    return _search.get_weather()

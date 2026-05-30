@@ -77,8 +77,10 @@ ddg_api = DDGAPIHandler()
 
 # Backwards compat
 def search_web(query: str, max_results: int = 5) -> list[dict]:
-    return ddg_api.search_web(query, max_results)
+    result = ddg_api.search_web(query, max_results)
+    return result.get("results", [])
 
 
 def search_news(query: str, max_results: int = 5) -> list[dict]:
-    return ddg_api.search_news(query, max_results)
+    result = ddg_api.search_news(query, max_results)
+    return result.get("results", [])

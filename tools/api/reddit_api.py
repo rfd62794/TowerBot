@@ -77,4 +77,5 @@ reddit_api = RedditAPIHandler()
 
 # Backwards compat
 def search_reddit(query: str, subreddit: str = None, sort: str = "relevance", limit: int = 10) -> list[dict]:
-    return reddit_api.search_reddit(query, subreddit, sort, limit)
+    result = reddit_api.search_reddit(query, subreddit, sort, limit)
+    return result.get("results", [])
