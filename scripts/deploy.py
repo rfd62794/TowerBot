@@ -55,8 +55,17 @@ def main():
 
     # Step 4: Run verify.py
     print("Running verify.py...")
-    code, stdout, stderr = run_command(["uv", "run", "python", "scripts/verify.py"])
-    verify_output = stdout or stderr
+    import os
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    result = subprocess.run(
+        ["uv", "run", "python", "scripts/verify.py"],
+        capture_output=True,
+        text=True,
+        env=env
+    )
+    code = result.returncode
+    verify_output = result.stdout.strip() or result.stderr.strip()
     print(verify_output)
 
     # Step 5a: If verify passes
