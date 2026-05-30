@@ -80,6 +80,7 @@ def test_weather():
     result = get_weather()
     assert "error" not in result, f"Weather error: {result.get('error')}"
     assert "temp_f" in result, "Expected 'temp_f' key"
+    assert "stale_notice" in result, "Expected 'stale_notice' key"
 
 
 @test("search: get_weather records to weather_history")
