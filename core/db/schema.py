@@ -1,4 +1,7 @@
 """DB schema, connection, and shared primitives."""
+# SCHEMA RULE: All table creation and migrations belong in init_db() only.
+# Never run SQL at module import time — _conn is None until init_db() is
+# called from privybot.py startup.
 
 import os
 import sqlite3
