@@ -26,7 +26,8 @@ def get_or_cache_tasklist_id() -> str | None:
     sync = get_last_sync()
     if sync and sync.get("tasklist_id"):
         return sync["tasklist_id"]
-    tasklist_id = get_default_tasklist_id()
+    raw = get_default_tasklist_id()
+    tasklist_id = raw.get("tasklist_id")
     if tasklist_id:
         update_sync_record(tasklist_id=tasklist_id)
     return tasklist_id
@@ -80,7 +81,8 @@ def pull_from_google() -> int:
     if not tasklist_id:
         return 0
 
-    google_tasks = pull_tasks(tasklist_id)
+    raw = pull_tasks(tasklist_id)
+    google_tasks = raw.get("tasks", [])
     local_tasks = get_personal_tasks("all")
     local_google_ids = {
         t["google_task_id"]

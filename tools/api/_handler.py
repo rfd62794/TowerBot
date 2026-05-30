@@ -114,3 +114,35 @@ class BaseAPIHandler:
         from core.cache import cache
 
         return cache.hash(*args, **kwargs)
+
+
+class BaseTool:
+    """
+    Base class for tool layer wrappers.
+    Provides success() and error() helpers.
+    """
+
+    def success(self, data: dict, stale_result: dict = None) -> dict:
+        """Return a successful result with optional stale notice."""
+        from core.cache import cache
+        
+        result = {"ok": True, **data}
+        
+        if stale_result is not None:
+            notice = cache.stale_notice(stale_result)
+            if notice:
+                result["_stale_notice"] = notice
+        
+        return result
+
+    def error(self, message: str, code: int = None) -> dict:
+        """Return an error result."""
+        result = {"ok": False, "error": message}
+        if code is not None:
+            result["code"] = code
+        return result
+
+    def stale_notice(self, result: dict) -> str | None:
+        """Extract stale notice from a result dict."""
+        from core.cache import cache
+        return cache.stale_notice(result)

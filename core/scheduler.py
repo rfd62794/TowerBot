@@ -375,7 +375,8 @@ async def heartbeat_check(send_fn) -> None:
         # Check 10 — pre-event calendar alerts
         try:
             import zlib
-            events_soon = get_events_soon(minutes=60)
+            raw = get_events_soon(minutes=60)
+            events_soon = raw.get("events", [])
             for event in events_soon:
                 alert_key = f"cal_{event['id']}_{event['start'][:10]}"
                 alert_id = zlib.adler32(alert_key.encode()) & 0x7FFFFFFF
