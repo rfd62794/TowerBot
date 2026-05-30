@@ -2,7 +2,7 @@
 
 from .youtube import get_channel_summary, get_top_videos, get_video_analytics
 from .recommendations import get_content_recommendations
-from .games import get_game_metrics, get_installed_games
+from .games import get_game_metrics, get_installed_games, get_sale_info
 
 TOOL_REGISTRY = {
     "get_youtube_stats": {
@@ -134,6 +134,27 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["video_id"],
+                },
+            },
+        },
+    },
+    "get_sale_info": {
+        "fn": get_sale_info,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_sale_info",
+                "description": "Check current sale prices and historical lows for games via IsThereAnyDeal. Call when asked if a game is on sale, current price, or best price to buy.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "game_names": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of game names to check",
+                        }
+                    },
+                    "required": ["game_names"],
                 },
             },
         },
