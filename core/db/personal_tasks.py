@@ -132,8 +132,8 @@ def get_tasks_due_soon(minutes: int = 90) -> list[dict]:
     """Return pending personal tasks with due_datetime within the next N minutes."""
     rows = _exec(
         "SELECT * FROM personal_tasks "
-        "WHERE due_datetime BETWEEN datetime('now') "
-        "AND datetime('now', '+' || ? || ' minutes') "
+        "WHERE due_datetime BETWEEN datetime('now', 'localtime') "
+        "AND datetime('now', 'localtime', '+' || ? || ' minutes') "
         "AND status = 'pending' "
         "ORDER BY due_datetime ASC",
         (minutes,),
