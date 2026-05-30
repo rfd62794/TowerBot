@@ -10,7 +10,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
+import asyncio
 import logging
+
+# Windows TLS fix: the default ProactorEventLoop intermittently resets async
+# TLS handshakes to api.telegram.org (BrokenResourceError). The SelectorEventLoop
+# completes handshakes reliably. Standard Windows asyncio workaround — PTB still
+# owns the loop; we only choose the loop implementation.
+if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from db import init_db
 from report import init_report
@@ -20,6 +28,10 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
     level=logging.INFO,
 )
+
+
+async def on_error(update, context) -> None:
+    logging.error("Handler error: %s", context.error)
 
 if __name__ == "__main__":
     # Layer 5 — database
@@ -37,6 +49,7 @@ if __name__ == "__main__":
             await app.bot.send_message(chat_id=chat_id, text=text, parse_mode=None)
 
     init_report(send_to_telegram)
+    app.add_error_handler(on_error)
 
     # Run
     app.run_polling(drop_pending_updates=True)
