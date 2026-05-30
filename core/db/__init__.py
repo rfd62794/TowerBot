@@ -92,6 +92,11 @@ from core.db.personal_tasks import (
     delete_personal_task,
     mark_reminded,
     already_reminded,
+    set_google_task_id,
+    get_unsynced_tasks,
+    get_tasks_completed_since,
+    update_sync_record,
+    get_last_sync,
 )
 
 from core.db.deployments import (
@@ -125,6 +130,8 @@ __all__ = [
     "add_personal_task", "get_personal_tasks", "get_tasks_due_soon",
     "complete_personal_task", "snooze_personal_task", "delete_personal_task",
     "mark_reminded", "already_reminded",
+    "set_google_task_id", "get_unsynced_tasks", "get_tasks_completed_since",
+    "update_sync_record", "get_last_sync",
     "record_deploy", "mark_verify_passed", "mark_stable", "mark_rolled_back",
     "get_last_stable_commit", "get_last_deploy", "get_deploy_history",
 ]

@@ -335,6 +335,39 @@ async def heartbeat_check(send_fn) -> None:
         except Exception as e:
             logger.debug(f"Personal task reminder check failed: {e}")
 
+        # Check 8 — Google Tasks sync
+        try:
+            from tools.sync_tasks import run_sync
+            sync_result = run_sync()
+            if sync_result.get("pulled_new", 0) > 0:
+                logger.info(f"Synced {sync_result['pulled_new']} new tasks from Google")
+            if sync_result.get("status") == "error":
+                logger.warning(f"Google Tasks sync error: {sync_result.get('error')}")
+        except Exception as e:
+            logger.debug(f"Google Tasks sync failed: {e}")
+
+        # Check 9 — overdue and pending personal task reminder
+        try:
+            overdue_tasks = get_personal_tasks("overdue")
+            today_pending = get_personal_tasks("today")
+
+            if overdue_tasks and should_send_now("normal"):
+                lines = "\n".join(
+                    f"\u2022 {t['title']}" for t in overdue_tasks[:5]
+                )
+                await send_fn(f"\u26a0\ufe0f Overdue ({len(overdue_tasks)}):\n{lines}")
+
+            if today_pending and should_send_now("normal"):
+                lines = "\n".join(
+                    f"\u2022 {t['title']}" + (f" at {t['due_time']}" if t.get("due_time") else "")
+                    for t in today_pending[:5]
+                )
+                await send_fn(
+                    f"\U0001f4dd Still pending today ({len(today_pending)}):\n{lines}"
+                )
+        except Exception as e:
+            logger.debug(f"Personal task reminder check failed: {e}")
+
         logger.info("Heartbeat check complete")
         
     except Exception as e:

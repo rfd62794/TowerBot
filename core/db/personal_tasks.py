@@ -179,6 +179,7 @@ def complete_personal_task(task_id: int) -> dict:
         "id": task_id,
         "title": task["title"],
         "next_due": next_due_str,
+        "google_task_id": task.get("google_task_id"),
     }
 
 
@@ -225,6 +226,100 @@ def delete_personal_task(task_id: int) -> dict:
         commit=True,
     )
     return {"status": "deleted", "id": task_id}
+
+
+def set_google_task_id(task_id: int, google_task_id: str) -> None:
+    _exec(
+        "UPDATE personal_tasks SET google_task_id = ? WHERE id = ?",
+        (google_task_id, task_id),
+        commit=True,
+    )
+
+
+def get_unsynced_tasks() -> list[dict]:
+    """Tasks with no google_task_id that are still pending."""
+    rows = _exec(
+        "SELECT * FROM personal_tasks "
+        "WHERE google_task_id IS NULL AND status = 'pending' "
+        "ORDER BY id ASC"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_tasks_completed_since(since) -> list[dict]:
+    """Tasks completed after since (ISO string or datetime), with google_task_id set."""
+    if isinstance(since, datetime):
+        since = since.isoformat()
+    rows = _exec(
+        "SELECT * FROM personal_tasks "
+        "WHERE completed_at >= ? AND google_task_id IS NOT NULL",
+        (since,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_sync_record(
+    last_pull=None,
+    last_push=None,
+    tasklist_id=None,
+    error=False,
+) -> None:
+    existing = _exec("SELECT id FROM tasks_sync LIMIT 1").fetchone()
+    if not existing:
+        _exec(
+            "INSERT INTO tasks_sync "
+            "(last_pull, last_push, tasklist_id, pull_count, push_count, error_count) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                last_pull, last_push, tasklist_id,
+                1 if last_pull else 0,
+                1 if last_push else 0,
+                1 if error else 0,
+            ),
+            commit=True,
+        )
+    else:
+        set_parts = []
+        params = []
+        if last_pull is not None:
+            set_parts.extend(["last_pull = ?", "pull_count = pull_count + 1"])
+            params.append(last_pull)
+        if last_push is not None:
+            set_parts.extend(["last_push = ?", "push_count = push_count + 1"])
+            params.append(last_push)
+        if tasklist_id is not None:
+            set_parts.append("tasklist_id = ?")
+            params.append(tasklist_id)
+        if error:
+            set_parts.append("error_count = error_count + 1")
+        if set_parts:
+            params.append(existing["id"])
+            _exec(
+                f"UPDATE tasks_sync SET {', '.join(set_parts)} WHERE id = ?",
+                tuple(params),
+                commit=True,
+            )
+
+
+def get_last_sync() -> dict | None:
+    row = _exec("SELECT * FROM tasks_sync LIMIT 1").fetchone()
+    return dict(row) if row else None
+
+
+def _run_migrations() -> None:
+    """Apply incremental schema migrations for personal_tasks."""
+    try:
+        cols = {row[1] for row in _exec("PRAGMA table_info(personal_tasks)").fetchall()}
+        if cols and "google_task_id" not in cols:
+            _exec(
+                "ALTER TABLE personal_tasks ADD COLUMN google_task_id TEXT",
+                commit=True,
+            )
+    except Exception:
+        pass
+
+
+_run_migrations()
 
 
 def mark_reminded(task_id: int) -> None:

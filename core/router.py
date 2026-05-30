@@ -129,6 +129,7 @@ def help_text() -> str:
         "/todo week — this week's tasks\n"
         "/todo done [id] — mark task done\n"
         "/todo add [text] — quick capture\n"
+        "/sync — sync with Google Tasks\n"
         "/help — this message"
     )
 
@@ -299,6 +300,20 @@ def handle_reject(milestone_id: str) -> str:
     return f"Dismissed suggestion for milestone: {milestone_id}"
 
 
+def handle_sync() -> str:
+    """Handle /sync command — run Google Tasks sync manually."""
+    from tools.sync_tasks import run_sync
+    result = run_sync()
+    if result.get("status") == "error":
+        return f"Sync error: {result.get('error', 'unknown')}"
+    return (
+        f"\U0001f504 Synced \u2014 "
+        f"pulled {result['pulled_new']}, "
+        f"pushed {result['pushed_new']} new, "
+        f"{result['pushed_completions']} completions"
+    )
+
+
 async def handle_deploy(chat_id: int) -> str:
     """Handle /deploy command — run deploy script as subprocess."""
     await report("tool_called", tool_name="deploy", result_summary="Starting deploy...")
@@ -409,6 +424,8 @@ async def route(chat_id: int, text: str) -> str:
     if text.startswith("/reject "):
         milestone_id = text[len("/reject "):].strip()
         return handle_reject(milestone_id)
+    if text == "/sync" or text.startswith("/sync"):
+        return handle_sync()
     if text == "/todo" or text.startswith("/todo"):
         parts = text[len("/todo"):].strip().split(None, 1)
         sub = parts[0].lower() if parts else ""

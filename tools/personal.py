@@ -132,6 +132,19 @@ def add_personal_task(
         notes=notes,
     )
 
+    # Event-driven push to Google Tasks
+    try:
+        from tools.sync_tasks import get_or_cache_tasklist_id
+        from tools.api.google_tasks_api import push_task as _push_gtask
+        from core.db.personal_tasks import set_google_task_id
+        tasklist_id = get_or_cache_tasklist_id()
+        if tasklist_id:
+            g_result = _push_gtask(tasklist_id, title=title, notes=notes, due=due_date)
+            if g_result:
+                set_google_task_id(task_id, g_result["id"])
+    except Exception:
+        pass  # Local task created; sync will catch it on next heartbeat
+
     due_str = (
         f"{due_date} {due_time}" if due_time else
         due_date if due_date else "no deadline"
@@ -167,7 +180,20 @@ def list_personal_tasks(filter: str = "today") -> dict:
 
 def complete_personal_task(task_id: int) -> dict:
     """Mark a personal task done. If recurring, creates next occurrence."""
-    return _db_complete(task_id)
+    result = _db_complete(task_id)
+
+    # Event-driven push completion to Google Tasks
+    if result.get("status") == "completed" and result.get("google_task_id"):
+        try:
+            from tools.sync_tasks import get_or_cache_tasklist_id
+            from tools.api.google_tasks_api import complete_task as _complete_gtask
+            tasklist_id = get_or_cache_tasklist_id()
+            if tasklist_id:
+                _complete_gtask(tasklist_id, result["google_task_id"])
+        except Exception:
+            pass
+
+    return result
 
 
 def snooze_personal_task(task_id: int, minutes: int = 60) -> dict:
