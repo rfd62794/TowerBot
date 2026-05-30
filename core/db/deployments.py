@@ -43,7 +43,7 @@ def mark_rolled_back(deploy_id: int) -> None:
 def get_last_stable_commit() -> dict | None:
     """Return the most recent deploy record where stable=1, or None."""
     cur = _exec(
-        "SELECT * FROM deploy_history WHERE stable = 1 ORDER BY deployed_at DESC LIMIT 1"
+        "SELECT * FROM deploy_history WHERE stable = 1 ORDER BY deployed_at DESC, id DESC LIMIT 1"
     )
     row = cur.fetchone()
     return dict(row) if row else None
@@ -52,7 +52,7 @@ def get_last_stable_commit() -> dict | None:
 def get_last_deploy() -> dict | None:
     """Return the most recent deploy record regardless of status, or None."""
     cur = _exec(
-        "SELECT * FROM deploy_history ORDER BY deployed_at DESC LIMIT 1"
+        "SELECT * FROM deploy_history ORDER BY deployed_at DESC, id DESC LIMIT 1"
     )
     row = cur.fetchone()
     return dict(row) if row else None
