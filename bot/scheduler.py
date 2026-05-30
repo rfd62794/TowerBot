@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from tools.content.channel import get_channel_summary, get_channel_summary_range
 from tools.productivity.calendar import get_today_schedule
-from tools.api.google_calendar_api import get_events_soon
+from api.google.calendar_api import get_events_soon
 from tools.communication.gmail import get_all_inbox_summary
 from infra.polling import polling_manager
 
@@ -487,7 +487,7 @@ async def health_check(send_fn) -> None:
 
     # Check 2 — YouTube credentials accessible?
     try:
-        from tools.api.youtube_api import _get_credentials
+        from api.google.youtube_api import _get_credentials
         creds = _get_credentials()
         if creds is None:
             issues.append("YouTube credentials missing")

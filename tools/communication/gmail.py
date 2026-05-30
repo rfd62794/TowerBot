@@ -7,7 +7,7 @@ from api.google.gmail_api import (
     get_messages_from,
     get_message_body,
 )
-from tools.api._handler import BaseTool
+from api._handler import BaseTool
 
 
 class GmailTools(BaseTool):
