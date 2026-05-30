@@ -145,6 +145,47 @@ def get_video_statistics(video_ids: list[str]) -> dict:
         return {"error": str(e)}
 
 
+def get_channel_uploads_playlist_id() -> dict:
+    """
+    Get the uploads playlist ID for the authenticated channel.
+
+    Returns:
+        Raw API response or error dict
+    """
+    try:
+        client = _build_data_client()
+        response = client.channels().list(
+            part="contentDetails",
+            mine=True
+        ).execute()
+        return {"raw": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_playlist_items(playlist_id: str, max_results: int = 10) -> dict:
+    """
+    Get items from a playlist.
+
+    Args:
+        playlist_id: YouTube playlist ID
+        max_results: Maximum results to return
+
+    Returns:
+        Raw API response or error dict
+    """
+    try:
+        client = _build_data_client()
+        response = client.playlistItems().list(
+            part="contentDetails",
+            playlistId=playlist_id,
+            maxResults=max_results
+        ).execute()
+        return {"raw": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def query_traffic_sources(start_date: str, end_date: str) -> dict:
     """
     Query YouTube Analytics for traffic sources (search terms).

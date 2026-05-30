@@ -13,6 +13,9 @@ from tools.api.youtube_api import (
     query_device_types,
     query_daily_views,
     query_geography,
+    get_channel_uploads_playlist_id,
+    get_playlist_items,
+    get_video_statistics,
 )
 
 
@@ -120,17 +123,26 @@ def get_top_videos(days: int = 7, limit: int = 10) -> dict:
     if cached:
         return cached
 
-    # Fetch fresh data using YouTube Data API v3 (Analytics v2 doesn't support video-level queries)
+    # Fetch fresh data using channel uploads playlist (no quota limit)
     try:
-        from tools.api.youtube_api import search_youtube, get_video_statistics
+        # Get channel's uploads playlist ID
+        playlist_response = get_channel_uploads_playlist_id()
+        if "error" in playlist_response:
+            return playlist_response
 
-        # Search for videos in the channel
-        search_response = search_youtube("", days, max_results=limit)
-        if "error" in search_response:
-            return search_response
+        playlist_data = playlist_response["raw"]
+        if not playlist_data.get("items"):
+            return {"error": "No channel data found"}
 
-        response = search_response["raw"]
-        video_ids = [item["id"]["videoId"] for item in response.get("items", [])]
+        uploads_playlist_id = playlist_data["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+
+        # Get recent videos from uploads playlist
+        items_response = get_playlist_items(uploads_playlist_id, max_results=limit)
+        if "error" in items_response:
+            return items_response
+
+        items_data = items_response["raw"]
+        video_ids = [item["contentDetails"]["videoId"] for item in items_data.get("items", [])]
 
         if not video_ids:
             return {
