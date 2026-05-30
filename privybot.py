@@ -5,11 +5,13 @@ Initializes the database, builds the app, injects the real Telegram
 send into the report layer, then polls.
 """
 
+import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from absolute path (critical for NSSM service)
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+load_dotenv(env_path)
 
-import os
 import asyncio
 import logging
 import time
