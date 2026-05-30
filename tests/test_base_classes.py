@@ -41,11 +41,28 @@ class MockAPIHandler(BaseAPIHandler):
         return {"client": "mock"}
 
 
+class BadHandler(BaseAPIHandler):
+    CACHE_PREFIX = ""
+
+    def _get_client(self):
+        return {"client": "bad"}
+
+
 @test("handler: cache_key returns namespaced key")
 def test_handler_cache_key():
     handler = MockAPIHandler()
     key = handler.cache_key("current")
     assert key == "mock_current", f"Expected 'mock_current', got '{key}'"
+
+
+@test("handler: cache_key raises if CACHE_PREFIX not set")
+def test_handler_cache_key_no_prefix():
+    handler = BadHandler()
+    try:
+        handler.cache_key("test")
+        assert False, "Should have raised NotImplementedError"
+    except NotImplementedError as e:
+        assert "must set CACHE_PREFIX" in str(e)
 
 
 @test("handler: hash delegates to cache.hash()")
@@ -100,6 +117,16 @@ def test_tool_success():
     assert result["temp_f"] == 72, "Expected temp_f=72"
     assert result["condition"] == "Clear", "Expected condition=Clear"
     assert result["stale_notice"] is None, "Expected stale_notice=None"
+
+
+@test("tool: success() strips internal keys from data")
+def test_tool_success_strips_internal():
+    tool = MockTool()
+    result = tool.success({"temp_f": 72, "_stale": True, "_cached_at": "2026-05-30"})
+    assert result["ok"] is True, "Expected ok=True"
+    assert result["temp_f"] == 72, "Expected temp_f=72"
+    assert "_stale" not in result, "Expected _stale stripped"
+    assert "_cached_at" not in result, "Expected _cached_at stripped"
 
 
 @test("tool: success() with stale_result extracts stale_notice")

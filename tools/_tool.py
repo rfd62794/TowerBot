@@ -25,7 +25,9 @@ class BaseTool:
         """
         from core.cache import cache
 
-        result = {"ok": True, "stale_notice": None, **data}
+        # Strip internal keys from data
+        clean = {k: v for k, v in data.items() if not k.startswith("_")}
+        result = {"ok": True, "stale_notice": None, **clean}
 
         if stale_result is not None:
             notice = cache.stale_notice(stale_result)
