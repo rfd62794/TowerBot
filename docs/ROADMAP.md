@@ -319,16 +319,23 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
     - BaseAPIHandler (tools/api/_handler.py) — base class for API clients
     - BaseTool (tools/_tool.py) — base class for tool functions
     - WAL mode enabled for concurrent access
-    - 157/157 tests passing
-  - **Migrated API files**:
+    - 165/165 tests passing
+  - **Migrated API files** (8/10):
     - weather_api.py — uses WeatherAPIHandler(BaseAPIHandler)
-  - **Pending API files**:
+    - ddg_api.py — uses DDGAPIHandler(BaseAPIHandler)
+    - wikipedia_api.py — uses WikipediaAPIHandler(BaseAPIHandler)
+    - reddit_api.py — uses RedditAPIHandler(BaseAPIHandler)
+    - fetch_api.py — uses FetchAPIHandler(BaseAPIHandler) — NEW
+  - **Pending API files** (2/10):
     - youtube_api.py — 6 hours (Analytics), 24 hours (Data)
     - steam_api.py — 24 hours
     - gmail_api.py — 5 minutes
     - google_calendar_api.py — 15 minutes
     - google_tasks_api.py — 5 minutes
-    - itad_api.py, steamspy_api.py, ddg_api.py, wikipedia_api.py, reddit_api.py
+    - itad_api.py, steamspy_api.py
+  - **New Tools Added**:
+    - fetch_url — browser tool for reading full web page content (requests + beautifulsoup4)
+    - think — scratchpad tool for context continuity across model switches
 - Phase 3 (Pending): Preloader on startup
   - scripts/preload.py — warm cache on bot startup
   - privybot.py _initial_sync — call run_preload()
@@ -360,6 +367,18 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 **Status**: Planned
 **Duration**: 1 week
 **Key Deliverables**:
+- RateLimitManager (core/rate_limits.py) — API rate limit tracking and quota awareness
+  - DB tables: api_rate_limits, api_call_log
+  - Singleton: rate_limits = RateLimitManager()
+  - BaseAPIHandler integration before live calls
+  - Known limits: YouTube (10k units/day), Gmail (5 req/sec), Steam (200 req/5min), etc.
+  - Quota visibility in /status command
+  - Proactive rate limit awareness before 429 errors
+- fetch_url — browser tool for reading full web page content (DONE, moved here from Phase 10)
+  - FetchAPIHandler(BaseAPIHandler) pattern
+  - requests + beautifulsoup4
+  - Cache per URL+max_chars, TTL 1h
+  - Removes noise elements (script, style, nav, header, footer, aside, form)
 - Return type changes: all API functions return dict (not int/list)
 - Tool unwrapping: tools/*.py unwrap dict data, add stale_notice
 - Caller audit: verify all tool callers handle dict returns
@@ -384,17 +403,21 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 
 ---
 
-## Phase 12 — DB Hardening 💾 PLANNED
+## Phase 12 — DB Hardening 💾 IN PROGRESS
 
-**Status**: Planned
+**Status**: In Progress
 **Duration**: 1 week
 **Key Deliverables**:
-- Connection pooling: SQLite connection pool for concurrent access
-- Transaction management: explicit BEGIN/COMMIT/ROLLBACK
-- Migration versioning: track schema versions, apply migrations incrementally
-- Vacuum/cleanup strategy: periodic VACUUM, index rebuild
-- Backup mechanism: automated backups to S3 or local
-- Connection health checks: detect and recover from stale connections
+- DBManager (core/db/manager.py) — DONE
+  - Single owner of database access with retry logic
+  - Exponential backoff for lock errors (0.1s, 0.2s, 0.4s, 0.8s, 1.6s)
+  - WAL mode coordination
+- Connection pooling: SQLite connection pool for concurrent access (planned)
+- Transaction management: explicit BEGIN/COMMIT/ROLLBACK (planned)
+- Migration versioning: track schema versions, apply migrations incrementally (planned)
+- Vacuum/cleanup strategy: periodic VACUUM, index rebuild (planned)
+- Backup mechanism: automated backups to S3 or local (planned)
+- Connection health checks: detect and recover from stale connections (planned)
 
 **Key Decisions**:
 - Pool size: 5 connections (balance resource vs concurrency)
@@ -455,9 +478,9 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 | Phase 7 — Tower | 🖥️ PLANNED | 0% |
 | Phase 8 — Publish | 📚 FUTURE | 0% |
 | Phase 9 — Local Model | 🤖 PLANNED | 0% |
-| Phase 10 — Offline Cache | 🔄 IN PROGRESS | 20% |
+| Phase 10 — Offline Cache | 🔄 IN PROGRESS | 30% |
 | Phase 11 — API Hardening | 🔒 PLANNED | 0% |
-| Phase 12 — DB Hardening | 💾 PLANNED | 0% |
+| Phase 12 — DB Hardening | 💾 IN PROGRESS | 10% |
 | Phase 13 — Logging | 📊 PLANNED | 0% |
 
 **Overall Progress**: 46% (6/13 phases complete)

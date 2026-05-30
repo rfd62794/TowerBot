@@ -18,6 +18,10 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - [ADR-010: Context Window Strategy](adr/ADR-010.md) — 10-message sliding window with thread isolation
 - [ADR-011: Tool Architecture](adr/ADR-011.md) — Tools as plug-ins with TOOL_REGISTRY pattern
 - [ADR-012: Morning Briefing Design](adr/ADR-012.md) — Template-based briefing with LLM anomaly analysis
+- [ADR-023: DBManager](adr/ADR-023.md) — Single owner of database access with retry logic
+- [ADR-024: fetch_url Browser Tool](adr/ADR-024.md) — Browser tool for reading full web page content
+- [ADR-025: think Scratchpad Tool](adr/ADR-025.md) — Scratchpad tool for context continuity
+- [ADR-026: RateLimitManager Layer](adr/ADR-026.md) — API rate limit tracking and quota awareness (planned)
 
 ## Layer Overview
 
@@ -69,9 +73,21 @@ This document is supplemented by ADRs that capture key architectural decisions:
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
+│ Layer 7b: RateLimitManager (core/rate_limits.py)            │
+│ API rate limit tracking, quota awareness, call logging      │
+│ (planned, not yet built)                                    │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
 │ Layer 8: API Clients (tools/api/*.py)                       │
 │ Raw HTTP calls, auth, response parsing                      │
 │ BaseAPIHandler: CACHE_PREFIX, call(), hash()                │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 9: Meta Tools (tools/meta.py)                         │
+│ Scratchpad tools, no API calls, no caching                  │
+│ think() — context continuity across model switches          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -357,6 +373,30 @@ This document is supplemented by ADRs that capture key architectural decisions:
 **Never imports:**
 - API layers, tool layers
 
+### Layer 7b: RateLimitManager (`core/rate_limits.py`)
+
+**Responsibility:** API rate limit tracking and quota awareness
+
+- Track API rate limits per service
+- Log all API calls for usage analysis
+- Provide quota visibility in `/status` command
+- Proactive rate limit awareness before 429 errors
+- Graceful degradation when approaching limits
+
+**Planned Features:**
+- DB tables: `api_rate_limits`, `api_call_log`
+- Singleton: `rate_limits = RateLimitManager()`
+- BaseAPIHandler integration before live calls
+- Known limits: YouTube (10k units/day), Gmail (5 req/sec), Steam (200 req/5min), etc.
+
+**Status:** Planned (not yet built)
+
+**Imports:**
+- `core.db.*` (Layer 5) — for rate limit storage
+
+**Never imports:**
+- API layers, tool layers
+
 ### Layer 8: API Clients (`tools/api/*.py`)
 
 **Responsibility:** Raw HTTP calls only
@@ -396,6 +436,32 @@ class WeatherAPIHandler(BaseAPIHandler):
 
 **Never imports:**
 - Tool layers, business logic
+
+### Layer 9: Meta Tools (`tools/meta.py`)
+
+**Responsibility:** Scratchpad tools for agent reasoning
+
+- Simple functions with no API calls
+- No caching, no staleness, no side effects
+- Context continuity across model switches
+- think() — visible reasoning before complex actions
+
+**Why not BaseTool:**
+- BaseTool exists for API-calling tools with caching
+- think has no network, no cache, no stale data
+- Forcing BaseTool adds noise without benefit
+
+**Context Continuity:**
+- think() creates conversation history record
+- Model-agnostic — any model sees past thoughts
+- Throttled model switches preserve context
+- New model reads thoughts and continues plan
+
+**Imports:**
+- None (pure functions)
+
+**Never imports:**
+- Any other layers
 
 ### Model Manager (`model_manager.py`)
 

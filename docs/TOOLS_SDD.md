@@ -415,12 +415,112 @@ from tools.api.ddg_api import search_web, search_news
 from tools.api.wikipedia_api import get_summary
 from tools.api.reddit_api import search_reddit
 from tools.api.weather_api import get_current_weather
+from tools.api.fetch_api import fetch_api
 
 def web_search(query: str) -> dict
 def news_search(query: str) -> dict
 def wiki_lookup(topic: str) -> dict
 def reddit_search(query: str) -> dict
 def get_weather(location: str) -> dict
+def fetch_url(url: str, max_chars: int = 3000) -> dict
+```
+
+**tools/meta.py**
+```python
+# Meta tools — scratchpad for agent reasoning
+def think(thought: str) -> dict
+```
+
+### fetch_url — Browser Tool
+
+**Purpose:** Fetch and read the full text content of a web page from a URL.
+
+**Pattern:** FetchAPIHandler(BaseAPIHandler)
+
+**Implementation:**
+- Uses `requests` (not httpx) for consistency with weather_api.py
+- Uses `beautifulsoup4` for HTML parsing
+- Cache key: hash(url, max_chars) — includes max_chars to distinguish different truncation levels
+- TTL: 3600 seconds (1 hour per URL)
+- Removes noise elements: script, style, nav, header, footer, aside, form tags
+- Extracts title from page title tag
+- Extracts text content with BeautifulSoup.get_text()
+- Normalizes whitespace with regex: `re.sub(r'\s+', ' ', text).strip()`
+
+**Return Shape:**
+```python
+{
+    "ok": True,
+    "stale_notice": None | str,
+    "url": str,
+    "title": str,
+    "content": str,  # First max_chars characters
+    "char_count": int,
+    "truncated": bool  # True if content exceeds max_chars
+}
+```
+
+**Cache Strategy:**
+- Cached per unique URL+max_chars combination
+- Stale page content served on API failure (stale_ok=True)
+- 1-hour TTL reduces repeated fetches of same page
+
+**Truncation Policy:**
+- Default max_chars: 3000
+- User can override up to 5000 characters
+- Truncated flag indicates more content exists
+
+**When to Use:**
+- After web_search or wiki_lookup returns a URL
+- User asks "what does that article say" or "read that page"
+- Search snippet is clearly incomplete
+- Never fetch without a URL from a prior search result
+- Never fetch login-required pages
+
+### think — Scratchpad Tool
+
+**Purpose:** Record a reasoning step before acting. Creates visible context that persists across model switches.
+
+**Pattern:** Simple function (not BaseTool)
+
+**Why Not BaseTool:**
+- BaseTool exists for API-calling tools with caching
+- think has no network, no cache, no stale data
+- Forcing BaseTool adds noise without benefit
+
+**Implementation:**
+- Pure function with no side effects
+- No database writes
+- No caching
+- Returns immediately
+
+**Return Shape:**
+```python
+{
+    "ok": True,
+    "thought": str,
+    "stale_notice": None
+}
+```
+
+**Context Continuity Benefit:**
+- think() creates conversation history record
+- Model-agnostic — any model sees past thoughts
+- When DeepSeek throttles and Llama picks up, the new model reads thoughts and continues the plan
+- Throttled model switches preserve context
+
+**When to Use:**
+- Before complex tool chains requiring multiple steps
+- When the question requires planning before executing
+- When switching between topics or resuming after tool failure
+- For genuinely complex multi-step reasoning only
+- NOT for every single message
+
+**Example:**
+```
+think("I need to find the top video first, then check its retention curve to see where viewers drop.")
+→ call get_top_videos()
+→ call get_retention_curve()
 ```
 
 ### Response Format
