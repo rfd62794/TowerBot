@@ -210,6 +210,17 @@ async def morning_briefing(send_fn) -> None:
         except Exception as e:
             logger.debug(f"Personal tasks check failed: {e}")
 
+        # Add weather
+        try:
+            from tools.search.search_tools import get_weather
+            weather = get_weather()
+            if not weather.get("_live_failed"):
+                temp = weather.get("temp_f", "?")
+                condition = weather.get("condition", "")
+                msg += f"\n\n{temp}°F, {condition}, South Florida."
+        except Exception as e:
+            logger.debug(f"Weather check failed: {e}")
+
         # Add weekly focus
         try:
             weekly_plan = get_current_weekly_plan()
