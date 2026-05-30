@@ -74,6 +74,22 @@ def test_get_last_deploy_returns_dict():
     assert "deployed_at" in last
 
 
+_TEST_HASHES = ["abc1234", "def5678", "ghi9012", "jkl3456"]
+
+
+def _teardown():
+    """Remove test deploy records so they don't poison the health check."""
+    try:
+        from core.db.schema import _exec
+        placeholders = ",".join("?" * len(_TEST_HASHES))
+        _exec(
+            f"DELETE FROM deploy_history WHERE commit_hash IN ({placeholders})",
+            tuple(_TEST_HASHES),
+        )
+    except Exception:
+        pass
+
+
 def run_all() -> tuple[int, int]:
     passed = 0
     failed = 0
@@ -85,6 +101,7 @@ def run_all() -> tuple[int, int]:
         except Exception as e:
             print(f"✗ deployments: {fn.__name__.replace('test_', '').replace('_', ' ')} — {e}")
             failed += 1
+    _teardown()
     return passed, failed
 
 
