@@ -23,11 +23,11 @@ import time
 if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from core.db import init_db
-from core.report import init_report
-from core.transport import handle_message
-from core.scheduler import run_scheduler, check_missed_briefing
-from core.polling import polling_manager
+from infra.db import init_db
+from bot.report import init_report
+from bot.transport import handle_message
+from bot.scheduler import run_scheduler, check_missed_briefing
+from infra.polling import polling_manager
 from telegram.ext import ApplicationBuilder, MessageHandler, filters
 from telegram.request import HTTPXRequest
 
@@ -64,7 +64,7 @@ def _validate_startup() -> None:
 
     # Check database accessibility
     try:
-        from core.db import DB_PATH
+        from infra.db import DB_PATH
         if not os.path.exists(DB_PATH):
             errors.append(f"Database not found at {DB_PATH}")
     except Exception as e:

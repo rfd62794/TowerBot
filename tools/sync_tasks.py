@@ -8,7 +8,7 @@ from tools.api.google_tasks_api import (
     push_task,
     complete_task,
 )
-from core.db.personal_tasks import (
+from infra.db.personal_tasks import (
     get_unsynced_tasks,
     set_google_task_id,
     get_tasks_completed_since,

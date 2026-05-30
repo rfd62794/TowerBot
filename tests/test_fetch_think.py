@@ -3,14 +3,14 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 
 def _reset_fetch_rate_limit():
     """Reset fetch rate limit state for clean test runs."""
     try:
-        from core.db.rate_limits_db import upsert_api_state
+        from infra.db.rate_limits_db import upsert_api_state
         upsert_api_state(
             "fetch",
             calls_this_minute=0,
@@ -68,7 +68,7 @@ def test_fetch_url_truncation():
 @test("fetch: fetch_url cached on second call")
 def test_fetch_url_cache():
     from tools.search_tools import fetch_url
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     # Clear cache for this URL
     _exec("DELETE FROM tool_cache WHERE tool_name LIKE 'fetch%'", commit=True)
     

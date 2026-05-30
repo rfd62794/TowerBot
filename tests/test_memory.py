@@ -10,7 +10,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 TESTS = []
@@ -30,7 +30,7 @@ def run_all() -> tuple[int, int]:
 
 @test("memory: tool_save_memory returns correct shape")
 def test_save_shape():
-    from core.memory import tool_save_memory
+    from bot.memory import tool_save_memory
     result = tool_save_memory("test_mem_key", "test content", "technical")
     assert isinstance(result, dict), "Expected dict return"
     assert result.get("status") == "saved", f"Expected status='saved', got {result}"
@@ -40,7 +40,7 @@ def test_save_shape():
 
 @test("memory: tool_update_memory returns correct shape")
 def test_update_shape():
-    from core.memory import tool_save_memory, tool_update_memory
+    from bot.memory import tool_save_memory, tool_update_memory
     tool_save_memory("test_mem_update_key", "original content", "project")
     result = tool_update_memory("test_mem_update_key", "updated content", "test reason")
     assert isinstance(result, dict), "Expected dict return"
@@ -50,8 +50,8 @@ def test_update_shape():
 
 @test("memory: tool_retire_memory marks inactive")
 def test_retire():
-    from core.memory import tool_save_memory, tool_retire_memory
-    from core.db import list_memories
+    from bot.memory import tool_save_memory, tool_retire_memory
+    from infra.db import list_memories
     tool_save_memory("test_mem_retire_key", "to be retired", "personal")
     result = tool_retire_memory("test_mem_retire_key", "test retirement")
     assert isinstance(result, dict), "Expected dict return"
@@ -63,7 +63,7 @@ def test_retire():
 
 @test("memory: tool_get_memories returns results for known key")
 def test_get_memories():
-    from core.memory import tool_save_memory, tool_get_memories
+    from bot.memory import tool_save_memory, tool_get_memories
     tool_save_memory("test_mem_search_key", "searchable content xyz", "technical")
     result = tool_get_memories("searchable content xyz")
     assert isinstance(result, dict), "Expected dict return"
@@ -73,7 +73,7 @@ def test_get_memories():
 
 @test("memory: invalid layer rejected")
 def test_invalid_layer():
-    from core.memory import tool_save_memory
+    from bot.memory import tool_save_memory
     result = tool_save_memory("test_bad_layer", "content", "invalid_layer_xyz")
     assert isinstance(result, dict), "Expected dict return"
     assert result.get("status") == "error", \
@@ -82,8 +82,8 @@ def test_invalid_layer():
 
 @test("memory: tool_get_memories queries seeded data")
 def test_get_seeded_memories():
-    from core.memory import tool_get_memories
-    from core.db.schema import _exec
+    from bot.memory import tool_get_memories
+    from infra.db.schema import _exec
     # Verify seeded data exists
     rows = _exec("SELECT key, content, layer FROM memory WHERE active = 1").fetchall()
     assert len(rows) > 0, "Expected seeded memories in database"

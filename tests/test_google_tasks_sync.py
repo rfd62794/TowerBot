@@ -10,7 +10,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 TESTS = []
@@ -75,7 +75,7 @@ def test_push_delete_task():
 
 @test("sync: tasks_sync table exists")
 def test_tasks_sync_table():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     row = _exec(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='tasks_sync'"
     ).fetchone()

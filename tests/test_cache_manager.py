@@ -10,10 +10,10 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
-from core.cache import cache
+from infra.cache import cache
 
 TESTS = []
 
@@ -71,7 +71,7 @@ def test_set_get_roundtrip():
 
 @test("cache: get() returns None after TTL expired")
 def test_get_expired():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     from datetime import datetime, timedelta
 
     # Insert with past timestamp
@@ -97,7 +97,7 @@ def test_get_or_stale_never_cached():
 
 @test("cache: get_or_stale() returns stale data after TTL expired")
 def test_get_or_stale_stale():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     from datetime import datetime, timedelta
 
     # Insert with past timestamp
@@ -153,7 +153,7 @@ def test_call_cached():
 
 @test("cache: call() returns stale on live failure when stale exists")
 def test_call_stale_fallback():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     from datetime import datetime, timedelta
 
     # Insert stale data
@@ -188,7 +188,7 @@ def test_call_no_stale():
 
 @test("cache: call() returns error dict when stale_ok=False even with stale data")
 def test_call_stale_not_ok():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     from datetime import datetime, timedelta
 
     # Insert stale data

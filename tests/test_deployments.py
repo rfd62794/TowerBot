@@ -18,7 +18,7 @@ def test(fn):
 
 @test
 def test_deploy_history_table_exists():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     cur = _exec(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='deploy_history'"
     )
@@ -28,7 +28,7 @@ def test_deploy_history_table_exists():
 
 @test
 def test_record_deploy_creates_entry():
-    from core.db import record_deploy, get_last_deploy
+    from infra.db import record_deploy, get_last_deploy
     deploy_id = record_deploy("abc1234", "test: record deploy")
     assert isinstance(deploy_id, int) and deploy_id > 0
     last = get_last_deploy()
@@ -41,7 +41,7 @@ def test_record_deploy_creates_entry():
 
 @test
 def test_mark_stable_updates_entry():
-    from core.db import record_deploy, mark_verify_passed, mark_stable, get_last_deploy
+    from infra.db import record_deploy, mark_verify_passed, mark_stable, get_last_deploy
     deploy_id = record_deploy("def5678", "test: mark stable")
     mark_verify_passed(deploy_id)
     mark_stable(deploy_id)
@@ -52,7 +52,7 @@ def test_mark_stable_updates_entry():
 
 @test
 def test_get_last_stable_commit_returns_dict():
-    from core.db import record_deploy, mark_verify_passed, mark_stable, get_last_stable_commit
+    from infra.db import record_deploy, mark_verify_passed, mark_stable, get_last_stable_commit
     deploy_id = record_deploy("ghi9012", "test: stable commit")
     mark_verify_passed(deploy_id)
     mark_stable(deploy_id)
@@ -65,7 +65,7 @@ def test_get_last_stable_commit_returns_dict():
 
 @test
 def test_get_last_deploy_returns_dict():
-    from core.db import record_deploy, get_last_deploy
+    from infra.db import record_deploy, get_last_deploy
     record_deploy("jkl3456", "test: last deploy")
     last = get_last_deploy()
     assert last is not None
@@ -80,7 +80,7 @@ _TEST_HASHES = ["abc1234", "def5678", "ghi9012", "jkl3456"]
 def _teardown():
     """Remove test deploy records so they don't poison the health check."""
     try:
-        from core.db.schema import _exec
+        from infra.db.schema import _exec
         placeholders = ",".join("?" * len(_TEST_HASHES))
         _exec(
             f"DELETE FROM deploy_history WHERE commit_hash IN ({placeholders})",

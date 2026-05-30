@@ -10,7 +10,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 from tools.api._handler import BaseAPIHandler

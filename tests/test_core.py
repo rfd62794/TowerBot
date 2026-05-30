@@ -10,7 +10,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 TESTS = []
@@ -30,7 +30,7 @@ def run_all() -> tuple[int, int]:
 
 @test("core: model_manager discovers free models")
 def test_fetch_models():
-    from core.model_manager import fetch_free_tool_models
+    from bot.model_manager import fetch_free_tool_models
     models = fetch_free_tool_models()
     assert isinstance(models, list), "Expected list of models"
     assert len(models) >= 5, f"Expected 5+ models, got {len(models)}"
@@ -38,7 +38,7 @@ def test_fetch_models():
 
 @test("core: get_available_model returns a model or None (not exception)")
 def test_get_available_model():
-    from core.model_manager import get_available_model
+    from bot.model_manager import get_available_model
     result = get_available_model()
     assert result is None or isinstance(result, str), \
         f"Expected str or None, got {type(result)}"
@@ -46,7 +46,7 @@ def test_get_available_model():
 
 @test("core: TOOL_INCOMPATIBLE excludes owl-alpha")
 def test_tool_incompatible():
-    from core.model_manager import TOOL_INCOMPATIBLE
+    from bot.model_manager import TOOL_INCOMPATIBLE
     assert "openrouter/owl-alpha" in TOOL_INCOMPATIBLE, \
         "owl-alpha should be in TOOL_INCOMPATIBLE"
     assert "z-ai/glm-4.5-air:free" in TOOL_INCOMPATIBLE, \
@@ -55,7 +55,7 @@ def test_tool_incompatible():
 
 @test("core: should_send_now returns bool")
 def test_should_send_now():
-    from core.scheduler import should_send_now
+    from bot.scheduler import should_send_now
     assert callable(should_send_now), "should_send_now not callable"
     result = should_send_now("normal")
     assert isinstance(result, bool), \
@@ -64,7 +64,7 @@ def test_should_send_now():
 
 @test("core: should_send_now blocks urgent during sleep hours logic")
 def test_should_send_now_urgent():
-    from core.scheduler import should_send_now
+    from bot.scheduler import should_send_now
     result_urgent = should_send_now("urgent")
     result_normal = should_send_now("normal")
     assert isinstance(result_urgent, bool), "Expected bool for urgent"
@@ -74,7 +74,7 @@ def test_should_send_now_urgent():
 @test("core: heartbeat_check runs without error")
 def test_heartbeat():
     import asyncio
-    from core.scheduler import heartbeat_check
+    from bot.scheduler import heartbeat_check
 
     async def fake_send(msg):
         return None

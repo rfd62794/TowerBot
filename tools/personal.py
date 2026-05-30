@@ -3,7 +3,7 @@
 import re
 from datetime import datetime, timedelta
 
-from core.db.personal_tasks import (
+from infra.db.personal_tasks import (
     add_personal_task as _db_add,
     get_personal_tasks as _db_get,
     complete_personal_task as _db_complete,
@@ -136,7 +136,7 @@ def add_personal_task(
     try:
         from tools.sync_tasks import get_or_cache_tasklist_id
         from tools.api.google_tasks_api import push_task as _push_gtask
-        from core.db.personal_tasks import set_google_task_id
+        from infra.db.personal_tasks import set_google_task_id
         tasklist_id = get_or_cache_tasklist_id()
         if tasklist_id:
             g_result = _push_gtask(tasklist_id, title=title, notes=notes, due=due_date)

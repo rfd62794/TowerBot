@@ -10,7 +10,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 TESTS = []
@@ -105,7 +105,7 @@ def test_weather():
 @test("search: get_weather records to weather_history")
 def test_weather_history():
     from tools.search_tools import get_weather
-    from core.db import get_weather_history
+    from infra.db import get_weather_history
     from datetime import datetime
     result = get_weather()
     assert "error" not in result, f"Weather call failed: {result.get('error')}"

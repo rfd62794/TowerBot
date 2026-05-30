@@ -10,7 +10,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 TESTS = []
@@ -32,7 +32,7 @@ _TEST_TASK_TITLES = [
 def _teardown():
     """Remove test personal tasks so they don't show up in heartbeat reminders."""
     try:
-        from core.db.schema import _exec
+        from infra.db.schema import _exec
         for title in _TEST_TASK_TITLES:
             _exec("DELETE FROM personal_tasks WHERE title = ?", (title,), commit=True)
         _exec(
@@ -53,7 +53,7 @@ def run_all() -> tuple[int, int]:
 
 @test("personal: personal_tasks table exists")
 def test_table_exists():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     row = _exec(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='personal_tasks'"
     ).fetchone()
@@ -62,7 +62,7 @@ def test_table_exists():
 
 @test("personal: task_reminders table exists")
 def test_reminders_table_exists():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     row = _exec(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='task_reminders'"
     ).fetchone()
@@ -71,7 +71,7 @@ def test_reminders_table_exists():
 
 @test("personal: add_personal_task creates entry")
 def test_add_task():
-    from core.db.personal_tasks import add_personal_task, get_personal_tasks
+    from infra.db.personal_tasks import add_personal_task, get_personal_tasks
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
     task_id = add_personal_task("Test dentist call", due_date=today)
@@ -83,7 +83,7 @@ def test_add_task():
 
 @test("personal: add_personal_task with recurrence")
 def test_add_task_recurrence():
-    from core.db.personal_tasks import add_personal_task
+    from infra.db.personal_tasks import add_personal_task
     task_id = add_personal_task(
         "YouTube analytics review",
         recurrence="weekly:monday",
@@ -93,7 +93,7 @@ def test_add_task_recurrence():
 
 @test("personal: list_personal_tasks today filter works")
 def test_list_today():
-    from core.db.personal_tasks import add_personal_task
+    from infra.db.personal_tasks import add_personal_task
     from tools.personal import list_personal_tasks
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
@@ -107,7 +107,7 @@ def test_list_today():
 
 @test("personal: complete_personal_task marks done")
 def test_complete_task():
-    from core.db.personal_tasks import add_personal_task, complete_personal_task
+    from infra.db.personal_tasks import add_personal_task, complete_personal_task
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
     task_id = add_personal_task("Complete me task", due_date=today)
@@ -119,7 +119,7 @@ def test_complete_task():
 
 @test("personal: complete_personal_task recurring generates next occurrence")
 def test_complete_recurring():
-    from core.db.personal_tasks import (
+    from infra.db.personal_tasks import (
         add_personal_task, complete_personal_task, get_personal_tasks
     )
     from datetime import datetime
@@ -139,7 +139,7 @@ def test_complete_recurring():
 
 @test("personal: snooze pushes due_datetime forward")
 def test_snooze():
-    from core.db.personal_tasks import add_personal_task, snooze_personal_task
+    from infra.db.personal_tasks import add_personal_task, snooze_personal_task
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
     task_id = add_personal_task("Snooze me", due_date=today, due_time="09:00")
@@ -152,7 +152,7 @@ def test_snooze():
 
 @test("personal: get_tasks_due_soon returns correct window")
 def test_tasks_due_soon():
-    from core.db.personal_tasks import add_personal_task, get_tasks_due_soon
+    from infra.db.personal_tasks import add_personal_task, get_tasks_due_soon
     from datetime import datetime, timedelta
     soon = datetime.now() + timedelta(minutes=30)
     due_date = soon.strftime("%Y-%m-%d")
