@@ -1,0 +1,56 @@
+current_week:
+  period: "2026-05-26 to 2026-06-01"
+  focus: "Tower deploy + PrivyBot hardening"
+  goals_advancing:
+    - palm_beach_2036
+    - privybot_complete
+    - reactreel_growth
+    - content_calendar
+  tasks:
+    - id: task_001
+      title: Deploy PrivyBot to Tower via NSSM
+      due: "2026-06-01"
+      status: pending
+      scheduled: null
+      milestone_id: tower_deploy
+    - id: task_002
+      title: Ship ReactReel OAuth hardening
+      due: "2026-06-01"
+      status: in_progress
+      scheduled: null
+      milestone_id: oauth_hardening
+    - id: task_003
+      title: Record two EIC Shorts
+      due: "2026-05-31"
+      status: pending
+      scheduled: "2026-05-30 19:00"
+      milestone_id: may_shorts
+    - id: task_004
+      title: Complete Goals and Plans system
+      due: "2026-05-30"
+      status: in_progress
+      scheduled: null
+      milestone_id: goals_system
+    - id: task_005
+      title: Commit PrivyBot before midnight
+      due: "2026-05-30"
+      status: pending
+      scheduled: null
+      milestone_id: tower_deploy
+
+recurring:
+  - id: rec_001
+    title: Warrior session
+    schedule: "friday,saturday"
+    time: "evening"
+    reminder_minutes: 60
+  - id: rec_002
+    title: YouTube analytics review
+    schedule: "monday"
+    time: "09:00"
+    reminder_minutes: 30
+  - id: rec_003
+    title: Weekly goal review
+    schedule: "sunday"
+    time: "20:00"
+    reminder_minutes: 60

@@ -380,5 +380,49 @@ def test_should_send_now():
     assert isinstance(result, bool), "should_send_now should return bool"
 
 
+@test("db: goals table exists")
+def test_goals_table():
+    conn = sqlite3.connect("privy.db")
+    tables = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    ).fetchall()
+    table_names = [t[0] for t in tables]
+    assert "goals" in table_names, "goals table missing"
+    assert "milestones" in table_names, "milestones table missing"
+    assert "tasks" in table_names, "tasks table missing"
+    assert "weekly_plans" in table_names, "weekly_plans table missing"
+    conn.close()
+
+
+@test("goals: seed_goals runs without error")
+def test_seed_goals():
+    from core.db import init_db
+    import sys
+    import os
+    
+    init_db()
+    
+    # Run seed script
+    seed_path = os.path.join(os.path.dirname(__file__), "..", "scripts", "seed_goals.py")
+    result = subprocess.run(
+        ["uv", "run", "python", seed_path],
+        capture_output=True,
+        text=True,
+        timeout=30
+    )
+    
+    assert result.returncode == 0, f"Seed script failed: {result.stderr}"
+    assert "Seed complete" in result.stdout, "Seed script did not complete"
+
+
+@test("goals: get_tasks_due_today returns list")
+def test_get_tasks_due_today():
+    from core.db import init_db, get_tasks_due_today
+    init_db()
+    
+    tasks = get_tasks_due_today()
+    assert isinstance(tasks, list), "get_tasks_due_today should return list"
+
+
 if __name__ == "__main__":
     run_all()

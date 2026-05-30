@@ -1,0 +1,109 @@
+goals:
+  - id: palm_beach_2036
+    title: Palm Beach Island Office
+    description: >
+      Work from a private office on Palm Beach Island by June 27, 2036.
+      Age 42. This is the 10-year vision.
+    deadline: 2036-06-27
+    status: active
+    progress_pct: 5
+    notes: Requires financial independence through SaaS and consulting
+    milestones:
+      - id: first_saas_customer
+        title: First ReactReel paying customer
+        deadline: 2026-08-08
+        status: in_progress
+        notes: Ship OAuth hardening, onboard yourself, collect first payment
+      - id: automation_engineer
+        title: Automation Engineer title
+        deadline: 2027-05-30
+        status: not_started
+        notes: Transition from generalist to specialist
+      - id: first_consulting_client
+        title: RFD IT Services first client
+        deadline: 2026-12-31
+        status: not_started
+        notes: Build consulting practice around automation
+
+  - id: privybot_complete
+    title: PrivyBot Personal AI System
+    description: >
+      Build a complete personal AI assistant that lives on your hardware,
+      knows you deeply, and costs nothing to run.
+    deadline: 2026-12-31
+    status: active
+    progress_pct: 50
+    notes: 4/8 phases complete (Core, Intelligence, Data, Proactive)
+    milestones:
+      - id: tower_deploy
+        title: Deploy PrivyBot to Tower
+        deadline: 2026-06-01
+        status: in_progress
+        notes: NSSM service, 24/7 uptime, no laptop dependency
+      - id: calendar_integration
+        title: Calendar + Schedule integration
+        deadline: 2026-06-15
+        status: not_started
+        notes: YouTube calendar, Google Calendar, video metadata
+      - id: goals_system
+        title: Goals and Plans system
+        deadline: 2026-06-01
+        status: in_progress
+        notes: This current work
+      - id: publish_guide
+        title: Publish "Build Your Own Personal AI" guide
+        deadline: 2026-12-31
+        status: not_started
+        notes: Gumroad, primitives extracted, open-source
+
+  - id: reactreel_growth
+    title: ReactReel SaaS Growth
+    description: >
+      Grow ReactReel to first paying customer and beyond.
+      Focus on OAuth hardening and user onboarding.
+    deadline: 2026-08-08
+    status: active
+    progress_pct: 30
+    notes: Currently in beta phase
+    milestones:
+      - id: oauth_hardening
+        title: OAuth hardening complete
+        deadline: 2026-06-01
+        status: in_progress
+        notes: Secure OAuth flow, token management
+      - id: first_user
+        title: First beta user (yourself)
+        deadline: 2026-06-15
+        status: not_started
+        notes: Dogfood the product
+      - id: first_payment
+        title: First payment collected
+        deadline: 2026-08-08
+        status: not_started
+        notes: Stripe integration, pricing confirmed
+
+  - id: content_calendar
+    title: Content Calendar Consistency
+    description: >
+      Maintain consistent content schedule across YouTube and other platforms.
+      Target: 8 EIC Shorts per month, regular long-form content.
+    deadline: 2026-12-31
+    status: active
+    progress_pct: 40
+    notes: EIC Shorts are the primary content format
+    milestones:
+      - id: may_shorts
+        title: 8 EIC Shorts in May
+        deadline: 2026-05-31
+        status: in_progress
+        notes: 2 sessions remaining
+      - id: june_shorts
+        title: 8 EIC Shorts in June
+        deadline: 2026-06-30
+        status: not_started
+        notes: Plan recording schedule
+      - id: analytics_review
+        title: Weekly YouTube analytics review
+        deadline: 2026-06-30
+        status: not_started
+        notes: Every Monday morning

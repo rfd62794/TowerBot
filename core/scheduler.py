@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 from tools.youtube import get_channel_summary, get_channel_summary_range
 from core.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
-    queue_observation, get_pending_observations, mark_sent, flush_morning_queue
+    queue_observation, get_pending_observations, mark_sent, flush_morning_queue,
+    get_upcoming_scheduled, get_tasks_due_today, get_current_weekly_plan
 )
 
 logger = logging.getLogger("privy.scheduler")
@@ -134,6 +135,27 @@ async def morning_briefing(send_fn) -> None:
         except Exception:
             pass
 
+        # Add today's tasks section
+        try:
+            tasks_today = get_tasks_due_today()
+            if tasks_today:
+                msg += f"\n\n📋 Today's Tasks ({len(tasks_today)}):"
+                for task in tasks_today:
+                    status_icon = "✓" if task["status"] == "complete" else "○"
+                    msg += f"\n{status_icon} {task['title']}"
+                    if task.get("scheduled_at"):
+                        msg += f" at {task['scheduled_at'][11:16]}"
+        except Exception as e:
+            logger.debug(f"Tasks check failed: {e}")
+
+        # Add weekly focus
+        try:
+            weekly_plan = get_current_weekly_plan()
+            if weekly_plan:
+                msg += f"\n\n🎯 Weekly Focus: {weekly_plan['focus']}"
+        except Exception as e:
+            logger.debug(f"Weekly plan check failed: {e}")
+
         await send_fn(msg)
         logger.info("Morning briefing sent successfully")
 
@@ -160,6 +182,8 @@ async def heartbeat_check(send_fn) -> None:
     - Commitments due today
     - Content calendar gap
     - Game player count spikes
+    - Tasks scheduled in next 60 minutes
+    - Overdue tasks
     - Flushes pending queue based on time/priority
     """
     try:
@@ -222,7 +246,35 @@ async def heartbeat_check(send_fn) -> None:
         except Exception as e:
             logger.debug(f"Game trend check failed: {e}")
         
-        # Check 4 — flush pending queue
+        # Check 4 — tasks scheduled in next 60 minutes
+        try:
+            upcoming = get_upcoming_scheduled(hours=1)
+            for task in upcoming:
+                if task.get("scheduled_at"):
+                    scheduled_time = datetime.fromisoformat(task["scheduled_at"])
+                    minutes_until = (scheduled_time - now).total_seconds() / 60
+                    if 0 < minutes_until <= 60:
+                        await send_fn(f"⏰ Reminder: {task['title']} in {int(minutes_until)} minutes")
+                        logger.info(f"Sent task reminder: {task['title']}")
+        except Exception as e:
+            logger.debug(f"Task reminder check failed: {e}")
+        
+        # Check 5 — overdue tasks
+        try:
+            today = now.strftime("%Y-%m-%d")
+            from core.db import get_tasks
+            overdue = get_tasks(status="pending")
+            for task in overdue:
+                if task["due_date"] < today:
+                    queue_observation(
+                        "overdue_task",
+                        f"⚠️ Overdue: {task['title']} was due {task['due_date']}",
+                        priority="high"
+                    )
+        except Exception as e:
+            logger.debug(f"Overdue task check failed: {e}")
+        
+        # Check 6 — flush pending queue
         pending = get_pending_observations()
         for obs in pending:
             if should_send_now(obs["priority"]):
