@@ -4,7 +4,16 @@ import hashlib
 import json
 from datetime import datetime, timedelta
 from core.db import cache_tool_result, get_cached_tool_result
-from tools.api.youtube_api import query_channel_report, query_video_report
+from tools.api.youtube_api import (
+    query_channel_report,
+    query_video_report,
+    query_traffic_sources,
+    query_demographics,
+    query_retention_curve,
+    query_device_types,
+    query_daily_views,
+    query_geography,
+)
 
 
 def _hash_params(params: dict) -> str:
@@ -202,6 +211,338 @@ def get_video_analytics(video_id: str, days: int = 28) -> dict:
 
         # Cache result (6 hour TTL)
         cache_tool_result("get_video_analytics", params_hash, result, ttl_hours=6)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_traffic_sources(days: int = 28) -> dict:
+    """
+    Get top search terms that find your videos.
+
+    Args:
+        days: Number of days to look back (default: 28)
+
+    Returns:
+        Dict with top search terms and view counts
+    """
+    # Check cache
+    params = {"days": days}
+    params_hash = _hash_params(params)
+    cached = get_cached_tool_result("get_traffic_sources", params_hash)
+    if cached:
+        return cached
+
+    # Fetch fresh data
+    try:
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        api_response = query_traffic_sources(start, end)
+        if "error" in api_response:
+            return api_response
+
+        response = api_response["raw"]
+        rows = response.get("rows", [])
+        top_terms = []
+        for row in rows:
+            top_terms.append({
+                "term": row[0],
+                "views": int(row[1])
+            })
+
+        result = {
+            "top_search_terms": top_terms,
+            "period_days": days,
+        }
+
+        # Cache result (6 hour TTL)
+        cache_tool_result("get_traffic_sources", params_hash, result, ttl_hours=6)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_audience_demographics(days: int = 28) -> dict:
+    """
+    Get audience demographics by age and gender.
+
+    Args:
+        days: Number of days to look back (default: 28)
+
+    Returns:
+        Dict with age groups and gender breakdown
+    """
+    # Check cache
+    params = {"days": days}
+    params_hash = _hash_params(params)
+    cached = get_cached_tool_result("get_audience_demographics", params_hash)
+    if cached:
+        return cached
+
+    # Fetch fresh data
+    try:
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        api_response = query_demographics(start, end)
+        if "error" in api_response:
+            return api_response
+
+        response = api_response["raw"]
+        rows = response.get("rows", [])
+        
+        age_groups = {}
+        gender = {}
+        
+        for row in rows:
+            age_group = row[0]
+            gender_type = row[1]
+            viewer_pct = float(row[2])
+            
+            if age_group not in age_groups:
+                age_groups[age_group] = 0.0
+            age_groups[age_group] += viewer_pct
+            
+            if gender_type not in gender:
+                gender[gender_type] = 0.0
+            gender[gender_type] += viewer_pct
+
+        result = {
+            "age_groups": age_groups,
+            "gender": gender,
+            "period_days": days,
+        }
+
+        # Cache result (6 hour TTL)
+        cache_tool_result("get_audience_demographics", params_hash, result, ttl_hours=6)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_retention_curve(video_id: str, days: int = 28) -> dict:
+    """
+    Get retention curve for a specific video.
+
+    Args:
+        video_id: YouTube video ID
+        days: Number of days to look back (default: 28)
+
+    Returns:
+        Dict with retention curve data and drop-off point
+    """
+    # Check cache
+    params = {"video_id": video_id, "days": days}
+    params_hash = _hash_params(params)
+    cached = get_cached_tool_result("get_retention_curve", params_hash)
+    if cached:
+        return cached
+
+    # Fetch fresh data
+    try:
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        api_response = query_retention_curve(video_id, start, end)
+        if "error" in api_response:
+            return api_response
+
+        response = api_response["raw"]
+        rows = response.get("rows", [])
+        
+        curve = []
+        drop_off_point = None
+        
+        for row in rows:
+            ratio = float(row[0])
+            watch_ratio = float(row[1])
+            relative_retention = float(row[2]) if len(row) > 2 else 0.0
+            
+            curve.append({
+                "ratio": ratio,
+                "watch_ratio": watch_ratio,
+                "relative_retention": relative_retention,
+            })
+            
+            # Find first drop-off point (where watch_ratio drops below 0.5)
+            if drop_off_point is None and watch_ratio < 0.5:
+                drop_off_point = ratio
+
+        result = {
+            "video_id": video_id,
+            "curve": curve,
+            "drop_off_point": drop_off_point,
+            "period_days": days,
+        }
+
+        # Cache result (6 hour TTL)
+        cache_tool_result("get_retention_curve", params_hash, result, ttl_hours=6)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_device_breakdown(days: int = 28) -> dict:
+    """
+    Get device type breakdown.
+
+    Args:
+        days: Number of days to look back (default: 28)
+
+    Returns:
+        Dict with device breakdown by views and percentage
+    """
+    # Check cache
+    params = {"days": days}
+    params_hash = _hash_params(params)
+    cached = get_cached_tool_result("get_device_breakdown", params_hash)
+    if cached:
+        return cached
+
+    # Fetch fresh data
+    try:
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        api_response = query_device_types(start, end)
+        if "error" in api_response:
+            return api_response
+
+        response = api_response["raw"]
+        rows = response.get("rows", [])
+        
+        devices = {}
+        total_views = 0
+        
+        for row in rows:
+            device_type = row[0]
+            views = int(row[1])
+            watch_time = float(row[2])
+            
+            devices[device_type] = {
+                "views": views,
+                "watch_time_minutes": watch_time,
+            }
+            total_views += views
+        
+        # Calculate percentages
+        for device_type in devices:
+            devices[device_type]["pct"] = devices[device_type]["views"] / total_views * 100 if total_views > 0 else 0.0
+
+        result = {
+            "devices": devices,
+            "period_days": days,
+        }
+
+        # Cache result (6 hour TTL)
+        cache_tool_result("get_device_breakdown", params_hash, result, ttl_hours=6)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_daily_views(days: int = 28) -> dict:
+    """
+    Get daily views time series.
+
+    Args:
+        days: Number of days to look back (default: 28)
+
+    Returns:
+        Dict with daily views, watch time, and subscriber gains
+    """
+    # Check cache
+    params = {"days": days}
+    params_hash = _hash_params(params)
+    cached = get_cached_tool_result("get_daily_views", params_hash)
+    if cached:
+        return cached
+
+    # Fetch fresh data
+    try:
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        api_response = query_daily_views(start, end)
+        if "error" in api_response:
+            return api_response
+
+        response = api_response["raw"]
+        rows = response.get("rows", [])
+        
+        days_data = []
+        for row in rows:
+            days_data.append({
+                "date": row[0],
+                "views": int(row[1]),
+                "watch_time_minutes": float(row[2]),
+                "subs": int(row[3]) if len(row) > 3 else 0,
+            })
+
+        result = {
+            "days": days_data,
+            "period_days": days,
+        }
+
+        # Cache result (6 hour TTL)
+        cache_tool_result("get_daily_views", params_hash, result, ttl_hours=6)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_geographic_breakdown(days: int = 28) -> dict:
+    """
+    Get geographic breakdown by country.
+
+    Args:
+        days: Number of days to look back (default: 28)
+
+    Returns:
+        Dict with top countries by views
+    """
+    # Check cache
+    params = {"days": days}
+    params_hash = _hash_params(params)
+    cached = get_cached_tool_result("get_geographic_breakdown", params_hash)
+    if cached:
+        return cached
+
+    # Fetch fresh data
+    try:
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        api_response = query_geography(start, end)
+        if "error" in api_response:
+            return api_response
+
+        response = api_response["raw"]
+        rows = response.get("rows", [])
+        
+        countries = []
+        total_views = sum(int(row[1]) for row in rows)
+        
+        for row in rows:
+            country = row[0]
+            views = int(row[1])
+            watch_time = float(row[2])
+            
+            countries.append({
+                "country": country,
+                "views": views,
+                "watch_time_minutes": watch_time,
+                "pct": views / total_views * 100 if total_views > 0 else 0.0,
+            })
+
+        result = {
+            "countries": countries,
+            "period_days": days,
+        }
+
+        # Cache result (6 hour TTL)
+        cache_tool_result("get_geographic_breakdown", params_hash, result, ttl_hours=6)
         return result
     except Exception as e:
         return {"error": str(e)}

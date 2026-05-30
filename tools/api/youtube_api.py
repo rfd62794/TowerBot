@@ -143,3 +143,160 @@ def get_video_statistics(video_ids: list[str]) -> dict:
         return {"raw": response}
     except Exception as e:
         return {"error": str(e)}
+
+
+def query_traffic_sources(start_date: str, end_date: str) -> dict:
+    """
+    Query YouTube Analytics for traffic sources (search terms).
+
+    Args:
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+
+    Returns:
+        Raw API response or error dict
+    """
+    try:
+        client = _build_analytics_client()
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start_date,
+            endDate=end_date,
+            dimensions="insightTrafficSourceDetail",
+            filters="insightTrafficSourceType==YT_SEARCH",
+            metrics="views",
+            sort="-views",
+            maxResults=25
+        ).execute()
+        return {"raw": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def query_demographics(start_date: str, end_date: str) -> dict:
+    """
+    Query YouTube Analytics for audience demographics.
+
+    Args:
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+
+    Returns:
+        Raw API response or error dict
+    """
+    try:
+        client = _build_analytics_client()
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start_date,
+            endDate=end_date,
+            dimensions="ageGroup,gender",
+            metrics="viewerPercentage"
+        ).execute()
+        return {"raw": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def query_retention_curve(video_id: str, start_date: str, end_date: str) -> dict:
+    """
+    Query YouTube Analytics for retention curve.
+
+    Args:
+        video_id: YouTube video ID
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+
+    Returns:
+        Raw API response or error dict
+    """
+    try:
+        client = _build_analytics_client()
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start_date,
+            endDate=end_date,
+            dimensions="elapsedVideoTimeRatio",
+            metrics="audienceWatchRatio,relativeRetentionPerformance",
+            filters=f"video=={video_id}"
+        ).execute()
+        return {"raw": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def query_device_types(start_date: str, end_date: str) -> dict:
+    """
+    Query YouTube Analytics for device breakdown.
+
+    Args:
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+
+    Returns:
+        Raw API response or error dict
+    """
+    try:
+        client = _build_analytics_client()
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start_date,
+            endDate=end_date,
+            dimensions="deviceType",
+            metrics="views,estimatedMinutesWatched"
+        ).execute()
+        return {"raw": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def query_daily_views(start_date: str, end_date: str) -> dict:
+    """
+    Query YouTube Analytics for daily views time series.
+
+    Args:
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+
+    Returns:
+        Raw API response or error dict
+    """
+    try:
+        client = _build_analytics_client()
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start_date,
+            endDate=end_date,
+            dimensions="day",
+            metrics="views,estimatedMinutesWatched,subscribersGained"
+        ).execute()
+        return {"raw": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def query_geography(start_date: str, end_date: str) -> dict:
+    """
+    Query YouTube Analytics for geographic breakdown.
+
+    Args:
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+
+    Returns:
+        Raw API response or error dict
+    """
+    try:
+        client = _build_analytics_client()
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start_date,
+            endDate=end_date,
+            dimensions="country",
+            metrics="views,estimatedMinutesWatched",
+            sort="-views",
+            maxResults=25
+        ).execute()
+        return {"raw": response}
+    except Exception as e:
+        return {"error": str(e)}

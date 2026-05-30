@@ -1,6 +1,16 @@
 """Tool plug-ins — extensible functions for AI agent."""
 
-from .youtube import get_channel_summary, get_top_videos, get_video_analytics
+from .youtube import (
+    get_channel_summary,
+    get_top_videos,
+    get_video_analytics,
+    get_traffic_sources,
+    get_audience_demographics,
+    get_retention_curve,
+    get_device_breakdown,
+    get_daily_views,
+    get_geographic_breakdown,
+)
 from .recommendations import get_content_recommendations
 from .games import get_game_metrics, get_installed_games, get_sale_info
 
@@ -155,6 +165,136 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["game_names"],
+                },
+            },
+        },
+    },
+    "get_traffic_sources": {
+        "fn": get_traffic_sources,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_traffic_sources",
+                "description": "Get top search terms that find your YouTube videos. Call when asked how viewers find your content or what search terms work.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "description": "Days to look back (default: 28)",
+                            "default": 28,
+                        }
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "get_audience_demographics": {
+        "fn": get_audience_demographics,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_audience_demographics",
+                "description": "Get audience demographics by age and gender. Call when asked who is watching your content.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "description": "Days to look back (default: 28)",
+                            "default": 28,
+                        }
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "get_retention_curve": {
+        "fn": get_retention_curve,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_retention_curve",
+                "description": "Get retention curve for a specific YouTube video. Call when asked where viewers leave a video or how retention performs.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "video_id": {
+                            "type": "string",
+                            "description": "YouTube video ID",
+                        },
+                        "days": {
+                            "type": "integer",
+                            "description": "Number of days to look back (default: 28)",
+                            "default": 28,
+                        }
+                    },
+                    "required": ["video_id"],
+                },
+            },
+        },
+    },
+    "get_device_breakdown": {
+        "fn": get_device_breakdown,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_device_breakdown",
+                "description": "Get device type breakdown (mobile, desktop, TV). Call when asked what devices viewers use.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "description": "Days to look back (default: 28)",
+                            "default": 28,
+                        }
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "get_daily_views": {
+        "fn": get_daily_views,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_daily_views",
+                "description": "Get daily views time series. Call when asked about view trends or daily performance.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "description": "Days to look back (default: 28)",
+                            "default": 28,
+                        }
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "get_geographic_breakdown": {
+        "fn": get_geographic_breakdown,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_geographic_breakdown",
+                "description": "Get geographic breakdown by country. Call when asked where your viewers are located.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "description": "Days to look back (default: 28)",
+                            "default": 28,
+                        }
+                    },
+                    "required": [],
                 },
             },
         },
