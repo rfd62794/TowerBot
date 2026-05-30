@@ -190,3 +190,59 @@ def get_top_videos(days: int = 7, limit: int = 10) -> dict:
         return result
     except Exception as e:
         return {"error": str(e)}
+
+
+def get_video_analytics(video_id: str, days: int = 28) -> dict:
+    """
+    Get detailed performance metrics for a specific YouTube video.
+
+    Args:
+        video_id: YouTube video ID
+        days: Number of days to look back (default: 28)
+
+    Returns:
+        Dict with detailed video metrics
+    """
+    # Check cache
+    params = {"video_id": video_id, "days": days}
+    params_hash = _hash_params(params)
+    cached = get_cached_tool_result("get_video_analytics", params_hash)
+    if cached:
+        return cached
+
+    # Fetch fresh data
+    try:
+        client = _build_analytics_client()
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start,
+            endDate=end,
+            dimensions="video",
+            filters=f"video=={video_id}",
+            metrics="views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,likes,comments",
+        ).execute()
+
+        rows = response.get("rows", [])
+        if not rows:
+            return {"error": "No data returned for this video"}
+
+        row = rows[0]
+        result = {
+            "video_id": video_id,
+            "views": int(row[1]),
+            "watch_time_minutes": float(row[2]),
+            "avg_view_duration_seconds": float(row[3]),
+            "avg_view_percentage": float(row[4]),
+            "likes": int(row[5]),
+            "comments": int(row[6]),
+            "period_days": days,
+        }
+
+        # Cache result (6 hour TTL)
+        cache_tool_result("get_video_analytics", params_hash, result, ttl_hours=6)
+        return result
+    except Exception as e:
+        return {"error": str(e)}

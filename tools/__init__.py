@@ -1,6 +1,6 @@
 """Tool plug-ins — extensible functions for AI agent."""
 
-from .youtube import get_channel_summary, get_top_videos
+from .youtube import get_channel_summary, get_top_videos, get_video_analytics
 from .recommendations import get_content_recommendations
 from .games import get_game_metrics, get_installed_games
 
@@ -109,6 +109,31 @@ TOOL_REGISTRY = {
                     "type": "object",
                     "properties": {},
                     "required": [],
+                },
+            },
+        },
+    },
+    "get_video_analytics": {
+        "fn": get_video_analytics,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_video_analytics",
+                "description": "Get detailed performance metrics for a specific YouTube video by video ID. Call when asked how a specific video or Short performed. Use get_top_videos first if you need to find the video_id from a title.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "video_id": {
+                            "type": "string",
+                            "description": "YouTube video ID",
+                        },
+                        "days": {
+                            "type": "integer",
+                            "description": "Number of days to look back (default: 28)",
+                            "default": 28,
+                        }
+                    },
+                    "required": ["video_id"],
                 },
             },
         },
