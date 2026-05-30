@@ -145,7 +145,8 @@ def test_snooze():
     from infra.db.personal_tasks import add_personal_task, snooze_personal_task
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
-    task_id = add_personal_task("Snooze me", due_date=today, due_time="09:00")
+    unique_title = f"Snooze me {datetime.now().strftime('%H%M%S')}"
+    task_id = add_personal_task(unique_title, due_date=today, due_time="09:00")
     result = snooze_personal_task(task_id, minutes=60)
     assert result.get("status") == "snoozed"
     assert result.get("id") == task_id
