@@ -10,7 +10,7 @@ from tools.api.steamspy_api import get_app_details
 from tools.api.itad_api import lookup_game, get_prices
 from tools.api.steam_catalog_api import get_full_catalog, fuzzy_match_catalog
 from tools.api.youtube_api import search_youtube, get_video_statistics
-from core.db import record_game_day, get_game_history
+from infra.db import record_game_day, get_game_history
 
 
 def resolve_appid(game_name: str) -> dict | None:

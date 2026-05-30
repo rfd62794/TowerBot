@@ -10,7 +10,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 TESTS = []
@@ -113,7 +113,7 @@ def test_save_commitment_no_deadline():
 @test("goals: list_commitments returns saved entry")
 def test_list_commitments():
     from tools.goals import save_commitment
-    from core.db import list_commitments
+    from infra.db import list_commitments
     save_commitment("Test commitment for list check", deadline="2026-07-01")
     results = list_commitments()
     assert isinstance(results, list), "Expected list return"

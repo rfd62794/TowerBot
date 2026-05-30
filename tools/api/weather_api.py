@@ -74,7 +74,7 @@ class WeatherAPIHandler(BaseAPIHandler):
         result = self.call("current", self.hash(), _live, stale_ok=True)
 
         # Add stale_notice to result
-        from core.cache import cache
+        from infra.cache import cache
         notice = cache.stale_notice(result)
         result["stale_notice"] = notice
 

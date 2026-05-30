@@ -55,8 +55,8 @@ from .personal import (
 )
 from .meta import think
 
-# Memory tools — defined in core/memory.py, imported here
-from core.memory import (
+# Memory tools — defined in bot/memory.py, imported here
+from bot.memory import (
     tool_save_memory,
     tool_update_memory,
     tool_retire_memory,

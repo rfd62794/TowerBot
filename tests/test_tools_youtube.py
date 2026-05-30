@@ -10,7 +10,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
 TESTS = []
@@ -62,7 +62,7 @@ def test_top_videos():
 @test("youtube: top videos has titles not just IDs")
 def test_top_videos_titles():
     from tools.youtube import get_top_videos
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     _exec("DELETE FROM tool_cache WHERE tool_name = 'get_top_videos'", commit=True)
     result = get_top_videos(days=28)
     assert "error" not in result, f"Top videos error: {result.get('error')}"

@@ -60,7 +60,7 @@ def cached_api_call(
       ttl_seconds: cache TTL for fresh results (converted to hours internally)
       stale_ok: whether to fall back to stale data on live failure
     """
-    from core.db.cache import (
+    from infra.db.cache import (
         get_cached_tool_result,
         cache_tool_result,
         get_stale_cached_result,

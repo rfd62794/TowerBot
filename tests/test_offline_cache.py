@@ -11,8 +11,8 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
-from core.db.schema import _exec
+from infra.db import init_db
+from infra.db.schema import _exec
 init_db()
 
 TESTS = []
@@ -27,14 +27,14 @@ def test(name):
 
 @test("offline: get_stale_cached_result returns None when no record exists")
 def test_stale_none():
-    from core.db import get_stale_cached_result
+    from infra.db import get_stale_cached_result
     result = get_stale_cached_result("test_tool_never_cached", "test_hash")
     assert result is None, f"Expected None for non-existent cache, got {result}"
 
 
 @test("offline: get_stale_cached_result returns stale record after TTL expiry")
 def test_stale_expired():
-    from core.db import get_stale_cached_result
+    from infra.db import get_stale_cached_result
     import json
 
     # Insert a record with expires_at in the past
@@ -57,7 +57,7 @@ def test_stale_expired():
 
 @test("offline: get_stale_cached_result adds correct metadata fields")
 def test_stale_metadata():
-    from core.db import get_stale_cached_result
+    from infra.db import get_stale_cached_result
     import json
 
     past = (datetime.datetime.now() - datetime.timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
@@ -82,7 +82,7 @@ def test_stale_metadata():
 
 @test("offline: preload_log table exists in schema")
 def test_preload_table_exists():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     row = _exec(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='preload_log'"
     ).fetchone()
@@ -91,7 +91,7 @@ def test_preload_table_exists():
 
 @test("offline: record_preload_result writes to preload_log on success=True")
 def test_preload_success():
-    from core.db import record_preload_result
+    from infra.db import record_preload_result
     import json
 
     record_preload_result(
@@ -113,7 +113,7 @@ def test_preload_success():
 
 @test("offline: record_preload_result writes to preload_log on success=False without cache")
 def test_preload_failure():
-    from core.db import record_preload_result
+    from infra.db import record_preload_result
 
     record_preload_result(
         "test_fail_tool", "test_hash", {}, 1.0, False, 50, "test error"
@@ -141,14 +141,14 @@ def test_preload_failure():
 
 @test("offline: get_preload_status returns list")
 def test_preload_status_list():
-    from core.db import get_preload_status
+    from infra.db import get_preload_status
     result = get_preload_status()
     assert isinstance(result, list)
 
 
 @test("offline: get_preload_status returns correct age_minutes")
 def test_preload_status_age():
-    from core.db import record_preload_result, get_preload_status
+    from infra.db import record_preload_result, get_preload_status
 
     record_preload_result(
         "test_age_tool", "test_age_hash", {"data": "test"}, 1.0, True, 10

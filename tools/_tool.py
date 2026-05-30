@@ -23,7 +23,7 @@ class BaseTool:
         stale_result: the raw API result if it contained stale metadata.
         Pass it here and BaseTool extracts the stale_notice automatically.
         """
-        from core.cache import cache
+        from infra.cache import cache
 
         # Strip internal keys from data
         clean = {k: v for k, v in data.items() if not k.startswith("_")}
@@ -44,6 +44,6 @@ class BaseTool:
 
     def stale_notice(self, result: dict) -> str | None:
         """Convenience wrapper."""
-        from core.cache import cache
+        from infra.cache import cache
 
         return cache.stale_notice(result)

@@ -10,11 +10,11 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
+from infra.db import init_db
 init_db()
 
-from core.db import record_poll, get_last_poll, get_all_last_polls
-from core.polling import polling_manager
+from infra.db import record_poll, get_last_poll, get_all_last_polls
+from infra.polling import polling_manager
 
 TESTS = []
 
@@ -44,7 +44,7 @@ def run_all() -> tuple[int, int]:
 
 @test("polling: poll_log table exists")
 def test_poll_log_table_exists():
-    from core.db.schema import _exec
+    from infra.db.schema import _exec
     result = _exec("SELECT name FROM sqlite_master WHERE type='table' AND name='poll_log'").fetchone()
     assert result is not None
     assert result["name"] == "poll_log"
@@ -89,7 +89,7 @@ def test_get_all_last_polls():
 
 @test("polling: polling_manager singleton importable")
 def test_polling_manager_singleton():
-    from core.polling import polling_manager as pm2
+    from infra.polling import polling_manager as pm2
     assert polling_manager is pm2  # Same instance
 
 

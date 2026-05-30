@@ -1,7 +1,7 @@
 """Goals, plans, and tasks tools — personal goal tracking system."""
 
 from tools._tool import BaseTool
-from core.db import (
+from infra.db import (
     get_goals,
     get_goal,
     get_milestones,

@@ -7,8 +7,8 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db
-from core.db.schema import _exec
+from infra.db import init_db
+from infra.db.schema import _exec
 init_db()
 
 test_titles = [
@@ -27,8 +27,8 @@ placeholders = ",".join("?" * len(test_hashes))
 _exec(f"DELETE FROM deploy_history WHERE commit_hash IN ({placeholders})", test_hashes)
 print("Removed test deploy records.")
 
-from core.db import get_last_deploy, get_last_stable_commit
-from core.db.personal_tasks import get_personal_tasks
+from infra.db import get_last_deploy, get_last_stable_commit
+from infra.db.personal_tasks import get_personal_tasks
 print(f"last_deploy: {get_last_deploy()}")
 print(f"last_stable: {get_last_stable_commit()}")
 print(f"personal tasks today: {len(get_personal_tasks('today'))}")

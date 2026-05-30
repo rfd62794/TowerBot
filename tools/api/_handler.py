@@ -41,8 +41,8 @@ class BaseAPIHandler:
         Delegates to CacheManager.
         Subclasses never call cache directly.
         """
-        from core.cache import cache
-        from core.rate_limits import rate_limits
+        from infra.cache import cache
+        from infra.rate_limits import rate_limits
         import logging
         import re
 
@@ -111,7 +111,7 @@ class BaseAPIHandler:
 
     def hash(self, *args, **kwargs) -> str:
         """Convenience — delegates to cache.hash()."""
-        from core.cache import cache
+        from infra.cache import cache
 
         return cache.hash(*args, **kwargs)
 
@@ -124,7 +124,7 @@ class BaseTool:
 
     def success(self, data: dict, stale_result: dict = None) -> dict:
         """Return a successful result with optional stale notice."""
-        from core.cache import cache
+        from infra.cache import cache
         
         result = {"ok": True, **data}
         
@@ -144,5 +144,5 @@ class BaseTool:
 
     def stale_notice(self, result: dict) -> str | None:
         """Extract stale notice from a result dict."""
-        from core.cache import cache
+        from infra.cache import cache
         return cache.stale_notice(result)

@@ -3,7 +3,7 @@
 import hashlib
 import json
 from datetime import datetime, timedelta
-from core.db import get_channel_history
+from infra.db import get_channel_history
 from tools._tool import BaseTool
 from tools.api.youtube_api import (
     query_channel_report,

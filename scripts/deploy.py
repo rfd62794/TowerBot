@@ -11,7 +11,7 @@ if _root not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
-from core.db import init_db, record_deploy, mark_verify_passed, mark_stable, mark_rolled_back
+from infra.db import init_db, record_deploy, mark_verify_passed, mark_stable, mark_rolled_back
 init_db()
 
 

@@ -6,7 +6,7 @@ from tools.api.ddg_api import ddg_api
 from tools.api.wikipedia_api import wikipedia_api
 from tools.api.reddit_api import reddit_api
 from tools.api.weather_api import get_current_weather
-from core.db import record_weather_day
+from infra.db import record_weather_day
 from tools._tool import BaseTool
 
 
