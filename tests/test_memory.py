@@ -80,6 +80,21 @@ def test_invalid_layer():
         f"Expected status='error' for invalid layer, got {result}"
 
 
+@test("memory: tool_get_memories queries seeded data")
+def test_get_seeded_memories():
+    from core.memory import tool_get_memories
+    from core.db.schema import _exec
+    # Verify seeded data exists
+    rows = _exec("SELECT key, content, layer FROM memory WHERE active = 1").fetchall()
+    assert len(rows) > 0, "Expected seeded memories in database"
+    # Query for known seeded content
+    result = tool_get_memories("ReactReel")
+    assert isinstance(result, dict), "Expected dict return"
+    assert result.get("status") in ["found", "empty"], f"Expected status 'found' or 'empty', got {result}"
+    if result.get("status") == "found":
+        assert result.get("count", 0) > 0, "Expected count > 0 when status is 'found'"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
