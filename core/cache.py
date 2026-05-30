@@ -128,7 +128,7 @@ class CacheManager:
         from core.db.cache import cache_tool_result
         ttl = self.TTL.get(key, 3600)
         data["_stale"] = False
-        cache_tool_result(key, params_hash, json.dumps(data), ttl)
+        cache_tool_result(key, params_hash, data, ttl)
 
     def call(self, key: str, params_hash: str, live_fn: Callable, stale_ok: bool = True) -> dict:
         """
