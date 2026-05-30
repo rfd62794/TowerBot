@@ -126,7 +126,7 @@ def search_youtube(query: str, days: int, max_results: int = 10) -> dict:
 
 def get_video_statistics(video_ids: list[str]) -> dict:
     """
-    Get statistics for YouTube videos.
+    Get statistics and metadata for YouTube videos.
 
     Args:
         video_ids: List of YouTube video IDs
@@ -137,7 +137,7 @@ def get_video_statistics(video_ids: list[str]) -> dict:
     try:
         client = _build_data_client()
         response = client.videos().list(
-            part="statistics",
+            part="statistics,snippet",
             id=",".join(video_ids)
         ).execute()
         return {"raw": response}
