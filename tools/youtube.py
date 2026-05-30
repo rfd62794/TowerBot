@@ -3,7 +3,7 @@
 import hashlib
 import json
 from datetime import datetime, timedelta
-from core.db import cache_tool_result, get_cached_tool_result
+from core.db import cache_tool_result, get_cached_tool_result, get_channel_history
 from tools.api.youtube_api import (
     query_channel_report,
     query_video_report,
@@ -33,6 +33,7 @@ def get_channel_summary(days: int = 7) -> dict:
 
     Returns:
         Dict with views, watch_time, subscribers, and date range.
+        Includes trend data if prior week history exists.
     """
     # Check cache
     params = {"days": days}
@@ -64,6 +65,33 @@ def get_channel_summary(days: int = 7) -> dict:
             "end_date": end,
             "period_days": days,
         }
+
+        # Add trend data from history if available
+        history = get_channel_history(days=14)
+        if len(history) >= 7:
+            # Prior week is the first 7 days (oldest)
+            prior_week = history[:7]
+            prior_views = sum(h["views"] for h in prior_week)
+            prior_subs = sum(h["subscribers_gained"] for h in prior_week)
+            
+            # Calculate change percentage
+            views_change = 0
+            if prior_views > 0:
+                views_change = ((result["views"] - prior_views) / prior_views) * 100
+            
+            subs_change = 0
+            if prior_subs > 0:
+                subs_change = ((result["subscribers_gained"] - prior_subs) / prior_subs) * 100
+            
+            result["trend"] = {
+                "views_prev_week": prior_views,
+                "views_change_pct": round(views_change, 1),
+                "subs_prev_week": prior_subs,
+                "subs_change_pct": round(subs_change, 1),
+            }
+            result["history_days_available"] = len(history)
+        else:
+            result["history_days_available"] = len(history)
 
         # Cache result (6 hour TTL)
         cache_tool_result("get_channel_summary", params_hash, result, ttl_hours=6)

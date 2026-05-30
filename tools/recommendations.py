@@ -1,9 +1,11 @@
 """Content recommendations tool — Steam + YouTube demand analysis."""
 
+import hashlib
 from datetime import datetime, timedelta
 from tools.api.steam_api import get_game_library
 from tools.api.steamspy_api import get_app_details
 from tools.api.youtube_api import search_youtube, get_video_statistics
+from core.db import cache_tool_result, get_cached_tool_result
 
 
 def get_owned_games() -> list[dict]:
@@ -93,6 +95,11 @@ def get_content_recommendations(limit: int = 5, min_playtime: float = 1.0) -> di
     Returns:
         Dict with count and list of recommendations
     """
+    params_hash = hashlib.md5(f"{limit}_{min_playtime}".encode()).hexdigest()
+    cached = get_cached_tool_result("get_content_recommendations", params_hash)
+    if cached:
+        return cached
+
     games = get_owned_games()
     games = [g for g in games if g["playtime_hours"] >= min_playtime]
     games.sort(key=lambda x: x["playtime_hours"], reverse=True)
@@ -109,7 +116,9 @@ def get_content_recommendations(limit: int = 5, min_playtime: float = 1.0) -> di
 
     results.sort(key=lambda x: x["composite_score"], reverse=True)
 
-    return {
+    result = {
         "count": min(limit, len(results)),
         "recommendations": results[:limit]
     }
+    cache_tool_result("get_content_recommendations", params_hash, result, ttl_hours=12)
+    return result

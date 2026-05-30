@@ -255,5 +255,88 @@ def test_weather():
     assert "temp_f" in result, "Expected temp_f key"
 
 
+@test("db: video_history table exists")
+def test_video_history_table():
+    conn = sqlite3.connect("privy.db")
+    tables = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    ).fetchall()
+    table_names = [t[0] for t in tables]
+    assert "video_history" in table_names, "video_history table missing"
+    conn.close()
+
+
+@test("db: game_history table exists")
+def test_game_history_table():
+    conn = sqlite3.connect("privy.db")
+    tables = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    ).fetchall()
+    table_names = [t[0] for t in tables]
+    assert "game_history" in table_names, "game_history table missing"
+    conn.close()
+
+
+@test("db: weather_history table exists")
+def test_weather_history_table():
+    conn = sqlite3.connect("privy.db")
+    tables = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    ).fetchall()
+    table_names = [t[0] for t in tables]
+    assert "weather_history" in table_names, "weather_history table missing"
+    conn.close()
+
+
+@test("cache: game_metrics cached on second call")
+def test_game_metrics_cache():
+    from tools.games import get_game_metrics
+    from core.db import get_cached_tool_result, init_db
+    init_db()
+    
+    # First call - should hit API
+    result1 = get_game_metrics("Duckov")
+    assert "error" not in result1, f"First call failed: {result1.get('error')}"
+    
+    # Second call - should hit cache
+    result2 = get_game_metrics("Duckov")
+    assert "error" not in result2, f"Second call failed: {result2.get('error')}"
+    assert result1["appid"] == result2["appid"], "Cache returned different result"
+
+
+@test("cache: weather cached on second call")
+def test_weather_cache():
+    from tools.search_tools import get_weather
+    from core.db import get_cached_tool_result, init_db
+    init_db()
+    
+    # First call - should hit API
+    result1 = get_weather()
+    assert "error" not in result1, f"First call failed: {result1.get('error')}"
+    
+    # Second call - should hit cache
+    result2 = get_weather()
+    assert "error" not in result2, f"Second call failed: {result2.get('error')}"
+    assert result1["temp_f"] == result2["temp_f"], "Cache returned different result"
+
+
+@test("history: weather records after get_weather")
+def test_weather_history():
+    from tools.search_tools import get_weather
+    from core.db import get_weather_history, init_db
+    from datetime import datetime
+    init_db()
+    
+    # Call weather to trigger history recording
+    result = get_weather()
+    assert "error" not in result, f"Weather call failed: {result.get('error')}"
+    
+    # Check history has today's entry
+    today = datetime.now().strftime("%Y-%m-%d")
+    history = get_weather_history(days=1)
+    assert len(history) > 0, "Weather history empty"
+    assert history[0]["date"] == today, f"Expected today {today}, got {history[0]['date']}"
+
+
 if __name__ == "__main__":
     run_all()

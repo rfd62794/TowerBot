@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timedelta
 
 from tools.youtube import get_channel_summary, get_channel_summary_range
-from core.db import record_channel_day
+from core.db import record_channel_day, get_game_history, get_scheduled_videos
 
 logger = logging.getLogger("privy.scheduler")
 
@@ -67,6 +67,35 @@ async def morning_briefing(send_fn) -> None:
             msg += "\n⚡ Anomaly detected — check analytics"
         else:
             msg += "\nNo anomalies. Good day to build."
+
+        # Check for game history trends (tracked games with >10% player change)
+        # Tracked games: Raccoin (appid from prior calls), Duckov, etc.
+        # For now, check games with recent history
+        try:
+            from tools.games import get_game_metrics
+            tracked_games = ["Raccoin", "Duckov", "Scritchy Scratchy"]
+            for game_name in tracked_games:
+                try:
+                    metrics = get_game_metrics(game_name)
+                    if "error" not in metrics and "players_change_pct" in metrics:
+                        change = metrics["players_change_pct"]
+                        if abs(change) > 10:
+                            msg += f"\n⚡ {game_name}: {metrics['players_2weeks']:,} players ({change:+.1f}% vs last week)"
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Check for scheduled videos today
+        try:
+            scheduled = get_scheduled_videos()
+            today_str = today.strftime("%Y-%m-%d")
+            for vid in scheduled:
+                vid_date = vid["scheduled_time"][:10] if vid["scheduled_time"] else ""
+                if vid_date == today_str:
+                    msg += f"\n📅 Scheduled today: {vid['title']} at {vid['scheduled_time'][11:16]}"
+        except Exception:
+            pass
 
         await send_fn(msg)
         logger.info("Morning briefing sent successfully")
