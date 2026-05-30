@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timedelta
 
 from tools.youtube import get_channel_summary, get_channel_summary_range
+from core.db import record_channel_day
 
 logger = logging.getLogger("privy.scheduler")
 
@@ -69,6 +70,16 @@ async def morning_briefing(send_fn) -> None:
 
         await send_fn(msg)
         logger.info("Morning briefing sent successfully")
+
+        # Record to channel history
+        today_str = today.strftime("%Y-%m-%d")
+        record_channel_day(
+            date=today_str,
+            views=current["views"],
+            watch_time=current["watch_time_minutes"],
+            subs=current["subscribers_gained"]
+        )
+        logger.info(f"Channel history recorded for {today_str}")
 
     except Exception as e:
         logger.error(f"Morning briefing failed: {e}")
