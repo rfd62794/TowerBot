@@ -2,33 +2,32 @@
 
 ## Branch Protection
 
-**CRITICAL: Never push to main without explicit user approval.**
+**CRITICAL: Never push to main. NEVER. Not even with user approval.**
 
 ### Workflow
 1. All work happens on `dev` branch
 2. Changes must be proven on `dev` (tests passing, spot checks verified)
-3. Only after user explicit approval:
-   - Merge `dev` to `main`
-   - Push `main` to origin
-
-### Commands to Run (Only with User Approval)
-```bash
-git checkout main
-git merge dev
-git push origin main
-git checkout dev
-```
+3. Never merge `dev` to `main`
+4. Never push `main` to origin
+5. Never switch to `main` branch
 
 ### Forbidden Actions
-- Never run `git push origin main` without user approval
-- Never merge `dev` to `main` without user approval
-- Never switch to `main` branch unless explicitly requested
+- Never run `git push origin main` — EVER
+- Never merge `dev` to `main` — EVER
+- Never switch to `main` branch — EVER
+- Never push to origin/main — EVER
 
 ### Current Branch
 Always work on `dev` branch. Verify with:
 ```bash
 git branch
 # Should show: * dev
+```
+
+### Pushing to dev
+Push to dev is allowed after work is proven:
+```bash
+git push origin dev
 ```
 
 ## Test Requirements
