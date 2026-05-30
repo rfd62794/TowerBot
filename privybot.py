@@ -12,6 +12,7 @@ load_dotenv()
 import os
 import asyncio
 import logging
+import time
 
 # Windows TLS fix: the default ProactorEventLoop intermittently resets async
 # TLS handshakes to api.telegram.org (BrokenResourceError). The SelectorEventLoop
@@ -24,16 +25,59 @@ from db import init_db
 from report import init_report
 from transport import build_app
 
+# Track startup time for /status command
+STARTUP_TIME = time.time()
+
+# Ensure logs directory exists
+os.makedirs("logs", exist_ok=True)
+
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
     level=logging.INFO,
+    handlers=[
+        logging.FileHandler("logs/privy.log"),
+        logging.StreamHandler(),
+    ],
 )
 
 
 async def on_error(update, context) -> None:
     logging.error("Handler error: %s", context.error)
 
+
+def _validate_startup() -> None:
+    """Check required environment variables and database access before starting."""
+    errors = []
+
+    if not os.getenv("OPENROUTER_API_KEY"):
+        errors.append("OPENROUTER_API_KEY not set in .env")
+    if not os.getenv("TELEGRAM_BOT_TOKEN"):
+        errors.append("TELEGRAM_BOT_TOKEN not set in .env")
+    if not os.getenv("TELEGRAM_CHAT_ID"):
+        errors.append("TELEGRAM_CHAT_ID not set in .env")
+
+    # Check database accessibility
+    try:
+        from db import DB_PATH
+        if not os.path.exists(DB_PATH):
+            errors.append(f"Database not found at {DB_PATH}")
+    except Exception as e:
+        errors.append(f"Database check failed: {e}")
+
+    if errors:
+        logging.error("Startup validation failed:")
+        for err in errors:
+            logging.error(f"  - {err}")
+        logging.error("Fix the above issues and restart.")
+        exit(1)
+
+    logging.info("Startup validation passed.")
+
+
 if __name__ == "__main__":
+    # Validate before starting
+    _validate_startup()
+
     # Layer 5 — database
     init_db()
 
