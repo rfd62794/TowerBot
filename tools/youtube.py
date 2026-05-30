@@ -80,6 +80,43 @@ def get_channel_summary(days: int = 7) -> dict:
         return {"error": str(e)}
 
 
+def get_channel_summary_range(start_date: str, end_date: str) -> dict:
+    """
+    Get YouTube channel performance for a specific date range.
+
+    Args:
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+
+    Returns:
+        Dict with views, watch_time, subscribers, and date range.
+    """
+    try:
+        client = _build_analytics_client()
+
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start_date,
+            endDate=end_date,
+            metrics="views,estimatedMinutesWatched,subscribersGained",
+        ).execute()
+
+        rows = response.get("rows", [[0, 0, 0]])
+        if not rows:
+            return {"error": "No data returned from YouTube Analytics"}
+
+        row = rows[0]
+        return {
+            "views": int(row[0]),
+            "watch_time_minutes": float(row[1]),
+            "subscribers_gained": int(row[2]),
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def get_top_videos(days: int = 7, limit: int = 10) -> dict:
     """
     Get top videos by views for last N days.

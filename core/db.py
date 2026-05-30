@@ -9,7 +9,7 @@ import json
 import sqlite3
 import threading
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "privy.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "privy.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS threads (
