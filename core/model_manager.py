@@ -43,6 +43,7 @@ SEED_FREE_MODELS = [
 TOOL_INCOMPATIBLE = {
     "openrouter/owl-alpha",  # Leaks raw longcat XML tool calls
     "z-ai/glm-4.5-air:free",  # Known incompatibility
+    "poolside/laguna-xs.2:free",  # Leaks raw XML tool calls
 }
 
 

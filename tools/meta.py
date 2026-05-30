@@ -7,7 +7,7 @@ Simple passthrough functions only.
 """
 
 
-def think(thought: str) -> dict:
+def think(content: str) -> dict:
     """
     Record a reasoning step before acting.
     Creates a visible scratchpad entry.
@@ -21,6 +21,6 @@ def think(thought: str) -> dict:
     """
     return {
         "ok": True,
-        "thought": thought,
+        "thought": content,
         "stale_notice": None
     }
