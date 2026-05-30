@@ -35,18 +35,22 @@ def test_credentials():
     assert client is not None
 
 
-@test("calendar: get_events returns list")
+@test("calendar: get_events returns dict with events")
 def test_get_events():
     from tools.api.google_calendar_api import get_events
     result = get_events(days_ahead=7)
-    assert isinstance(result, list), f"Expected list, got {type(result)}"
+    assert isinstance(result, dict), f"Expected dict, got {type(result)}"
+    assert "events" in result, "Missing 'events' key"
+    assert isinstance(result["events"], list), f"Expected list for events, got {type(result['events'])}"
 
 
-@test("calendar: get_events_today returns list")
+@test("calendar: get_events_today returns dict with events")
 def test_get_events_today():
     from tools.api.google_calendar_api import get_events_today
     result = get_events_today()
-    assert isinstance(result, list), f"Expected list, got {type(result)}"
+    assert isinstance(result, dict), f"Expected dict, got {type(result)}"
+    assert "events" in result, "Missing 'events' key"
+    assert isinstance(result["events"], list), f"Expected list for events, got {type(result['events'])}"
 
 
 @test("calendar: get_today_schedule returns dict with count and formatted")

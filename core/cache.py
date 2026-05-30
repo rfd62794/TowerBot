@@ -38,11 +38,18 @@ class CacheManager:
         "youtube_geography": 86400,
         "youtube_playlist_id": 86400,  # 24h
         "youtube_playlist_items": 86400,  # 24h
-        "gmail_personal": 300,  # 5min
-        "gmail_rfd": 300,  # 5min
-        "calendar_today": 900,  # 15min
+        "gmail_unread_personal": 300,  # 5min
+        "gmail_unread_rfd": 300,  # 5min
+        "gmail_search_personal": 300,  # 5min
+        "gmail_search_rfd": 300,  # 5min
+        "gmail_body_personal": 3600,  # 1h
+        "gmail_body_rfd": 3600,  # 1h
         "calendar_upcoming": 900,  # 15min
-        "google_tasks": 300,  # 5min
+        "calendar_window": 900,  # 15min
+        "calendar_today": 900,  # 15min
+        "calendar_soon": 300,  # 5min
+        "google_tasks_tasklist_id": 300,  # 5min
+        "google_tasks_tasks": 300,  # 5min
         "steam_library": 86400,  # 24h
         "steam_metrics": 7200,  # 2h
         "steamspy": 14400,  # 4h
@@ -64,10 +71,18 @@ class CacheManager:
     # After this age — stale_notice shown.
     # Usually matches TTL but can differ.
     STALE_BUDGET = {
-        "gmail_personal": 300,
-        "gmail_rfd": 300,
+        "gmail_unread_personal": 300,
+        "gmail_unread_rfd": 300,
+        "gmail_search_personal": 300,
+        "gmail_search_rfd": 300,
+        "gmail_body_personal": 3600,
+        "gmail_body_rfd": 3600,
         "calendar_today": 900,
-        "google_tasks": 300,
+        "calendar_upcoming": 900,
+        "calendar_window": 900,
+        "calendar_soon": 300,
+        "google_tasks_tasklist_id": 300,
+        "google_tasks_tasks": 300,
         "weather": 3600,
         "ddg_web_search": 1800,
         "ddg_news_search": 1800,
@@ -92,7 +107,6 @@ class CacheManager:
         "youtube_geography": 86400,
         "youtube_playlist_id": 86400,
         "youtube_playlist_items": 86400,
-        "calendar_upcoming": 900,
         "fetch_page": 3600,
     }
 
