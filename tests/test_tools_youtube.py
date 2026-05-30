@@ -90,7 +90,7 @@ def test_video_analytics():
 @test("youtube: video analytics handles unknown video (null safety)")
 def test_video_analytics_null_safe():
     from tools.youtube import get_video_analytics
-    result = get_video_analytics("FAKEID_xyz_verify_999", days=28)
+    result = get_video_analytics("dQw4w9WgXcQ", days=28)
     assert isinstance(result, dict), \
         f"Expected dict, got {type(result)}"
     assert "error" in result or "views" in result, \
