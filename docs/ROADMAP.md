@@ -152,32 +152,39 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 - Briefing includes today's events
 
 **Related ADRs**:
-- ADR-016: Calendar Integration (to be written)
+- ADR-017: Calendar Integration (to be written)
 
 ---
 
-## Phase 6 — Goals + Plans 🎯 PLANNED
+## Phase 6 — Goals + Plans 🎯 DONE
 
-**Status**: Planned
-**Duration**: 2 weeks
+**Status**: Complete
+**Duration**: 1 day
 **Key Deliverables**:
-- Goals table (id, title, target_date, status, progress)
-- Milestones table (linked to goals)
-- Weekly plans table (linked to goals)
-- Telegram commands for goal management
-- Agent suggests weekly plans based on commitments
-- Progress tracking and alerts
+- 4 tables: goals, milestones, tasks, weekly_plans
+- CRUD functions for all 4 tables
+- config/goals.yaml with 4 active goals
+- config/plans.yaml with current week plan
+- scripts/seed_goals.py for idempotent seeding
+- tools/goals.py with 7 functions
+- 7 Telegram commands (/goals, /goal, /tasks, /plan, /task done, /confirm, /reject)
+- Heartbeat task reminders (scheduled in 60 min, overdue detection)
+- Morning briefing enriched with today's tasks and weekly focus
+- 8 goals tools added to TOOL_REGISTRY
 
 **Key Decisions**:
-- TBD: Telegram commands vs YAML vs both
-- TBD: Weekly plans vs daily+weekly vs project-based
-- TBD: Agent updates autonomously vs manual vs suggest-and-confirm
+- Both Telegram commands + YAML (YAML is source of truth for initial data)
+- Weekly plans with task breakdown (aligned with nightly summary rhythm)
+- Agent suggests updates, you confirm or reject (balance of autonomy + control)
+- Agent NEVER updates goals autonomously — only suggests via suggest_goal_progress
 
 **Unlocked**:
-- Long-term goal tracking
+- Long-term goal tracking (yearly → quarterly → monthly → weekly → daily)
 - Structured planning system
 - Agent helps plan your week
 - Progress monitored automatically
+- Morning briefing tells you what to work on
+- Heartbeat reminds you when tasks are due
 
 **Related ADRs**:
 - ADR-017: Goals and Plans System (to be written)
@@ -208,7 +215,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 - True "always-on" assistant
 
 **Related ADRs**:
-- ADR-018: Tower Deployment (to be written)
+- ADR-019: Tower Deployment (to be written)
 
 ---
 
@@ -235,7 +242,55 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 - Potential revenue from guide
 
 **Related ADRs**:
-- ADR-019: Publishing Strategy (to be written)
+- ADR-020: Publishing Strategy (to be written)
+
+---
+
+## Phase 9 — Local Model for Background Tasks 🤖 PLANNED
+
+**Status**: Planned
+**Duration**: 1 week (after Tower deploy)
+**Hardware Confirmed**:
+- CPU: i5 4-core (older generation)
+- RAM: 32GB (sufficient, not the constraint)
+- GPU: none
+
+**Key Deliverables**:
+- Ollama installation on Tower
+- Gemma 4 E4B Q4 model pull (gemma4:4b)
+- call_background_model() function in llm_client.py
+- Nightly summary uses local model
+- Weekly goal synthesis uses local model
+- Long-form draft generation uses local model
+- test_models.py validation for tool calling
+
+**Key Decisions**:
+- Local model used for background tasks ONLY
+- Never called from conversation handler
+- Real-time conversation stays on OpenRouter
+- Model: gemma4:4b (Q4 quantized, ~5GB RAM)
+- Estimated: 2-5 tokens/second on CPU-only i5
+- Environment flag: LOCAL_MODEL_MODE=background
+
+**Use Cases**:
+- Nightly summary (midnight) — no urgency
+- Weekly goal synthesis (Sunday night)
+- Long-form content drafts (async)
+- Transcription analysis (batch)
+
+**Unlocked**:
+- Zero cost for background processing
+- Full privacy for sensitive summaries
+- No impact on conversation responsiveness
+- OpenRouter remains primary for conversation
+
+**Future**: if GPU added to Tower
+- Reassess for real-time conversation
+- Gemma 4 E4B with GPU: 30-60 tok/s
+- Switch LOCAL_MODEL_MODE=realtime
+
+**Related ADRs**:
+- ADR-018: Local Model Integration (to be written)
 
 ---
 
@@ -248,30 +303,33 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 | Phase 3 — Data | ✅ DONE | 100% |
 | Phase 4 — Proactive | ✅ DONE | 100% |
 | Phase 5 — Calendar | 📅 PLANNED | 0% |
-| Phase 6 — Goals | 🎯 PLANNED | 0% |
+| Phase 6 — Goals | 🎯 DONE | 100% |
 | Phase 7 — Tower | 🖥️ PLANNED | 0% |
 | Phase 8 — Publish | 📚 FUTURE | 0% |
+| Phase 9 — Local Model | 🤖 PLANNED | 0% |
 
-**Overall Progress**: 50% (4/8 phases complete)
+**Overall Progress**: 56% (5/9 phases complete)
 
 ---
 
 ## Next Steps
 
-1. **Answer three questions for Phase 6**:
-   - Telegram commands vs YAML vs both?
-   - Weekly plans vs daily+weekly vs project-based?
-   - Agent updates autonomously vs manual vs suggest-and-confirm?
-
-2. **Build Phase 5** (Calendar + Schedule):
+1. **Build Phase 5** (Calendar + Schedule):
    - YouTube Data API v3 integration
    - Google Calendar OAuth
    - Video metadata and scheduled videos tools
 
-3. **Build Phase 6** (Goals + Plans):
-   - Goals and milestones tables
-   - Weekly planning system
-   - Telegram commands for goal management
+2. **Build Phase 7** (Tower Deployment):
+   - NSSM service installation
+   - Remote deploy via /deploy command
+   - OBS WebSocket integration
+
+3. **Build Phase 9** (Local Model for Background Tasks):
+   - After Tower deploy, install Ollama
+   - Pull gemma4:4b model
+   - Add call_background_model() to llm_client.py
+   - Test inference speed on Tower hardware
+   - If < 90 seconds: enable for nightly summary
 
 ---
 
