@@ -16,6 +16,9 @@ STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 STEAMSPY_API = "https://steamspy.com/api.php"
 STEAM_API = "https://api.steampowered.com"
 STEAM_CATALOG_CACHE = Path("config/steam_catalog.json")
+ITAD_CLIENT_ID = os.getenv("ITAD_CLIENT_ID")
+ITAD_CLIENT_SECRET = os.getenv("ITAD_CLIENT_SECRET")
+ITAD_API = "https://api.isthereanydeal.com"
 
 
 def get_steam_catalog() -> list[dict]:
@@ -269,3 +272,87 @@ def get_installed_games() -> dict:
             for g in installed
         ],
     }
+
+
+def get_sale_info(game_names: list[str]) -> dict:
+    """
+    Check current sale prices and historical lows for games via IsThereAnyDeal.
+
+    Args:
+        game_names: List of game names to check
+
+    Returns:
+        Dict with per-game sale information
+    """
+    if not ITAD_CLIENT_ID or not ITAD_CLIENT_SECRET:
+        return {"error": "ITAD credentials not configured"}
+
+    results = {}
+
+    for game_name in game_names:
+        try:
+            # Step 1: Find game ID via lookup
+            lookup_response = requests.post(
+                f"{ITAD_API}/games/lookup/v1",
+                json={"gameTitle": game_name},
+                timeout=10
+            )
+            lookup_response.raise_for_status()
+            lookup_data = lookup_response.json()
+
+            if not lookup_data or not isinstance(lookup_data, list) or len(lookup_data) == 0:
+                results[game_name] = {"error": "not found"}
+                continue
+
+            game_id = lookup_data[0].get("id")
+            if not game_id:
+                results[game_name] = {"error": "not found"}
+                continue
+
+            # Step 2: Get prices
+            params = {
+                "id": game_id,
+                "country": "US",
+            }
+            prices_response = requests.get(
+                f"{ITAD_API}/games/prices/v3",
+                params=params,
+                timeout=10
+            )
+            prices_response.raise_for_status()
+            prices_data = prices_response.json()
+
+            if not prices_data or not isinstance(prices_data, list) or len(prices_data) == 0:
+                results[game_name] = {"error": "no price data"}
+                continue
+
+            # Find best current deal
+            best_deal = None
+            for deal in prices_data:
+                if deal.get("price_new") and deal.get("price_cut"):
+                    if best_deal is None or deal["price_cut"] > best_deal["price_cut"]:
+                        best_deal = deal
+
+            if best_deal:
+                results[game_name] = {
+                    "current_price": best_deal.get("price_new", 0.0),
+                    "current_discount_pct": best_deal.get("price_cut", 0),
+                    "historical_low": best_deal.get("price_low", 0.0),
+                    "on_sale": best_deal.get("price_cut", 0) > 0,
+                    "store_name": best_deal.get("shop", {}).get("name", "Unknown"),
+                    "store_url": best_deal.get("url", ""),
+                }
+            else:
+                results[game_name] = {
+                    "current_price": prices_data[0].get("price_new", 0.0),
+                    "current_discount_pct": 0,
+                    "historical_low": prices_data[0].get("price_low", 0.0),
+                    "on_sale": False,
+                    "store_name": "Steam",
+                    "store_url": "",
+                }
+
+        except Exception as e:
+            results[game_name] = {"error": str(e)}
+
+    return {"games": results}
