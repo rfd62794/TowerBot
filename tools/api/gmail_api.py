@@ -1,6 +1,7 @@
 """Gmail API client — raw API calls only. Read-only, no send path."""
 
 import base64
+import os
 
 from googleapiclient.discovery import build
 from tools.api.youtube_api import _get_credentials
@@ -9,6 +10,37 @@ from tools.api.youtube_api import _get_credentials
 def _get_gmail_client():
     creds = _get_credentials()
     return build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+
+def _get_rfd_credentials():
+    """Load RFD IT Services credentials. Returns None if token not present."""
+    rfd_token = os.getenv("RFD_GMAIL_TOKEN_PATH", "config/rfd_token.json")
+    if not os.path.exists(rfd_token):
+        return None
+    try:
+        from google.oauth2.credentials import Credentials
+        creds = Credentials.from_authorized_user_file(rfd_token)
+        if creds.expired and creds.refresh_token:
+            from google.auth.transport.requests import Request
+            creds.refresh(Request())
+        return creds
+    except Exception:
+        return None
+
+
+def _get_rfd_gmail_client():
+    """Gmail client for RFDITServices account. Returns None if not authorized."""
+    creds = _get_rfd_credentials()
+    if creds is None:
+        return None
+    return build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+
+def _get_client(account: str = "personal"):
+    """Return Gmail client for the given account ('personal' or 'rfd')."""
+    if account == "rfd":
+        return _get_rfd_gmail_client()
+    return _get_gmail_client()
 
 
 def _parse_message_metadata(msg: dict) -> dict:
@@ -47,18 +79,26 @@ def _extract_body(payload: dict) -> str:
     return ""
 
 
-def get_unread_count(label: str = "INBOX") -> int:
+def get_unread_count(label: str = "INBOX", account: str = "personal") -> int:
     try:
-        client = _get_gmail_client()
+        client = _get_client(account)
+        if client is None:
+            return 0
         result = client.users().labels().get(userId="me", id=label).execute()
         return result.get("messagesUnread", 0)
     except Exception:
         return 0
 
 
-def search_messages(query: str, max_results: int = 10) -> list[dict]:
+def search_messages(
+    query: str,
+    max_results: int = 10,
+    account: str = "personal",
+) -> list[dict]:
     try:
-        client = _get_gmail_client()
+        client = _get_client(account)
+        if client is None:
+            return []
         result = client.users().messages().list(
             userId="me",
             q=query,
@@ -82,9 +122,11 @@ def search_messages(query: str, max_results: int = 10) -> list[dict]:
         return []
 
 
-def get_message_body(message_id: str) -> str:
+def get_message_body(message_id: str, account: str = "personal") -> str:
     try:
-        client = _get_gmail_client()
+        client = _get_client(account)
+        if client is None:
+            return ""
         msg = client.users().messages().get(
             userId="me",
             id=message_id,
@@ -95,16 +137,20 @@ def get_message_body(message_id: str) -> str:
         return ""
 
 
-def get_recent_unread(max_results: int = 5) -> list[dict]:
-    return search_messages("is:unread in:inbox", max_results=max_results)
+def get_recent_unread(
+    max_results: int = 5,
+    account: str = "personal",
+) -> list[dict]:
+    return search_messages("is:unread in:inbox", max_results=max_results, account=account)
 
 
 def get_messages_from(
     sender: str,
     max_results: int = 5,
     unread_only: bool = False,
+    account: str = "personal",
 ) -> list[dict]:
     query = f"from:{sender}"
     if unread_only:
         query += " is:unread"
-    return search_messages(query, max_results=max_results)
+    return search_messages(query, max_results=max_results, account=account)

@@ -97,6 +97,55 @@ def test_check_sender():
     assert "count" in result
 
 
+@test("gmail: rfd credentials return None gracefully when token missing")
+def test_rfd_no_token():
+    import os
+    from unittest.mock import patch
+    with patch.dict(os.environ, {"RFD_GMAIL_TOKEN_PATH": "config/nonexistent_rfd_token.json"}):
+        from tools.api.gmail_api import _get_rfd_credentials
+        result = _get_rfd_credentials()
+        assert result is None, \
+            f"Expected None for missing token file, got {result!r}"
+
+
+@test("gmail: get_all_inbox_summary returns dict with personal and professional keys")
+def test_all_inbox_summary_shape():
+    from tools.gmail import get_all_inbox_summary
+    result = get_all_inbox_summary()
+    assert isinstance(result, dict)
+    assert "personal" in result, "Missing 'personal' key"
+    assert "professional" in result, "Missing 'professional' key"
+    assert "total_unread" in result, "Missing 'total_unread' key"
+    assert isinstance(result["total_unread"], int)
+    assert "unread_count" in result["personal"]
+    assert "unread_count" in result["professional"]
+
+
+@test("gmail: get_all_inbox_summary handles missing RFD token without exception")
+def test_all_inbox_summary_no_rfd():
+    import os
+    from unittest.mock import patch
+    with patch.dict(os.environ, {"RFD_GMAIL_TOKEN_PATH": "config/nonexistent_rfd_token.json"}):
+        from tools.gmail import get_all_inbox_summary
+        result = get_all_inbox_summary()
+        assert isinstance(result, dict)
+        assert result["professional"]["unread_count"] == 0
+        assert result["professional"]["recent"] == []
+
+
+@test("gmail: check_sender_all returns count and has_messages keys")
+def test_check_sender_all():
+    from tools.gmail import check_sender_all
+    result = check_sender_all("noreply@github.com", unread_only=False)
+    assert isinstance(result, dict)
+    assert "count" in result
+    assert "has_messages" in result
+    assert "sender" in result
+    assert "messages" in result
+    assert isinstance(result["has_messages"], bool)
+    assert isinstance(result["messages"], list)
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
