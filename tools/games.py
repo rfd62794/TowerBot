@@ -1,56 +1,12 @@
 """Game metrics tool — per-game deep dive with Steam + YouTube data."""
 
-import os
-import json
-import requests
 import difflib
 from datetime import datetime, timedelta
-from pathlib import Path
-from tools.recommendations import get_owned_games
-from tools.youtube import _get_credentials
-from googleapiclient.discovery import build
-
-# Constants
-STEAM_ID = os.getenv("STEAM_ID")
-STEAM_API_KEY = os.getenv("STEAM_API_KEY")
-STEAMSPY_API = "https://steamspy.com/api.php"
-STEAM_API = "https://api.steampowered.com"
-STEAM_CATALOG_CACHE = Path("config/steam_catalog.json")
-ITAD_API_KEY = os.getenv("ITAD_API_KEY")
-ITAD_API = "https://api.isthereanydeal.com"
-
-
-def get_steam_catalog() -> list[dict]:
-    """Get Steam catalog with caching."""
-    # Check cache (valid for 7 days)
-    if STEAM_CATALOG_CACHE.exists():
-        try:
-            with open(STEAM_CATALOG_CACHE, "r") as f:
-                cache_data = json.load(f)
-                cache_time = datetime.fromisoformat(cache_data.get("timestamp", "1970-01-01"))
-                if (datetime.now() - cache_time).total_seconds() < 604800:  # 7 days
-                    return cache_data.get("apps", [])
-        except (IOError, json.JSONDecodeError):
-            pass
-
-    # Fetch fresh catalog
-    try:
-        response = requests.get(
-            f"{STEAM_API}/ISteamApps/GetAppList/v2/",
-            timeout=30
-        )
-        response.raise_for_status()
-        data = response.json()
-        apps = data.get("applist", {}).get("apps", [])
-
-        # Cache with timestamp
-        STEAM_CATALOG_CACHE.parent.mkdir(parents=True, exist_ok=True)
-        with open(STEAM_CATALOG_CACHE, "w") as f:
-            json.dump({"timestamp": datetime.now().isoformat(), "apps": apps}, f)
-
-        return apps
-    except Exception:
-        return []
+from tools.api.steam_api import get_game_library, resolve_appid_from_library
+from tools.api.steamspy_api import get_app_details
+from tools.api.itad_api import lookup_game, get_prices
+from tools.api.steam_catalog_api import get_full_catalog, fuzzy_match_catalog
+from tools.api.youtube_api import search_youtube, get_video_statistics
 
 
 def resolve_appid(game_name: str) -> dict | None:
@@ -67,82 +23,75 @@ def resolve_appid(game_name: str) -> dict | None:
         {"appid": int, "name": str, "source": "owned"|"catalog"} or None
     """
     # Step 1: Search owned library first
-    owned = get_owned_games()
-    for game in owned:
-        if game_name.lower() in game["name"].lower():
-            return {"appid": game["appid"], "name": game["name"], "source": "owned"}
+    library_result = get_game_library()
+    if "error" not in library_result:
+        owned = library_result["raw"]
+        for game in owned:
+            if game_name.lower() in game["name"].lower():
+                return {"appid": game["appid"], "name": game["name"], "source": "owned"}
 
-    # Step 2: Fuzzy match owned library
-    names = [g["name"] for g in owned]
-    matches = difflib.get_close_matches(game_name, names, n=1, cutoff=0.6)
-    if matches:
-        match = next(g for g in owned if g["name"] == matches[0])
-        return {"appid": match["appid"], "name": match["name"], "source": "owned"}
+        # Step 2: Fuzzy match owned library
+        names = [g["name"] for g in owned]
+        matches = difflib.get_close_matches(game_name, names, n=1, cutoff=0.6)
+        if matches:
+            match = next(g for g in owned if g["name"] == matches[0])
+            return {"appid": match["appid"], "name": match["name"], "source": "owned"}
 
     # Step 3: Full Steam catalog search
-    catalog = get_steam_catalog()
-    for app in catalog:
-        if game_name.lower() in app.get("name", "").lower():
-            return {"appid": app["appid"], "name": app["name"], "source": "catalog"}
+    catalog_result = get_full_catalog()
+    if "error" not in catalog_result:
+        catalog = catalog_result["raw"]
+        for app in catalog:
+            if game_name.lower() in app.get("name", "").lower():
+                return {"appid": app["appid"], "name": app["name"], "source": "catalog"}
 
-    # Step 4: Fuzzy match catalog
-    catalog_names = [app.get("name", "") for app in catalog]
-    matches = difflib.get_close_matches(game_name, catalog_names, n=1, cutoff=0.7)
-    if matches:
-        match = next(app for app in catalog if app.get("name") == matches[0])
-        return {"appid": match["appid"], "name": match["name"], "source": "catalog"}
+        # Step 4: Fuzzy match catalog
+        catalog_names = [app.get("name", "") for app in catalog]
+        matches = difflib.get_close_matches(game_name, catalog_names, n=1, cutoff=0.7)
+        if matches:
+            match = next(app for app in catalog if app.get("name") == matches[0])
+            return {"appid": match["appid"], "name": match["name"], "source": "catalog"}
 
     return None
 
 
 def get_steamspy_info(appid: int) -> dict:
     """Get SteamSpy data for a specific game."""
-    try:
-        params = {"request": "appdetails", "appid": appid}
-        response = requests.get(STEAMSPY_API, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return {
-            "owners": data.get("owners", "0 .. 0"),
-            "players_forever": data.get("players_forever", 0),
-            "players_2weeks": data.get("players_2weeks", 0),
-            "positive_reviews": data.get("positive", 0),
-            "negative_reviews": data.get("negative", 0),
-        }
-    except Exception:
+    result = get_app_details(appid)
+    if "error" in result:
         return {}
+    
+    data = result["raw"]
+    return {
+        "owners": data.get("owners", "0 .. 0"),
+        "players_forever": data.get("players_forever", 0),
+        "players_2weeks": data.get("players_2weeks", 0),
+        "positive_reviews": data.get("positive", 0),
+        "negative_reviews": data.get("negative", 0),
+    }
 
 
 def get_youtube_coverage(game_name: str, days: int = 30) -> dict:
     """Get YouTube coverage data for a game."""
     try:
-        creds = _get_credentials()
-        youtube = build("youtube", "v3", credentials=creds)
+        api_response = search_youtube(f"{game_name} gameplay", days, max_results=5)
+        if "error" in api_response:
+            return {"recent_count": 0, "top_views": 0, "gap_signal": "none"}
 
-        published_after = (datetime.now() - timedelta(days=days)).isoformat() + "Z"
-        query = f"{game_name} gameplay"
-
-        search_response = youtube.search().list(
-            q=query,
-            type="video",
-            publishedAfter=published_after,
-            maxResults=5,
-            order="viewCount",
-            part="snippet"
-        ).execute()
-
-        video_ids = [item["id"]["videoId"] for item in search_response.get("items", [])]
+        response = api_response["raw"]
+        video_ids = [item["id"]["videoId"] for item in response.get("items", [])]
 
         if not video_ids:
             return {"recent_count": 0, "top_views": 0, "gap_signal": "none"}
 
-        videos_response = youtube.videos().list(
-            part="statistics",
-            id=",".join(video_ids)
-        ).execute()
+        # Get video statistics
+        stats_response = get_video_statistics(video_ids)
+        if "error" in stats_response:
+            return {"recent_count": len(video_ids), "top_views": 0, "gap_signal": "none"}
 
+        stats = stats_response["raw"]
         view_counts = []
-        for video in videos_response.get("items", []):
+        for video in stats.get("items", []):
             views = int(video["statistics"].get("viewCount", 0))
             view_counts.append(views)
 
@@ -194,12 +143,14 @@ def get_game_metrics(game_name: str) -> dict:
     name = resolved["name"]
 
     # Get your playtime
-    owned = get_owned_games()
+    library_result = get_game_library()
     your_playtime = 0.0
-    for game in owned:
-        if game["appid"] == appid:
-            your_playtime = game["playtime_hours"]
-            break
+    if "error" not in library_result:
+        owned = library_result["raw"]
+        for game in owned:
+            if game["appid"] == appid:
+                your_playtime = game["playtime_hours"]
+                break
 
     # Get SteamSpy data
     steamspy_data = get_steamspy_info(appid)
@@ -250,7 +201,11 @@ def get_installed_games() -> dict:
     Returns:
         Dict with count and list of installed games
     """
-    owned = get_owned_games()
+    library_result = get_game_library()
+    if "error" in library_result:
+        return {"count": 0, "games": []}
+
+    owned = library_result["raw"]
 
     # Filter to installed games (Steam API doesn't provide this directly,
     # so we return all owned games with playtime > 0 as a proxy for "installed")
@@ -283,102 +238,81 @@ def get_sale_info(game_names: list[str]) -> dict:
     Returns:
         Dict with per-game sale information
     """
-    if not ITAD_API_KEY:
-        return {"error": "ITAD API key not configured"}
-
     results = {}
     game_ids = []
 
     # Step 1: Lookup all game IDs via search
-    headers = {"ITAD-API-Key": ITAD_API_KEY}
     for game_name in game_names:
-        try:
-            search_params = {
-                "title": game_name,
-                "results": 1
-            }
-            search_response = requests.get(
-                f"{ITAD_API}/games/search/v1",
-                params=search_params,
-                headers=headers,
-                timeout=10
-            )
-            search_response.raise_for_status()
-            search_data = search_response.json()
-
-            if search_data and isinstance(search_data, list) and len(search_data) > 0:
-                game_id = search_data[0].get("id")
-                if game_id:
-                    game_ids.append(game_id)
-                    results[game_name] = {"id": game_id}
-                else:
-                    results[game_name] = {"error": "not found"}
+        lookup_result = lookup_game(game_name)
+        if "error" in lookup_result:
+            results[game_name] = {"error": lookup_result["error"]}
+            continue
+        
+        search_data = lookup_result["raw"]
+        if search_data and isinstance(search_data, list) and len(search_data) > 0:
+            game_id = search_data[0].get("id")
+            if game_id:
+                game_ids.append(game_id)
+                results[game_name] = {"id": game_id}
             else:
                 results[game_name] = {"error": "not found"}
-        except Exception as e:
-            results[game_name] = {"error": str(e)}
+        else:
+            results[game_name] = {"error": "not found"}
 
     # Step 2: Get prices for all found games (batch request)
     if game_ids:
-        try:
-            prices_response = requests.post(
-                f"{ITAD_API}/games/prices/v3",
-                params={"country": "US"},
-                headers=headers,
-                json=game_ids,
-                timeout=10
-            )
-            prices_response.raise_for_status()
-            prices_data = prices_response.json()
-
-            # Map game IDs to price data
-            price_map = {}
-            for price_info in prices_data:
-                game_id = price_info.get("id")
-                if game_id:
-                    price_map[game_id] = price_info
-
-            # Merge price data into results
-            for game_name, data in results.items():
-                if "error" in data:
-                    continue
-                game_id = data.get("id")
-                if game_id in price_map:
-                    price_info = price_map[game_id]
-                    deals = price_info.get("deals", [])
-                    history_low = price_info.get("historyLow", {})
-
-                    # Find best current deal
-                    best_deal = None
-                    for deal in deals:
-                        if deal.get("price") and deal.get("cut"):
-                            if best_deal is None or deal["cut"] > best_deal["cut"]:
-                                best_deal = deal
-
-                    if best_deal:
-                        results[game_name] = {
-                            "current_price": best_deal.get("price", {}).get("amount", 0.0),
-                            "current_discount_pct": best_deal.get("cut", 0),
-                            "historical_low": history_low.get("price", {}).get("amount", 0.0),
-                            "on_sale": best_deal.get("cut", 0) > 0,
-                            "store_name": best_deal.get("shop", {}).get("name", "Unknown"),
-                            "store_url": best_deal.get("url", ""),
-                        }
-                    else:
-                        results[game_name] = {
-                            "current_price": history_low.get("price", {}).get("amount", 0.0),
-                            "current_discount_pct": 0,
-                            "historical_low": history_low.get("price", {}).get("amount", 0.0),
-                            "on_sale": False,
-                            "store_name": "Steam",
-                            "store_url": "",
-                        }
-                else:
-                    results[game_name] = {"error": "no price data"}
-
-        except Exception as e:
+        prices_result = get_prices(game_ids, country="US")
+        if "error" in prices_result:
             for game_name in results:
                 if "error" not in results[game_name]:
-                    results[game_name] = {"error": f"price fetch failed: {str(e)}"}
+                    results[game_name] = {"error": prices_result["error"]}
+            return {"games": results}
+        
+        prices_data = prices_result["raw"]
+
+        # Map game IDs to price data
+        price_map = {}
+        for price_info in prices_data:
+            game_id = price_info.get("id")
+            if game_id:
+                price_map[game_id] = price_info
+
+        # Merge price data into results
+        for game_name, data in results.items():
+            if "error" in data:
+                continue
+            game_id = data.get("id")
+            if game_id in price_map:
+                price_info = price_map[game_id]
+                deals = price_info.get("deals", [])
+                history_low = price_info.get("historyLow", {})
+
+                # Find best current deal
+                best_deal = None
+                for deal in deals:
+                    if deal.get("price") and deal.get("cut"):
+                        if best_deal is None or deal["cut"] > best_deal["cut"]:
+                            best_deal = deal
+
+                if best_deal:
+                    results[game_name] = {
+                        "current_price": best_deal.get("price", {}).get("amount", 0.0),
+                        "current_discount_pct": best_deal.get("cut", 0),
+                        "historical_low": history_low.get("price", {}).get("amount", 0.0),
+                        "on_sale": best_deal.get("cut", 0) > 0,
+                        "store_name": best_deal.get("shop", {}).get("name", "Unknown"),
+                        "store_url": best_deal.get("url", ""),
+                    }
+                else:
+                    results[game_name] = {
+                        "current_price": history_low.get("price", {}).get("amount", 0.0),
+                        "current_discount_pct": 0,
+                        "historical_low": history_low.get("price", {}).get("amount", 0.0),
+                        "on_sale": False,
+                        "store_name": "Steam",
+                        "store_url": "",
+                    }
+            else:
+                results[game_name] = {"error": "no price data"}
 
     return {"games": results}
