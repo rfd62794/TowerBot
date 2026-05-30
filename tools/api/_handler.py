@@ -27,6 +27,10 @@ class BaseAPIHandler:
 
     def cache_key(self, suffix: str) -> str:
         """Namespaced cache key for this handler."""
+        if not self.CACHE_PREFIX:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} must set CACHE_PREFIX"
+            )
         return f"{self.CACHE_PREFIX}_{suffix}"
 
     def call(
