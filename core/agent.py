@@ -30,7 +30,7 @@ from core.db import (
     list_memories,
 )
 from core.memory import (
-    TOOL_DEFINITIONS,
+    TOOL_DEFINITIONS as MEMORY_TOOL_DEFINITIONS,
     tool_save_memory,
     tool_update_memory,
     tool_retire_memory,
@@ -38,6 +38,7 @@ from core.memory import (
 )
 from core.report import report
 from core.model_manager import get_available_model, handle_429, handle_success
+from tools import TOOL_REGISTRY
 
 # max_retries=0: we manage 429 rotation ourselves; the SDK's internal retries
 # add 19-23s blocking waits before our fallback logic can run.
@@ -70,7 +71,11 @@ NAME_THREAD_TOOL = {
     },
 }
 
-ALL_TOOLS = TOOL_DEFINITIONS + [NAME_THREAD_TOOL]
+ALL_TOOLS = (
+    [TOOL_REGISTRY[t]["definition"] for t in TOOL_REGISTRY]
+    + MEMORY_TOOL_DEFINITIONS
+    + [NAME_THREAD_TOOL]
+)
 
 
 # Cap output tokens: some providers (e.g. Venice for Llama) reject the model's
@@ -184,6 +189,13 @@ async def _chat(model: str, messages: list, tools, allow_rotation: bool = True):
 
 
 async def _execute(thread_id: str, name: str, args: dict) -> dict:
+    # Tool registry tools first
+    if name in TOOL_REGISTRY:
+        tool_fn = TOOL_REGISTRY[name]["fn"]
+        r = tool_fn(**args)
+        await report("tool_called", tool_name=name)
+        return r
+    # Memory tools
     if name == "save_memory":
         r = tool_save_memory(args["key"], args["content"], args["layer"])
         await report("memory_saved", key=args["key"], layer=args["layer"],
