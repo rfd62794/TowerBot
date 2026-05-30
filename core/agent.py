@@ -118,7 +118,21 @@ def _system_prompt() -> str:
         "4. Call get_memories at start of new topic.\n"
         "5. Never save casual conversation. Save: projects, decisions, preferences, "
         "goals, people, technical choices.\n"
-        "6. Always accept corrections immediately.\n\n"
+        "6. Always accept corrections immediately.\n"
+        "7. When Robert says he WILL do something with a time reference — call "
+        "save_commitment, not save_memory.\n\n"
+        "COMMITMENT DETECTION — non-negotiable:\n"
+        "These phrases always trigger save_commitment:\n"
+        "  'I'm going to X'\n"
+        "  'I'll do X this weekend'\n"
+        "  'I need to do X by Y'\n"
+        "  'planning to X after Z'\n"
+        "  'going to record X'\n"
+        "  'will finish X by Y'\n"
+        "  'I want to X before Y'\n"
+        "Do not use save_memory for these. "
+        "Do not use add_task unless already in the weekly plan. "
+        "Use save_commitment. Always.\n\n"
         "GROUNDING RULES — non-negotiable:\n"
         "Before answering ANY factual question about a specific game, person, place, "
         "company, or current event:\n"
@@ -205,7 +219,12 @@ async def _execute(thread_id: str, name: str, args: dict) -> dict:
             r = {"error": f"Tool {name} returned None"}
         elif not isinstance(r, dict):
             r = {"error": f"Tool {name} returned unexpected type: {type(r)}"}
-        await report("tool_called", tool_name=name)
+        if name == "save_commitment":
+            await report("commitment_saved",
+                         description=args.get("description", ""),
+                         deadline=args.get("deadline"))
+        else:
+            await report("tool_called", tool_name=name)
         return r
     # Memory tools
     if name == "save_memory":

@@ -89,6 +89,39 @@ def test_update_task():
         f"Expected status='complete', got {updated.get('status')}"
 
 
+@test("goals: save_commitment creates db entry")
+def test_save_commitment():
+    from tools.goals import save_commitment
+    result = save_commitment("Record Raccoin content", deadline="after June 15")
+    assert isinstance(result, dict), "Expected dict return"
+    assert result.get("status") == "saved", f"Expected status='saved', got {result.get('status')}"
+    assert result.get("description") == "Record Raccoin content"
+    assert result.get("deadline") == "after June 15"
+    assert isinstance(result.get("commitment_id"), int), "Expected int commitment_id"
+
+
+@test("goals: save_commitment without deadline works")
+def test_save_commitment_no_deadline():
+    from tools.goals import save_commitment
+    result = save_commitment("Finish ReactReel landing page")
+    assert isinstance(result, dict), "Expected dict return"
+    assert result.get("status") == "saved"
+    assert result.get("deadline") == "no deadline set"
+    assert isinstance(result.get("commitment_id"), int)
+
+
+@test("goals: list_commitments returns saved entry")
+def test_list_commitments():
+    from tools.goals import save_commitment
+    from core.db import list_commitments
+    save_commitment("Test commitment for list check", deadline="2026-07-01")
+    results = list_commitments()
+    assert isinstance(results, list), "Expected list return"
+    assert len(results) > 0, "Expected at least one commitment"
+    descriptions = [r["description"] for r in results]
+    assert "Test commitment for list check" in descriptions
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

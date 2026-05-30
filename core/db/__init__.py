@@ -79,6 +79,8 @@ from core.db.goals import (
     get_upcoming_scheduled,
     upsert_weekly_plan,
     get_current_weekly_plan,
+    add_commitment,
+    list_commitments,
 )
 
 from core.db.deployments import (
@@ -108,6 +110,7 @@ __all__ = [
     "upsert_task", "get_tasks", "get_task", "update_task_status",
     "get_tasks_due_today", "get_upcoming_scheduled",
     "upsert_weekly_plan", "get_current_weekly_plan",
+    "add_commitment", "list_commitments",
     "record_deploy", "mark_verify_passed", "mark_stable", "mark_rolled_back",
     "get_last_stable_commit", "get_last_deploy", "get_deploy_history",
 ]
