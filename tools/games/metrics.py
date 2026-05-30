@@ -5,11 +5,11 @@ import hashlib
 import json
 from datetime import datetime, timedelta
 from tools._tool import BaseTool
-from tools.api.steam_api import get_game_library, resolve_appid_from_library
-from tools.api.steamspy_api import get_app_details
-from tools.api.itad_api import lookup_game, get_prices
-from tools.api.steam_catalog_api import get_full_catalog, fuzzy_match_catalog
-from tools.api.youtube_api import search_youtube, get_video_statistics
+from api.steam.steam_api import get_game_library, resolve_appid_from_library
+from api.steam.steamspy_api import get_app_details
+from api.steam.itad_api import lookup_game, get_prices
+from api.steam.catalog_api import get_full_catalog, fuzzy_match_catalog
+from api.google.youtube_api import search_youtube, get_video_statistics
 from infra.db import record_game_day, get_game_history
 
 

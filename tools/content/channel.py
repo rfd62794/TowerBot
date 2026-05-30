@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta
 from infra.db import get_channel_history
 from tools._tool import BaseTool
-from tools.api.youtube_api import (
+from api.google.youtube_api import (
     query_channel_report,
     query_daily_views,
     query_demographics,

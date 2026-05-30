@@ -168,7 +168,7 @@ def test_preload_status_age():
 
 @test("offline: cached_api_call returns fresh data on successful live call")
 def test_cached_fresh():
-    from tools.api._base import cached_api_call
+    from api._base import cached_api_call
 
     def live_fn():
         return {"fresh": True, "value": 123}
@@ -184,7 +184,7 @@ def test_cached_fresh():
 
 @test("offline: cached_api_call returns from cache on second call")
 def test_cached_hit():
-    from tools.api._base import cached_api_call
+    from api._base import cached_api_call
 
     call_count = [0]
 
@@ -207,7 +207,7 @@ def test_cached_hit():
 
 @test("offline: cached_api_call returns stale data when live_fn raises and stale exists")
 def test_cached_stale_fallback():
-    from tools.api._base import cached_api_call
+    from api._base import cached_api_call
     import json
 
     # Insert stale record
@@ -233,7 +233,7 @@ def test_cached_stale_fallback():
 
 @test("offline: cached_api_call returns error dict when live_fn raises and no stale record")
 def test_cached_no_stale():
-    from tools.api._base import cached_api_call
+    from api._base import cached_api_call
 
     def failing_fn():
         raise Exception("no cache available")
@@ -246,7 +246,7 @@ def test_cached_no_stale():
 
 @test("offline: cached_api_call returns error dict when stale_ok=False regardless of stale data")
 def test_cached_stale_not_ok():
-    from tools.api._base import cached_api_call
+    from api._base import cached_api_call
     import json
 
     # Insert stale record
@@ -274,7 +274,7 @@ def test_cached_stale_not_ok():
 
 @test("offline: stale_notice returns None for fresh result")
 def test_stale_notice_fresh():
-    from tools.api._base import stale_notice
+    from api._base import stale_notice
     result = {"_stale": False, "data": "fresh"}
     notice = stale_notice(result)
     assert notice is None
@@ -282,7 +282,7 @@ def test_stale_notice_fresh():
 
 @test("offline: stale_notice returns string for stale result with correct age format")
 def test_stale_notice_format():
-    from tools.api._base import stale_notice
+    from api._base import stale_notice
 
     # Test minutes
     result = {"_stale": True, "_age_minutes": 30, "_cached_at": "2026-05-30T10:00:00"}

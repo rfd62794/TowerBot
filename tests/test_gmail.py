@@ -30,14 +30,14 @@ def run_all() -> tuple[int, int]:
 
 @test("gmail: credentials load")
 def test_credentials():
-    from tools.api.gmail_api import _get_gmail_client
+    from api.google.gmail_api import _get_gmail_client
     client = _get_gmail_client()
     assert client is not None
 
 
 @test("gmail: get_unread_count returns dict with count")
 def test_unread_count():
-    from tools.api.gmail_api import get_unread_count
+    from api.google.gmail_api import get_unread_count
     result = get_unread_count()
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "count" in result, "Missing 'count' key"
@@ -46,7 +46,7 @@ def test_unread_count():
 
 @test("gmail: get_recent_unread returns dict with messages")
 def test_recent_unread():
-    from tools.api.gmail_api import get_recent_unread
+    from api.google.gmail_api import get_recent_unread
     result = get_recent_unread(max_results=3)
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "messages" in result, "Missing 'messages' key"
@@ -55,7 +55,7 @@ def test_recent_unread():
 
 @test("gmail: search_messages returns dict with messages")
 def test_search_messages():
-    from tools.api.gmail_api import search_messages
+    from api.google.gmail_api import search_messages
     result = search_messages("in:inbox", max_results=3)
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "messages" in result, "Missing 'messages' key"
@@ -64,7 +64,7 @@ def test_search_messages():
 
 @test("gmail: get_messages_from returns dict with messages")
 def test_messages_from():
-    from tools.api.gmail_api import get_messages_from
+    from api.google.gmail_api import get_messages_from
     result = get_messages_from("noreply@github.com", max_results=3, unread_only=False)
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "messages" in result, "Missing 'messages' key"
@@ -109,7 +109,7 @@ def test_rfd_no_token():
     import os
     from unittest.mock import patch
     with patch.dict(os.environ, {"RFD_GMAIL_TOKEN_PATH": "config/nonexistent_rfd_token.json"}):
-        from tools.api.gmail_api import _get_rfd_credentials
+        from api.google.gmail_api import _get_rfd_credentials
         result = _get_rfd_credentials()
         assert result is None, \
             f"Expected None for missing token file, got {result!r}"

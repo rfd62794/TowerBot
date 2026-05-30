@@ -4,7 +4,7 @@ import hashlib
 import json
 from datetime import datetime, timedelta
 from tools._tool import BaseTool
-from tools.api.youtube_api import query_traffic_sources
+from api.google.youtube_api import query_traffic_sources
 
 
 class DiscoveryTools(BaseTool):

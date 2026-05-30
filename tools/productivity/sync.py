@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from tools.api.google_tasks_api import (
+from api.google.tasks_api import (
     get_default_tasklist_id,
     pull_tasks,
     push_task,

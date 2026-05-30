@@ -1,6 +1,6 @@
 """Gmail tool functions — read-only inbox access."""
 
-from tools.api.gmail_api import (
+from api.google.gmail_api import (
     get_unread_count,
     search_messages,
     get_recent_unread,
@@ -99,7 +99,7 @@ class GmailTools(BaseTool):
     def read_email(self, message_id: str, account: str = "personal") -> dict:
         """Get full email body and metadata for a specific message ID."""
         try:
-            from tools.api.gmail_api import gmail_api
+            from api.google.gmail_api import gmail_api
             client = gmail_api._get_client(account)
             if client is None:
                 return self.error("Account not authorized")
