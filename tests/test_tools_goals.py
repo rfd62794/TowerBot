@@ -30,7 +30,7 @@ def run_all() -> tuple[int, int]:
 
 @test("goals: get_goals_list returns dict with count")
 def test_get_goals():
-    from tools.goals import get_goals_list
+    from tools.productivity.goals import get_goals_list
     result = get_goals_list()
     assert isinstance(result, dict), "Expected dict return"
     assert "count" in result, "Expected 'count' key"
@@ -40,14 +40,14 @@ def test_get_goals():
 
 @test("goals: get_current_plan returns dict or error")
 def test_get_current_plan():
-    from tools.goals import get_current_plan
+    from tools.productivity.goals import get_current_plan
     result = get_current_plan()
     assert isinstance(result, dict), "Expected dict return"
 
 
 @test("goals: get_tasks_today returns count and tasks")
 def test_get_tasks_today():
-    from tools.goals import get_tasks_today
+    from tools.productivity.goals import get_tasks_today
     result = get_tasks_today()
     assert isinstance(result, dict), "Expected dict return"
     assert "count" in result, "Expected 'count' key"
@@ -57,7 +57,7 @@ def test_get_tasks_today():
 
 @test("goals: get_upcoming_tasks returns count and tasks")
 def test_get_upcoming_tasks():
-    from tools.goals import get_upcoming_tasks
+    from tools.productivity.goals import get_upcoming_tasks
     result = get_upcoming_tasks(hours=48)
     assert isinstance(result, dict), "Expected dict return"
     assert "count" in result, "Expected 'count' key"
@@ -66,7 +66,7 @@ def test_get_upcoming_tasks():
 
 @test("goals: add_new_task creates task in db")
 def test_add_new_task():
-    from tools.goals import add_new_task
+    from tools.productivity.goals import add_new_task
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
     result = add_new_task("Test verify task", today)
@@ -78,7 +78,7 @@ def test_add_new_task():
 
 @test("goals: update_task marks complete")
 def test_update_task():
-    from tools.goals import add_new_task, update_task
+    from tools.productivity.goals import add_new_task, update_task
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
     task = add_new_task("Test verify complete task", today)
@@ -91,7 +91,7 @@ def test_update_task():
 
 @test("goals: save_commitment creates db entry")
 def test_save_commitment():
-    from tools.goals import save_commitment
+    from tools.productivity.goals import save_commitment
     result = save_commitment("Record Raccoin content", deadline="after June 15")
     assert isinstance(result, dict), "Expected dict return"
     assert result.get("status") == "saved", f"Expected status='saved', got {result.get('status')}"
@@ -102,7 +102,7 @@ def test_save_commitment():
 
 @test("goals: save_commitment without deadline works")
 def test_save_commitment_no_deadline():
-    from tools.goals import save_commitment
+    from tools.productivity.goals import save_commitment
     result = save_commitment("Finish ReactReel landing page")
     assert isinstance(result, dict), "Expected dict return"
     assert result.get("status") == "saved"
@@ -112,7 +112,7 @@ def test_save_commitment_no_deadline():
 
 @test("goals: list_commitments returns saved entry")
 def test_list_commitments():
-    from tools.goals import save_commitment
+    from tools.productivity.goals import save_commitment
     from infra.db import list_commitments
     save_commitment("Test commitment for list check", deadline="2026-07-01")
     results = list_commitments()

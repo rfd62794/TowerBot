@@ -55,7 +55,7 @@ def test_get_events_today():
 
 @test("calendar: get_today_schedule returns dict with count and formatted")
 def test_get_today_schedule():
-    from tools.calendar import get_today_schedule
+    from tools.productivity.calendar import get_today_schedule
     result = get_today_schedule()
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "count" in result, "Missing 'count' key"
@@ -65,7 +65,7 @@ def test_get_today_schedule():
 
 @test("calendar: get_upcoming_events returns dict")
 def test_get_upcoming_events():
-    from tools.calendar import get_upcoming_events
+    from tools.productivity.calendar import get_upcoming_events
     result = get_upcoming_events(days=7)
     assert isinstance(result, dict)
     assert "count" in result
@@ -75,7 +75,7 @@ def test_get_upcoming_events():
 
 @test("calendar: check_availability returns busy bool")
 def test_check_availability():
-    from tools.calendar import check_availability
+    from tools.productivity.calendar import check_availability
     from datetime import datetime, timedelta
     future_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
     result = check_availability(future_date)
@@ -88,7 +88,7 @@ def test_check_availability():
 
 @test("calendar: _format_event handles all-day event")
 def test_format_all_day():
-    from tools.calendar import _format_event
+    from tools.productivity.calendar import _format_event
     event = {
         "id": "test1",
         "title": "Holiday",
@@ -106,7 +106,7 @@ def test_format_all_day():
 
 @test("calendar: _format_event handles timed event")
 def test_format_timed():
-    from tools.calendar import _format_event
+    from tools.productivity.calendar import _format_event
     event = {
         "id": "test2",
         "title": "Dentist",

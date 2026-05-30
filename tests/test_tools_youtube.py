@@ -30,7 +30,7 @@ def run_all() -> tuple[int, int]:
 
 @test("youtube: channel summary returns views > 0")
 def test_channel_summary():
-    from tools.youtube import get_channel_summary
+    from tools.content import get_channel_summary
     result = get_channel_summary(days=7)
     assert "error" not in result, f"Channel summary error: {result.get('error')}"
     assert result.get("views", 0) > 0, f"Expected views > 0, got {result.get('views')}"
@@ -40,7 +40,7 @@ def test_channel_summary():
 
 @test("youtube: channel summary has required keys")
 def test_channel_summary_keys():
-    from tools.youtube import get_channel_summary
+    from tools.content import get_channel_summary
     result = get_channel_summary(days=7)
     assert "error" not in result, f"Channel summary error: {result.get('error')}"
     for key in ("views", "watch_time_minutes", "subscribers_gained",
@@ -50,7 +50,7 @@ def test_channel_summary_keys():
 
 @test("youtube: top videos returns list")
 def test_top_videos():
-    from tools.youtube import get_top_videos
+    from tools.content import get_top_videos
     result = get_top_videos(days=28)
     assert "error" not in result, f"Top videos error: {result.get('error')}"
     assert "videos" in result, "Expected 'videos' key"
@@ -61,7 +61,7 @@ def test_top_videos():
 
 @test("youtube: top videos has titles not just IDs")
 def test_top_videos_titles():
-    from tools.youtube import get_top_videos
+    from tools.content import get_top_videos
     from infra.db.schema import _exec
     _exec("DELETE FROM tool_cache WHERE tool_name = 'get_top_videos'", commit=True)
     result = get_top_videos(days=28)
@@ -79,7 +79,7 @@ def test_top_videos_titles():
 
 @test("youtube: video analytics works for known video")
 def test_video_analytics():
-    from tools.youtube import get_video_analytics
+    from tools.content import get_video_analytics
     result = get_video_analytics("yZMuKQ2WEWA", days=28)
     assert "error" not in result, f"Video analytics error: {result.get('error')}"
     assert result.get("views", 0) > 0, f"Expected views > 0, got {result.get('views')}"
@@ -89,7 +89,7 @@ def test_video_analytics():
 
 @test("youtube: video analytics handles unknown video (null safety)")
 def test_video_analytics_null_safe():
-    from tools.youtube import get_video_analytics
+    from tools.content import get_video_analytics
     result = get_video_analytics("dQw4w9WgXcQ", days=28)
     assert isinstance(result, dict), \
         f"Expected dict, got {type(result)}"
@@ -99,7 +99,7 @@ def test_video_analytics_null_safe():
 
 @test("youtube: traffic sources returns list")
 def test_traffic_sources():
-    from tools.youtube import get_traffic_sources
+    from tools.content import get_traffic_sources
     result = get_traffic_sources(days=28)
     assert "error" not in result, f"Traffic sources error: {result.get('error')}"
     assert "top_search_terms" in result, "Expected 'top_search_terms' key"
@@ -110,7 +110,7 @@ def test_traffic_sources():
 
 @test("youtube: demographics returns age and gender")
 def test_demographics():
-    from tools.youtube import get_audience_demographics
+    from tools.content import get_audience_demographics
     result = get_audience_demographics(days=28)
     assert "error" not in result, f"Demographics error: {result.get('error')}"
     assert "age_groups" in result, "Expected 'age_groups' key"
@@ -121,7 +121,7 @@ def test_demographics():
 
 @test("youtube: retention curve returns curve key")
 def test_retention_curve():
-    from tools.youtube import get_retention_curve
+    from tools.content import get_retention_curve
     result = get_retention_curve("yZMuKQ2WEWA", days=28)
     assert "error" not in result, f"Retention curve error: {result.get('error')}"
     assert "curve" in result, "Expected 'curve' key"
@@ -131,7 +131,7 @@ def test_retention_curve():
 
 @test("youtube: device breakdown returns devices")
 def test_device_breakdown():
-    from tools.youtube import get_device_breakdown
+    from tools.content import get_device_breakdown
     result = get_device_breakdown(days=28)
     assert "error" not in result, f"Device breakdown error: {result.get('error')}"
     assert "devices" in result, "Expected 'devices' key"
@@ -141,7 +141,7 @@ def test_device_breakdown():
 
 @test("youtube: daily views returns days list")
 def test_daily_views():
-    from tools.youtube import get_daily_views
+    from tools.content import get_daily_views
     result = get_daily_views(days=28)
     assert "error" not in result, f"Daily views error: {result.get('error')}"
     assert "days" in result, "Expected 'days' key"
@@ -152,7 +152,7 @@ def test_daily_views():
 
 @test("youtube: geographic breakdown returns countries")
 def test_geographic_breakdown():
-    from tools.youtube import get_geographic_breakdown
+    from tools.content import get_geographic_breakdown
     result = get_geographic_breakdown(days=28)
     assert "error" not in result, f"Geographic breakdown error: {result.get('error')}"
     assert "countries" in result, "Expected 'countries' key"

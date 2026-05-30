@@ -30,7 +30,7 @@ def run_all() -> tuple[int, int]:
 
 @test("search: web_search returns count >= 0")
 def test_web_search():
-    from tools.search_tools import web_search
+    from tools.search.search_tools import web_search
     result = web_search("Python programming", max_results=3)
     assert "count" in result, "Expected 'count' key"
     assert result["count"] >= 0, "Expected count >= 0"
@@ -41,7 +41,7 @@ def test_web_search():
 
 @test("search: news_search returns count >= 0")
 def test_news_search():
-    from tools.search_tools import news_search
+    from tools.search.search_tools import news_search
     result = news_search("technology", max_results=3)
     assert "count" in result, "Expected 'count' key"
     assert result["count"] >= 0, "Expected count >= 0"
@@ -52,7 +52,7 @@ def test_news_search():
 
 @test("search: wiki_lookup finds Python article")
 def test_wiki_lookup_found():
-    from tools.search_tools import wiki_lookup
+    from tools.search.search_tools import wiki_lookup
     result = wiki_lookup("Python_(programming_language)")
     assert isinstance(result, dict), "Expected dict return"
     # API may be blocked, so accept both success and error
@@ -65,7 +65,7 @@ def test_wiki_lookup_found():
 
 @test("search: wiki_lookup handles unknown topic (not exception)")
 def test_wiki_lookup_not_found():
-    from tools.search_tools import wiki_lookup
+    from tools.search.search_tools import wiki_lookup
     result = wiki_lookup("xkq9fake99topicverify999")
     assert isinstance(result, dict), \
         f"Expected dict, got {type(result)}"
@@ -81,7 +81,7 @@ def test_wiki_lookup_not_found():
 
 @test("search: reddit_search returns count >= 0")
 def test_reddit_search():
-    from tools.search_tools import reddit_search
+    from tools.search.search_tools import reddit_search
     result = reddit_search("incremental games", limit=5)
     # API may be blocked, so accept both success and error
     if result.get("ok") == True:
@@ -95,7 +95,7 @@ def test_reddit_search():
 
 @test("search: get_weather returns temp_f")
 def test_weather():
-    from tools.search_tools import get_weather
+    from tools.search.search_tools import get_weather
     result = get_weather()
     assert "error" not in result, f"Weather error: {result.get('error')}"
     assert "temp_f" in result, "Expected 'temp_f' key"
@@ -104,7 +104,7 @@ def test_weather():
 
 @test("search: get_weather records to weather_history")
 def test_weather_history():
-    from tools.search_tools import get_weather
+    from tools.search.search_tools import get_weather
     from infra.db import get_weather_history
     from datetime import datetime
     result = get_weather()

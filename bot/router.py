@@ -18,7 +18,7 @@ from bot.report import report
 from bot.model_manager import get_status_report, get_throttled_models
 from infra.rate_limits import rate_limits
 from infra.polling import polling_manager
-from tools.goals import (
+from tools.productivity.goals import (
     get_goals_list,
     get_goal_detail,
     get_current_plan,
@@ -283,7 +283,7 @@ def handle_confirm(milestone_id: str) -> str:
 
 def handle_todo(sub: str, rest: str) -> str:
     """Handle /todo subcommands — list, done. add is handled in route()."""
-    from tools.personal import list_personal_tasks, complete_personal_task
+    from tools.productivity.personal import list_personal_tasks, complete_personal_task
 
     if sub == "list":
         result = list_personal_tasks(filter="all")
@@ -326,7 +326,7 @@ def handle_reject(milestone_id: str) -> str:
 
 def handle_sync() -> str:
     """Handle /sync command — run Google Tasks sync manually."""
-    from tools.sync_tasks import run_sync
+    from tools.productivity.sync import run_sync
     result = run_sync()
     if result.get("status") == "error":
         return f"Sync error: {result.get('error', 'unknown')}"

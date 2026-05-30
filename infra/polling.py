@@ -86,13 +86,13 @@ class PollingManager:
         Called at startup from privybot.py.
         Imports here to avoid circular imports.
         """
-        from tools.gmail import get_inbox_summary
-        from tools.calendar import get_today_schedule
-        from tools.calendar import get_upcoming_events
-        from tools.sync_tasks import run_sync
-        from tools.youtube.channel import get_channel_summary
-        from tools.games import get_installed_games
-        from tools.search_tools import get_weather
+        from tools.communication.gmail import get_inbox_summary
+        from tools.productivity.calendar import get_today_schedule
+        from tools.productivity.calendar import get_upcoming_events
+        from tools.productivity.sync import run_sync
+        from tools.content.channel import get_channel_summary
+        from tools.games.metrics import get_installed_games
+        from tools.search.search_tools import get_weather
 
         self.register(
             "gmail_personal",

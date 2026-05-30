@@ -12,21 +12,25 @@ No circular imports possible because:
 """
 
 # ─── Imports — tool functions only ────────
-from .youtube import (
+from .content.channel import (
     get_channel_summary,
-    get_top_videos,
-    get_video_analytics,
-    get_traffic_sources,
-    get_audience_demographics,
-    get_retention_curve,
-    get_device_breakdown,
     get_daily_views,
+    get_audience_demographics,
+    get_device_breakdown,
     get_geographic_breakdown,
 )
-from .recommendations import get_content_recommendations
-from .games import get_game_metrics, get_installed_games, get_sale_info
-from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url
-from .goals import (
+from .content.videos import (
+    get_top_videos,
+    get_video_analytics,
+    get_retention_curve,
+)
+from .content.discovery import (
+    get_traffic_sources,
+)
+from .games.recommendations import get_content_recommendations
+from .games.metrics import get_game_metrics, get_installed_games, get_sale_info
+from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url
+from .productivity.goals import (
     save_commitment,
     get_goals_list,
     get_goal_detail,
@@ -37,8 +41,8 @@ from .goals import (
     add_new_task,
     suggest_goal_progress,
 )
-from .calendar import get_today_schedule, get_upcoming_events, check_availability
-from .gmail import (
+from .productivity.calendar import get_today_schedule, get_upcoming_events, check_availability
+from .communication.gmail import (
     get_inbox_summary,
     get_all_inbox_summary,
     search_email,
@@ -46,14 +50,14 @@ from .gmail import (
     check_sender_all,
     read_email,
 )
-from .personal import (
+from .productivity.personal import (
     add_personal_task,
     list_personal_tasks,
     complete_personal_task,
     snooze_personal_task,
     delete_personal_task,
 )
-from .meta import think
+from .meta.meta import think
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (

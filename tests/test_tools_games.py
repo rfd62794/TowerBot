@@ -31,7 +31,7 @@ def run_all() -> tuple[int, int]:
 
 @test("games: Duckov resolves by name")
 def test_duckov_resolves():
-    from tools.games import get_game_metrics
+    from tools.games.metrics import get_game_metrics
     result = get_game_metrics("Duckov")
     assert "error" not in result, f"Game metrics error: {result.get('error')}"
     assert result.get("name") is not None, "Expected game name"
@@ -41,7 +41,7 @@ def test_duckov_resolves():
 
 @test("games: unknown game returns error dict (not exception)")
 def test_unknown_game_safe():
-    from tools.games import get_game_metrics
+    from tools.games.metrics import get_game_metrics
     result = get_game_metrics("fakegamexyz99999verify")
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "error" in result, \
@@ -60,7 +60,7 @@ def test_installed_games():
 
 @test("games: sale info returns games list")
 def test_sale_info():
-    from tools.games import get_sale_info
+    from tools.games.metrics import get_sale_info
     result = get_sale_info(["Scritchy Scratchy"])
     assert "games" in result, "Expected 'games' key in result"
     assert len(result["games"]) > 0, "Expected at least one game result"
@@ -70,7 +70,7 @@ def test_sale_info():
 
 @test("games: resolve_appid returns dict with appid")
 def test_resolve_appid():
-    from tools.games import resolve_appid
+    from tools.games.metrics import resolve_appid
     result = resolve_appid("Raccoin")
     assert result is not None, "Expected non-None for known game"
     assert "appid" in result, "Expected 'appid' key"
@@ -79,7 +79,7 @@ def test_resolve_appid():
 
 @test("games: second call to get_game_metrics returns from cache")
 def test_game_metrics_cache():
-    from tools.games import get_game_metrics
+    from tools.games.metrics import get_game_metrics
     result1 = get_game_metrics("Duckov")
     assert "error" not in result1, f"First call failed: {result1.get('error')}"
     result2 = get_game_metrics("Duckov")
