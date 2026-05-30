@@ -222,7 +222,7 @@ def get_video_analytics(video_id: str, days: int = 28) -> dict:
             endDate=end,
             dimensions="video",
             filters=f"video=={video_id}",
-            metrics="views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,likes,comments",
+            metrics="views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage",
         ).execute()
 
         rows = response.get("rows", [])
@@ -236,8 +236,6 @@ def get_video_analytics(video_id: str, days: int = 28) -> dict:
             "watch_time_minutes": float(row[2]),
             "avg_view_duration_seconds": float(row[3]),
             "avg_view_percentage": float(row[4]),
-            "likes": int(row[5]),
-            "comments": int(row[6]),
             "period_days": days,
         }
 
