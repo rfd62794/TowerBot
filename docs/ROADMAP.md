@@ -126,33 +126,38 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 
 ---
 
-## Phase 5 — Calendar + Schedule 📅 PLANNED
+## Phase 5 — Calendar + Schedule ✅ DONE
 
-**Status**: Planned
+**Status**: Complete
 **Duration**: 2 weeks
 **Key Deliverables**:
-- YouTube Data API v3 integration
-- get_scheduled_videos() tool
-- get_video_metadata() tool
-- Google Calendar API integration
-- get_upcoming_events() tool
-- get_today_schedule() tool
-- OAuth scope addition for calendar access
+- Google Calendar API integration (tools/api/google_calendar_api.py)
+- Google Tasks API integration (tools/api/google_tasks_api.py)
+- Gmail API integration (tools/api/gmail_api.py)
+- Dual Gmail account support (personal + RFD IT Services)
+- Calendar tools: get_today_schedule, get_upcoming_events, check_availability
+- Gmail tools: get_inbox_summary, search_email, check_sender
+- Google Tasks sync: bidirectional sync with personal_tasks table
+- Morning briefing enriched with calendar events and email summaries
+- Heartbeat check 8: Google Tasks sync
+- Heartbeat check 9: overdue/pending personal task reminders
 
 **Key Decisions**:
-- Re-auth required for calendar scope
-- Video metadata cached (stable reference data)
-- Scheduled videos auto-cleanup after 7 days
+- OAuth token per account (config/youtube_token.json, config/rfd_token.json)
+- RFD credentials handled gracefully when token missing
+- Tasks sync on startup and via /sync command
 - Calendar events integrated into morning briefing
+- Dual Gmail merged inbox summaries
 
 **Unlocked**:
 - Agent knows your schedule
-- Video publishing tracked
-- Calendar gaps detected
-- Briefing includes today's events
+- Email monitoring across two accounts
+- Task sync between local DB and Google Tasks
+- Briefing includes today's events and email status
 
 **Related ADRs**:
-- ADR-017: Calendar Integration (to be written)
+- ADR-016: Dual Gmail Account Pattern
+- ADR-017: Google OAuth Scope Management
 
 ---
 
@@ -294,6 +299,140 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 
 ---
 
+## Phase 10 — Offline-First Cache Strategy 🔄 IN PROGRESS
+
+**Status**: In Progress (Phase 1 complete, Phase 2 pending)
+**Duration**: 2 weeks
+**Key Deliverables**:
+- Phase 1 (Complete): Cache plumbing infrastructure
+  - get_stale_cached_result() — returns cached data regardless of TTL
+  - record_preload_result() — writes to tool_cache + preload_log
+  - get_preload_status() — metadata on last fetch per tool
+  - preload_log table — tracks fetch attempts, success, duration
+  - tools/api/_base.py — cached_api_call() wrapper pattern
+  - stale_notice() — human-readable staleness formatting
+  - 15 tests, 124/124 passing
+- Phase 2 (Pending): Wire all API files to use cached_api_call()
+  - weather_api.py — 1 hour TTL
+  - youtube_api.py — 6 hours (Analytics), 24 hours (Data)
+  - steam_api.py — 24 hours
+  - gmail_api.py — 5 minutes
+  - google_calendar_api.py — 15 minutes
+  - google_tasks_api.py — 5 minutes
+  - itad_api.py, steamspy_api.py, ddg_api.py, wikipedia_api.py, reddit_api.py
+- Phase 3 (Pending): Preloader on startup
+  - scripts/preload.py — warm cache on bot startup
+  - privybot.py _initial_sync — call run_preload()
+  - scheduler.py health_check — stale data detection
+  - scheduler.py morning_briefing — stale notice cap (max 2)
+
+**Key Decisions**:
+- Staleness budget per API — some data ages slowly (YouTube, Steam)
+- On API failure: fall back to stale data with timestamp warning
+- Preload on startup: reduce first-query latency
+- Stale notice format: "⚠️ Data from 4h ago (2026-05-30 09:15)"
+- Morning briefing stale notice cap: max 2 individual, then collapse to summary
+
+**Unlocked**:
+- Bot remains functional during API outages
+- First query latency reduced via preload
+- User informed when data is stale
+- Reduced API quota usage
+
+**Related ADRs**:
+- ADR-018: Offline-First Cache Strategy
+- ADR-019: Staleness Budget per API
+- ADR-020: Preload on Startup Pattern
+
+---
+
+## Phase 11 — API Hardening + Typed Returns 🔒 PLANNED
+
+**Status**: Planned
+**Duration**: 1 week
+**Key Deliverables**:
+- Return type changes: all API functions return dict (not int/list)
+- Tool unwrapping: tools/*.py unwrap dict data, add stale_notice
+- Caller audit: verify all tool callers handle dict returns
+- Test updates: update assertions for new return shapes
+- Type hints: add proper type hints to all API functions
+- Error contracts: standardize error dict format across all APIs
+
+**Key Decisions**:
+- API functions always return dict (even for simple int/list)
+- Tool functions add stale_notice field when _stale=True
+- Agent sees stale_notice field and surfaces to user
+- No breaking changes to agent tool calling
+
+**Unlocked**:
+- Consistent return shapes across all APIs
+- Staleness visible to agent and user
+- Type safety improved
+- Error handling standardized
+
+**Related ADRs**:
+- ADR-021: API Return Type Standardization (to be written)
+
+---
+
+## Phase 12 — DB Hardening 💾 PLANNED
+
+**Status**: Planned
+**Duration**: 1 week
+**Key Deliverables**:
+- Connection pooling: SQLite connection pool for concurrent access
+- Transaction management: explicit BEGIN/COMMIT/ROLLBACK
+- Migration versioning: track schema versions, apply migrations incrementally
+- Vacuum/cleanup strategy: periodic VACUUM, index rebuild
+- Backup mechanism: automated backups to S3 or local
+- Connection health checks: detect and recover from stale connections
+
+**Key Decisions**:
+- Pool size: 5 connections (balance resource vs concurrency)
+- Migration table: schema_migrations (version, applied_at, rollback_sql)
+- Backup schedule: daily at 3AM, retain 7 days
+- Vacuum schedule: weekly on Sunday at 4AM
+
+**Unlocked**:
+- Better concurrent access
+- Safer schema changes
+- Data loss protection
+- Performance maintenance
+
+**Related ADRs**:
+- ADR-022: DB Hardening Strategy (to be written)
+
+---
+
+## Phase 13 — Logging Infrastructure 📊 PLANNED
+
+**Status**: Planned
+**Duration**: 1 week
+**Key Deliverables**:
+- Structured logging: JSON-formatted logs with consistent fields
+- Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+- Log rotation: daily rotation, retain 30 days
+- Request tracing: trace_id across async calls
+- Performance metrics: log duration for API calls, tool execution
+- Error aggregation: deduplicate similar errors, alert on spikes
+
+**Key Decisions**:
+- Log format: JSON with timestamp, level, trace_id, module, message
+- Storage: logs/ directory, rotated by date
+- Tracing: async contextvars for trace_id propagation
+- Metrics: log API call duration in ms, tool execution time
+
+**Unlocked**:
+- Better debugging
+- Performance visibility
+- Error pattern detection
+- Production observability
+
+**Related ADRs**:
+- ADR-023: Logging Infrastructure (to be written)
+
+---
+
 ## Phase Progress Summary
 
 | Phase | Status | Completion |
@@ -302,22 +441,25 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 | Phase 2 — Intelligence | ✅ DONE | 100% |
 | Phase 3 — Data | ✅ DONE | 100% |
 | Phase 4 — Proactive | ✅ DONE | 100% |
-| Phase 5 — Calendar | 📅 PLANNED | 0% |
+| Phase 5 — Calendar | ✅ DONE | 100% |
 | Phase 6 — Goals | 🎯 DONE | 100% |
 | Phase 7 — Tower | 🖥️ PLANNED | 0% |
 | Phase 8 — Publish | 📚 FUTURE | 0% |
 | Phase 9 — Local Model | 🤖 PLANNED | 0% |
+| Phase 10 — Offline Cache | 🔄 IN PROGRESS | 10% |
+| Phase 11 — API Hardening | 🔒 PLANNED | 0% |
+| Phase 12 — DB Hardening | 💾 PLANNED | 0% |
+| Phase 13 — Logging | 📊 PLANNED | 0% |
 
-**Overall Progress**: 56% (5/9 phases complete)
+**Overall Progress**: 46% (6/13 phases complete)
 
 ---
 
 ## Next Steps
 
-1. **Build Phase 5** (Calendar + Schedule):
-   - YouTube Data API v3 integration
-   - Google Calendar OAuth
-   - Video metadata and scheduled videos tools
+1. **Complete Phase 10** (Offline-First Cache):
+   - Phase 2: Wire all API files to use cached_api_call()
+   - Phase 3: Preloader on startup
 
 2. **Build Phase 7** (Tower Deployment):
    - NSSM service installation
