@@ -95,3 +95,6 @@ content:
   - key: content_pipeline
     content: YAML-driven FFmpeg assembly. review_session.py for Whisper transcription. OBS WebSocket integration.
     layer: content
+  - key: eic_game
+    content: Everything is Crab — Steam roguelite evolution game by a solo dev. Roberts best performing YouTube series. Top Short 595 views. Not Roblox. Not Electronic Intelligence Community.
+    layer: content

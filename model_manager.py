@@ -30,6 +30,9 @@ SEED_FREE_MODELS = [
     "moonshotai/kimi-k2.6:free",
 ]
 
+# Models with tool-calling format incompatibilities (leak raw tool-call text)
+TOOL_INCOMPATIBLE = {"openrouter/owl-alpha"}
+
 
 def fetch_free_tool_models() -> list:
     """Return free, tool-capable model ids. Cached 24h; seeds on failure."""
@@ -64,10 +67,10 @@ def fetch_free_tool_models() -> list:
 
 
 def get_available_model() -> str | None:
-    """Best available free model, skipping those still in 429 cooldown."""
+    """Best available free model, skipping those still in 429 cooldown or tool-incompatible."""
     throttled = set(get_throttled_models())
     for model_id in fetch_free_tool_models():
-        if model_id not in throttled:
+        if model_id not in throttled and model_id not in TOOL_INCOMPATIBLE:
             return model_id
     return None
 
