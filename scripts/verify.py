@@ -152,5 +152,58 @@ def test_recommendations():
     assert result.get("count", 0) > 0, f"Expected count > 0, got {result.get('count')}"
 
 
+@test("youtube: traffic sources returns list")
+def test_traffic_sources():
+    from tools.youtube import get_traffic_sources
+    result = get_traffic_sources(days=28)
+    assert "error" not in result, f"Traffic sources error: {result.get('error')}"
+    assert "top_search_terms" in result, "Expected top_search_terms key"
+    assert isinstance(result["top_search_terms"], list), "Expected list"
+
+
+@test("youtube: demographics returns breakdown")
+def test_demographics():
+    from tools.youtube import get_audience_demographics
+    result = get_audience_demographics(days=28)
+    assert "error" not in result, f"Demographics error: {result.get('error')}"
+    assert "age_groups" in result, "Expected age_groups key"
+    assert "gender" in result, "Expected gender key"
+
+
+@test("youtube: retention curve returns data")
+def test_retention_curve():
+    from tools.youtube import get_retention_curve
+    result = get_retention_curve("yZMuKQ2WEWA", days=28)
+    assert "error" not in result, f"Retention curve error: {result.get('error')}"
+    assert "curve" in result, "Expected curve key"
+    # Curve may be empty for small channels, that's acceptable
+
+
+@test("youtube: device breakdown returns devices")
+def test_device_breakdown():
+    from tools.youtube import get_device_breakdown
+    result = get_device_breakdown(days=28)
+    assert "error" not in result, f"Device breakdown error: {result.get('error')}"
+    assert "devices" in result, "Expected devices key"
+
+
+@test("youtube: daily views returns time series")
+def test_daily_views():
+    from tools.youtube import get_daily_views
+    result = get_daily_views(days=28)
+    assert "error" not in result, f"Daily views error: {result.get('error')}"
+    assert "days" in result, "Expected days key"
+    assert len(result["days"]) > 0, "Expected at least one day of data"
+
+
+@test("youtube: geographic breakdown returns countries")
+def test_geographic_breakdown():
+    from tools.youtube import get_geographic_breakdown
+    result = get_geographic_breakdown(days=28)
+    assert "error" not in result, f"Geographic breakdown error: {result.get('error')}"
+    assert "countries" in result, "Expected countries key"
+    assert len(result["countries"]) > 0, "Expected at least one country"
+
+
 if __name__ == "__main__":
     run_all()
