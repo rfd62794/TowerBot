@@ -301,7 +301,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 
 ## Phase 10 — Offline-First Cache Strategy 🔄 IN PROGRESS
 
-**Status**: In Progress (Phase 1 complete, Phase 2 pending)
+**Status**: In Progress (Phase 1 complete, Phase 2 in progress)
 **Duration**: 2 weeks
 **Key Deliverables**:
 - Phase 1 (Complete): Cache plumbing infrastructure
@@ -312,14 +312,23 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
   - tools/api/_base.py — cached_api_call() wrapper pattern
   - stale_notice() — human-readable staleness formatting
   - 15 tests, 124/124 passing
-- Phase 2 (Pending): Wire all API files to use cached_api_call()
-  - weather_api.py — 1 hour TTL
-  - youtube_api.py — 6 hours (Analytics), 24 hours (Data)
-  - steam_api.py — 24 hours
-  - gmail_api.py — 5 minutes
-  - google_calendar_api.py — 15 minutes
-  - google_tasks_api.py — 5 minutes
-  - itad_api.py, steamspy_api.py, ddg_api.py, wikipedia_api.py, reddit_api.py
+- Phase 2 (In Progress): Wire all API files to use cached_api_call()
+  - **Infrastructure Complete**:
+    - CacheManager (core/cache.py) — single owner of all cache behavior
+    - DBManager (core/db/manager.py) — single owner of database access with retry logic
+    - BaseAPIHandler (tools/api/_handler.py) — base class for API clients
+    - BaseTool (tools/_tool.py) — base class for tool functions
+    - WAL mode enabled for concurrent access
+    - 157/157 tests passing
+  - **Migrated API files**:
+    - weather_api.py — uses WeatherAPIHandler(BaseAPIHandler)
+  - **Pending API files**:
+    - youtube_api.py — 6 hours (Analytics), 24 hours (Data)
+    - steam_api.py — 24 hours
+    - gmail_api.py — 5 minutes
+    - google_calendar_api.py — 15 minutes
+    - google_tasks_api.py — 5 minutes
+    - itad_api.py, steamspy_api.py, ddg_api.py, wikipedia_api.py, reddit_api.py
 - Phase 3 (Pending): Preloader on startup
   - scripts/preload.py — warm cache on bot startup
   - privybot.py _initial_sync — call run_preload()
@@ -446,7 +455,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 | Phase 7 — Tower | 🖥️ PLANNED | 0% |
 | Phase 8 — Publish | 📚 FUTURE | 0% |
 | Phase 9 — Local Model | 🤖 PLANNED | 0% |
-| Phase 10 — Offline Cache | 🔄 IN PROGRESS | 10% |
+| Phase 10 — Offline Cache | 🔄 IN PROGRESS | 20% |
 | Phase 11 — API Hardening | 🔒 PLANNED | 0% |
 | Phase 12 — DB Hardening | 💾 PLANNED | 0% |
 | Phase 13 — Logging | 📊 PLANNED | 0% |
@@ -458,7 +467,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 ## Next Steps
 
 1. **Complete Phase 10** (Offline-First Cache):
-   - Phase 2: Wire all API files to use cached_api_call()
+   - Phase 2: Wire remaining API files to use cache.call() via BaseAPIHandler
    - Phase 3: Preloader on startup
 
 2. **Build Phase 7** (Tower Deployment):
