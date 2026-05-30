@@ -10,7 +10,7 @@ import logging
 
 import httpx
 
-from db import (
+from core.db import (
     record_throttle,
     record_success,
     get_throttled_models,

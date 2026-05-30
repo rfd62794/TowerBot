@@ -5,7 +5,7 @@ tool definitions. Only the Agent layer calls these.
 Pure memory logic: no Telegram, OpenRouter, routing, or report code.
 """
 
-from db import save_memory, update_memory, retire_memory, get_memories
+from core.db import save_memory, update_memory, retire_memory, get_memories
 
 VALID_LAYERS = {"technical", "project", "personal", "business", "content"}
 

@@ -8,10 +8,10 @@ PTB, OpenRouter, or direct SQLite (db.py only).
 import uuid
 import time
 
-from agent import respond, get_last_model
-from db import create_thread, list_memories, list_threads
-from report import report
-from model_manager import get_status_report, get_throttled_models
+from core.agent import respond, get_last_model
+from core.db import create_thread, list_memories, list_threads
+from core.report import report
+from core.model_manager import get_status_report, get_throttled_models
 
 _current_threads: dict[int, str] = {}
 _ROUTER_STARTUP = time.time()

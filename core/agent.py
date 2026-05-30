@@ -21,7 +21,7 @@ def get_last_model() -> str:
     """Return the last model used, or 'none' if none yet."""
     return _last_model_used or "none"
 
-from db import (
+from core.db import (
     get_context,
     add_message,
     create_thread,
@@ -29,15 +29,15 @@ from db import (
     update_thread_name,
     list_memories,
 )
-from memory import (
+from core.memory import (
     TOOL_DEFINITIONS,
     tool_save_memory,
     tool_update_memory,
     tool_retire_memory,
     tool_get_memories,
 )
-from report import report
-from model_manager import get_available_model, handle_429, handle_success
+from core.report import report
+from core.model_manager import get_available_model, handle_429, handle_success
 
 # max_retries=0: we manage 429 rotation ourselves; the SDK's internal retries
 # add 19-23s blocking waits before our fallback logic can run.
