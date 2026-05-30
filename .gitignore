@@ -1,5 +1,6 @@
 .env
 privy.db
+privy.db-journal
 logs/
 __pycache__/
 *.pyc
