@@ -26,7 +26,17 @@ from .youtube import (
 from .recommendations import get_content_recommendations
 from .games import get_game_metrics, get_installed_games, get_sale_info
 from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url
-from .goals import save_commitment
+from .goals import (
+    save_commitment,
+    get_goals_list,
+    get_goal_detail,
+    get_current_plan,
+    get_tasks_today,
+    get_upcoming_tasks,
+    update_task,
+    add_new_task,
+    suggest_goal_progress,
+)
 from .calendar import get_today_schedule, get_upcoming_events, check_availability
 from .gmail import (
     get_inbox_summary,
@@ -51,14 +61,6 @@ from core.memory import (
     tool_update_memory,
     tool_retire_memory,
     tool_get_memories,
-    tool_get_goals,
-    tool_get_goal,
-    tool_get_current_plan,
-    tool_get_tasks_today,
-    tool_get_upcoming_tasks,
-    tool_update_task,
-    tool_add_task,
-    tool_suggest_goal_progress,
 )
 
 # ─── Tool definitions ─────────────────────
@@ -840,7 +842,7 @@ TOOL_REGISTRY = {
     },
     # Goals tools
     "get_goals": {
-        "fn": tool_get_goals,
+        "fn": get_goals_list,
         "definition": {
             "type": "function",
             "function": {
@@ -861,7 +863,7 @@ TOOL_REGISTRY = {
         },
     },
     "get_goal": {
-        "fn": tool_get_goal,
+        "fn": get_goal_detail,
         "definition": {
             "type": "function",
             "function": {
@@ -878,7 +880,7 @@ TOOL_REGISTRY = {
         },
     },
     "get_current_plan": {
-        "fn": tool_get_current_plan,
+        "fn": get_current_plan,
         "definition": {
             "type": "function",
             "function": {
@@ -893,7 +895,7 @@ TOOL_REGISTRY = {
         },
     },
     "get_tasks_today": {
-        "fn": tool_get_tasks_today,
+        "fn": get_tasks_today,
         "definition": {
             "type": "function",
             "function": {
@@ -908,7 +910,7 @@ TOOL_REGISTRY = {
         },
     },
     "get_upcoming_tasks": {
-        "fn": tool_get_upcoming_tasks,
+        "fn": get_upcoming_tasks,
         "definition": {
             "type": "function",
             "function": {
@@ -925,7 +927,7 @@ TOOL_REGISTRY = {
         },
     },
     "update_task": {
-        "fn": tool_update_task,
+        "fn": update_task,
         "definition": {
             "type": "function",
             "function": {
@@ -946,7 +948,7 @@ TOOL_REGISTRY = {
         },
     },
     "add_task": {
-        "fn": tool_add_task,
+        "fn": add_new_task,
         "definition": {
             "type": "function",
             "function": {
@@ -966,7 +968,7 @@ TOOL_REGISTRY = {
         },
     },
     "suggest_goal_progress": {
-        "fn": tool_suggest_goal_progress,
+        "fn": suggest_goal_progress,
         "definition": {
             "type": "function",
             "function": {
