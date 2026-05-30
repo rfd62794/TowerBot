@@ -25,7 +25,8 @@ def test(name):
 
 _TEST_TASK_TITLES = [
     "Test dentist call", "Filter test task", "Dentist at 10am",
-    "Test task for snooze", "Due soon task",
+    "Test task for snooze", "Due soon task", "Snooze me",
+    "Complete me task", "Daily standup", "YouTube analytics review",
 ]
 
 
