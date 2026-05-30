@@ -30,7 +30,7 @@ def run_all() -> tuple[int, int]:
 
 @test("api: youtube credentials load without error")
 def test_youtube_credentials():
-    from tools.api.youtube_api import _get_credentials
+    from api.google.youtube_api import _get_credentials
     try:
         creds = _get_credentials()
         assert creds is not None, "Credentials returned None"
@@ -40,7 +40,7 @@ def test_youtube_credentials():
 
 @test("api: steam_api get_owned_games returns list")
 def test_steam_owned_games():
-    from tools.api.steam_api import get_game_library
+    from api.steam.steam_api import get_game_library
     result = get_game_library()
     assert "error" not in result, f"Steam API error: {result.get('error')}"
     assert "raw" in result, "Expected 'raw' key"
@@ -50,7 +50,7 @@ def test_steam_owned_games():
 
 @test("api: steamspy_api returns dict for known appid")
 def test_steamspy():
-    from tools.api.steamspy_api import get_app_details
+    from api.steam.steamspy_api import get_app_details
     result = get_app_details(2780540)
     assert isinstance(result, dict), "Expected dict return"
     assert "error" not in result or "appid" in result, \
@@ -59,14 +59,14 @@ def test_steamspy():
 
 @test("api: itad_api returns result for known game")
 def test_itad():
-    from tools.api.itad_api import lookup_game
+    from api.steam.itad_api import lookup_game
     result = lookup_game("Duckov")
     assert isinstance(result, dict), "Expected dict return"
 
 
 @test("api: ddg_api search_web returns list")
 def test_ddg():
-    from tools.api.ddg_api import search_web
+    from api.web.ddg_api import search_web
     result = search_web("Python programming", max_results=3)
     assert isinstance(result, list), \
         f"Expected list, got {type(result)}"
@@ -74,7 +74,7 @@ def test_ddg():
 
 @test("api: wikipedia_api get_summary returns dict")
 def test_wikipedia():
-    from tools.api.wikipedia_api import get_summary
+    from api.web.wikipedia_api import get_summary
     result = get_summary("Python_(programming_language)")
     assert isinstance(result, dict), "Expected dict return"
     assert "found" in result or "summary" in result or "error" in result, \
@@ -83,7 +83,7 @@ def test_wikipedia():
 
 @test("api: reddit_api search_reddit returns list")
 def test_reddit():
-    from tools.api.reddit_api import search_reddit
+    from api.web.reddit_api import search_reddit
     result = search_reddit("incremental games", limit=3)
     assert isinstance(result, list), \
         f"Expected list, got {type(result)}"
@@ -91,7 +91,7 @@ def test_reddit():
 
 @test("api: weather_api get_current_weather returns dict")
 def test_weather_api():
-    from tools.api.weather_api import get_current_weather
+    from api.weather.weather_api import get_current_weather
     result = get_current_weather()
     assert isinstance(result, dict), "Expected dict return"
     assert "error" not in result or "temp_f" in result, \

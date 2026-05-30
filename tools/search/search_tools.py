@@ -2,10 +2,10 @@
 
 import hashlib
 from datetime import datetime
-from tools.api.ddg_api import ddg_api
-from tools.api.wikipedia_api import wikipedia_api
-from tools.api.reddit_api import reddit_api
-from tools.api.weather_api import get_current_weather
+from api.web.ddg_api import ddg_api
+from api.web.wikipedia_api import wikipedia_api
+from api.web.reddit_api import reddit_api
+from api.weather.weather_api import get_current_weather
 from infra.db import record_weather_day
 from tools._tool import BaseTool
 
@@ -139,7 +139,7 @@ class SearchTools(BaseTool):
         Returns:
             Dict with url, title, content, char_count, truncated
         """
-        from tools.api.fetch_api import fetch_api
+        from api.web.fetch_api import fetch_api
 
         raw = fetch_api.fetch_url(url, max_chars)
 

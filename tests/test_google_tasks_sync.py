@@ -30,14 +30,14 @@ def run_all() -> tuple[int, int]:
 
 @test("sync: google_tasks_api credentials load")
 def test_credentials():
-    from tools.api.google_tasks_api import _get_tasks_client
+    from api.google.tasks_api import _get_tasks_client
     client = _get_tasks_client()
     assert client is not None
 
 
 @test("sync: get_default_tasklist_id returns dict with tasklist_id")
 def test_tasklist_id():
-    from tools.api.google_tasks_api import get_default_tasklist_id
+    from api.google.tasks_api import get_default_tasklist_id
     result = get_default_tasklist_id()
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "tasklist_id" in result, "Missing 'tasklist_id' key"
@@ -47,7 +47,7 @@ def test_tasklist_id():
 
 @test("sync: pull_tasks returns dict with tasks")
 def test_pull_tasks():
-    from tools.api.google_tasks_api import get_default_tasklist_id, pull_tasks
+    from api.google.tasks_api import get_default_tasklist_id, pull_tasks
     tasklist_id_raw = get_default_tasklist_id()
     tasklist_id = tasklist_id_raw.get("tasklist_id")
     if not tasklist_id:
@@ -60,7 +60,7 @@ def test_pull_tasks():
 
 @test("sync: push_task creates and deletes task in Google")
 def test_push_delete_task():
-    from tools.api.google_tasks_api import (
+    from api.google.tasks_api import (
         get_default_tasklist_id, push_task, delete_task
     )
     tasklist_id_raw = get_default_tasklist_id()

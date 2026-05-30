@@ -51,7 +51,7 @@ def test_unknown_game_safe():
 
 @test("games: installed games library returns 100+ games")
 def test_installed_games():
-    from tools.api.steam_api import get_game_library
+    from api.steam.steam_api import get_game_library
     result = get_game_library()
     assert "error" not in result, f"Steam library error: {result.get('error')}"
     games = result["raw"]

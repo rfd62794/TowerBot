@@ -3,9 +3,9 @@
 import hashlib
 from datetime import datetime, timedelta
 from tools._tool import BaseTool
-from tools.api.steam_api import get_game_library
-from tools.api.steamspy_api import get_app_details
-from tools.api.youtube_api import search_youtube, get_video_statistics
+from api.steam.steam_api import get_game_library
+from api.steam.steamspy_api import get_app_details
+from api.google.youtube_api import search_youtube, get_video_statistics
 from infra.db import cache_tool_result, get_cached_tool_result
 
 

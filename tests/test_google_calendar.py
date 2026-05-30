@@ -30,14 +30,14 @@ def run_all() -> tuple[int, int]:
 
 @test("calendar: credentials load")
 def test_credentials():
-    from tools.api.google_calendar_api import _get_calendar_client
+    from api.google.calendar_api import _get_calendar_client
     client = _get_calendar_client()
     assert client is not None
 
 
 @test("calendar: get_events returns dict with events")
 def test_get_events():
-    from tools.api.google_calendar_api import get_events
+    from api.google.calendar_api import get_events
     result = get_events(days_ahead=7)
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "events" in result, "Missing 'events' key"
@@ -46,7 +46,7 @@ def test_get_events():
 
 @test("calendar: get_events_today returns dict with events")
 def test_get_events_today():
-    from tools.api.google_calendar_api import get_events_today
+    from api.google.calendar_api import get_events_today
     result = get_events_today()
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "events" in result, "Missing 'events' key"

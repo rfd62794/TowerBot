@@ -13,7 +13,7 @@ load_dotenv(os.path.join(_root, ".env"))
 from infra.db import init_db
 init_db()
 
-from tools.api._handler import BaseAPIHandler
+from api._handler import BaseAPIHandler
 from tools._tool import BaseTool
 
 TESTS = []
