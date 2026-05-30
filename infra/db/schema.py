@@ -309,6 +309,15 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
+    # Migration: add created_at to commitments if missing
+    try:
+        cols = {row[1] for row in _conn.execute("PRAGMA table_info(commitments)").fetchall()}
+        if cols and "created_at" not in cols:
+            _conn.execute("ALTER TABLE commitments ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+            _conn.commit()
+    except Exception:
+        pass
+
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
     with _lock:
