@@ -58,13 +58,17 @@ NAME_THREAD_TOOL = {
 ALL_TOOLS = TOOL_DEFINITIONS + [NAME_THREAD_TOOL]
 
 
+# Confirmed-valid free models with tool-calling. Invalid IDs (hermes-3-405b,
+# gemma-4-31b) were removed after OpenRouter rejected them as not-a-valid-model.
 FREE_MODEL_FALLBACKS = [
     "deepseek/deepseek-v4-flash:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "nousresearch/hermes-3-405b-instruct:free",
-    "google/gemma-4-31b:free",
     "moonshotai/kimi-k2.6:free",
 ]
+
+# Cap output tokens: some providers (e.g. Venice for Llama) reject the model's
+# large default max_completion_tokens. 8000 is well under provider caps.
+MAX_OUTPUT_TOKENS = 8000
 
 
 class _CreditsExhausted(Exception):
@@ -112,7 +116,7 @@ def _handle_name_thread(thread_id: str, name: str) -> dict:
 
 
 def _call(model: str, messages: list, tools):
-    kwargs = {"model": model, "messages": messages}
+    kwargs = {"model": model, "messages": messages, "max_tokens": MAX_OUTPUT_TOKENS}
     if tools:
         kwargs["tools"] = tools
         kwargs["tool_choice"] = "auto"

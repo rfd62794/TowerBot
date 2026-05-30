@@ -28,15 +28,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     text = update.message.text or ""
     chat_id = update.effective_chat.id
 
-    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+    # Typing is best-effort; a transient network blip must not block the reply.
+    try:
+        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+    except Exception:
+        pass
 
     response = await route(chat_id, text)
 
-    # Markdown safety: retry without parse_mode if Markdown fails.
-    try:
-        await update.message.reply_text(response, parse_mode="Markdown")
-    except Exception:
-        await update.message.reply_text(response, parse_mode=None)
+    # Markdown safety + transient-network resilience: retry the send a few times,
+    # falling back to plain text if Markdown parsing fails.
+    for attempt in range(3):
+        try:
+            await update.message.reply_text(response, parse_mode="Markdown")
+            return
+        except Exception:
+            try:
+                await update.message.reply_text(response, parse_mode=None)
+                return
+            except Exception:
+                if attempt == 2:
+                    raise
 
 
 def build_app():
