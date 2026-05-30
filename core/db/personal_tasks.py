@@ -306,22 +306,6 @@ def get_last_sync() -> dict | None:
     return dict(row) if row else None
 
 
-def _run_migrations() -> None:
-    """Apply incremental schema migrations for personal_tasks."""
-    try:
-        cols = {row[1] for row in _exec("PRAGMA table_info(personal_tasks)").fetchall()}
-        if cols and "google_task_id" not in cols:
-            _exec(
-                "ALTER TABLE personal_tasks ADD COLUMN google_task_id TEXT",
-                commit=True,
-            )
-    except Exception:
-        pass
-
-
-_run_migrations()
-
-
 def mark_reminded(task_id: int) -> None:
     _exec(
         "INSERT INTO task_reminders (task_id) VALUES (?)",
