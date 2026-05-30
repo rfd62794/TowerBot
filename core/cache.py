@@ -79,6 +79,8 @@ class CacheManager:
         "youtube_devices": 86400,
         "youtube_daily": 21600,
         "youtube_geography": 86400,
+        "youtube_playlist_id": 86400,
+        "youtube_playlist_items": 86400,
         "calendar_upcoming": 900,
     }
 

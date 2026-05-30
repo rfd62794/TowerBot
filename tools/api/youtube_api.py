@@ -408,3 +408,12 @@ def query_daily_views(start_date: str, end_date: str) -> dict:
 def query_geography(start_date: str, end_date: str) -> dict:
     return youtube_api.query_geography(start_date, end_date)
 
+
+# Backwards compat for internal functions used by other modules
+def _get_credentials() -> Credentials:
+    return youtube_api._get_credentials()
+
+
+def search_youtube(query: str, days: int, max_results: int = 10) -> dict:
+    return youtube_api.search_youtube(query, days, max_results)
+
