@@ -16,6 +16,7 @@ from core.db import (
 )
 from core.report import report
 from core.model_manager import get_status_report, get_throttled_models
+from core.rate_limits import rate_limits
 from tools.goals import (
     get_goals_list,
     get_goal_detail,
@@ -55,6 +56,14 @@ def handle_status() -> str:
         f"Last model: {last_model}",
         f"Throttled models: {len(throttled)}",
     ]
+
+    # Rate limit status
+    status_data = rate_limits.get_status()
+    limited = [s for s in status_data if not s["available"]]
+    if limited:
+        lines.append(f"⚠️ Rate limited: {', '.join(l['api'] for l in limited)}")
+    elif status_data:
+        lines.append("✅ All APIs available")
 
     if last_deploy:
         lines.append(f"\nCurrent commit: {last_deploy['commit_hash'][:7] if last_deploy['commit_hash'] else 'unknown'}")

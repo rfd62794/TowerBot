@@ -112,6 +112,14 @@ from core.db.deployments import (
     get_deploy_history,
 )
 
+from core.db.rate_limits_db import (
+    get_api_state,
+    upsert_api_state,
+    log_api_call,
+    get_call_log,
+    get_all_api_states,
+)
+
 __all__ = [
     "DB_PATH", "init_db",
     "create_thread", "update_thread_name", "update_thread_active", "list_threads",
@@ -138,4 +146,5 @@ __all__ = [
     "update_sync_record", "get_last_sync",
     "record_deploy", "mark_verify_passed", "mark_stable", "mark_rolled_back",
     "get_last_stable_commit", "get_last_deploy", "get_deploy_history",
+    "get_api_state", "upsert_api_state", "log_api_call", "get_call_log", "get_all_api_states",
 ]

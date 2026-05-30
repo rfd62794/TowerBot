@@ -240,6 +240,30 @@ CREATE TABLE IF NOT EXISTS deploy_history (
     rolled_back INTEGER DEFAULT 0,
     notes TEXT
 );
+
+CREATE TABLE IF NOT EXISTS api_rate_limits (
+    api_name TEXT PRIMARY KEY,
+    calls_today INTEGER DEFAULT 0,
+    calls_this_minute INTEGER DEFAULT 0,
+    last_call_at TEXT,
+    last_429_at TEXT,
+    retry_after_seconds INTEGER DEFAULT 0,
+    total_calls_lifetime INTEGER DEFAULT 0,
+    quota_used_today INTEGER DEFAULT 0,
+    day_reset_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS api_call_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    api_name TEXT NOT NULL,
+    called_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+    cost_units INTEGER DEFAULT 1,
+    success INTEGER DEFAULT 1,
+    response_code INTEGER,
+    was_cached INTEGER DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_call_log_name_time ON api_call_log(api_name, called_at DESC);
 """
 
 _conn: sqlite3.Connection | None = None
