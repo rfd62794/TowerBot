@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+config/client_secret.json
+config/youtube_token.json
