@@ -9,7 +9,8 @@ from tools.youtube import get_channel_summary, get_channel_summary_range
 from core.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
     queue_observation, get_pending_observations, mark_sent, flush_morning_queue,
-    get_upcoming_scheduled, get_tasks_due_today, get_current_weekly_plan
+    get_upcoming_scheduled, get_tasks_due_today, get_current_weekly_plan,
+    get_channel_history
 )
 
 logger = logging.getLogger("privy.scheduler")
@@ -172,6 +173,29 @@ async def morning_briefing(send_fn) -> None:
     except Exception as e:
         logger.error(f"Morning briefing failed: {e}")
         await send_fn("📺 Morning briefing failed: Unexpected error")
+
+
+async def check_missed_briefing(send_fn) -> None:
+    """
+    Called on every startup.
+    If current time is past 7AM and no channel_history entry exists for today —
+    the briefing was missed. Send it now.
+    """
+    now = datetime.now(EASTERN)
+    
+    if now.hour < 7:
+        return  # Before briefing time, skip
+    
+    today = now.strftime("%Y-%m-%d")
+    history = get_channel_history(days=1)
+    
+    already_sent = any(
+        h["date"] == today for h in history
+    )
+    
+    if not already_sent:
+        logger.info("Missed briefing detected. Sending now.")
+        await morning_briefing(send_fn)
 
 
 async def heartbeat_check(send_fn) -> None:
