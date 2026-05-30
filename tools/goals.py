@@ -194,7 +194,7 @@ class GoalsTools(BaseTool):
         
         # Return updated task
         updated = get_task(task_id)
-        return self.success({"task": updated})
+        return self.success(updated)
 
     def suggest_goal_progress(self, milestone_id: str) -> dict:
         """
