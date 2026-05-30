@@ -401,25 +401,34 @@ async def heartbeat_check(send_fn) -> None:
         except Exception as e:
             logger.debug(f"Calendar alert check failed: {e}")
 
-        # Check 9 — overdue and pending personal task reminder
+        # Check 9 — overdue and pending personal task reminder (daily summary only)
         try:
-            overdue_tasks = get_personal_tasks("overdue")
-            today_pending = get_personal_tasks("today")
+            # Use a unique alert key for the daily summary
+            summary_alert_key = f"daily_task_summary_{now.strftime('%Y-%m-%d')}"
+            import zlib
+            summary_alert_id = zlib.adler32(summary_alert_key.encode()) & 0x7FFFFFFF
+            
+            if not already_reminded(summary_alert_id):
+                overdue_tasks = get_personal_tasks("overdue")
+                today_pending = get_personal_tasks("today")
 
-            if overdue_tasks and should_send_now("normal"):
-                lines = "\n".join(
-                    f"\u2022 {t['title']}" for t in overdue_tasks[:5]
-                )
-                await send_fn(f"\u26a0\ufe0f Overdue ({len(overdue_tasks)}):\n{lines}")
+                if overdue_tasks and should_send_now("normal"):
+                    lines = "\n".join(
+                        f"\u2022 {t['title']}" for t in overdue_tasks[:5]
+                    )
+                    await send_fn(f"\u26a0\ufe0f Overdue ({len(overdue_tasks)}):\n{lines}")
 
-            if today_pending and should_send_now("normal"):
-                lines = "\n".join(
-                    f"\u2022 {t['title']}" + (f" at {t['due_time']}" if t.get("due_time") else "")
-                    for t in today_pending[:5]
-                )
-                await send_fn(
-                    f"\U0001f4dd Still pending today ({len(today_pending)}):\n{lines}"
-                )
+                if today_pending and should_send_now("normal"):
+                    lines = "\n".join(
+                        f"\u2022 {t['title']}" + (f" at {t['due_time']}" if t.get("due_time") else "")
+                        for t in today_pending[:5]
+                    )
+                    await send_fn(
+                        f"\U0001f4dd Still pending today ({len(today_pending)}):\n{lines}"
+                    )
+                
+                # Mark this daily summary as sent
+                mark_reminded(summary_alert_id)
         except Exception as e:
             logger.debug(f"Personal task reminder check failed: {e}")
 
