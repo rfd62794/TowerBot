@@ -21,9 +21,9 @@ import time
 if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from db import init_db
-from report import init_report
-from transport import build_app
+from core.db import init_db
+from core.report import init_report
+from core.transport import build_app
 
 # Track startup time for /status command
 STARTUP_TIME = time.time()
@@ -58,7 +58,7 @@ def _validate_startup() -> None:
 
     # Check database accessibility
     try:
-        from db import DB_PATH
+        from core.db import DB_PATH
         if not os.path.exists(DB_PATH):
             errors.append(f"Database not found at {DB_PATH}")
     except Exception as e:
