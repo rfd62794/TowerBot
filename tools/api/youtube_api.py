@@ -22,15 +22,8 @@ def _get_credentials() -> Credentials:
 
     # Refresh if expired
     if creds.expired and creds.refresh_token:
-        from google_auth_oauthlib.flow import InstalledAppFlow
-        flow = InstalledAppFlow.from_client_secrets_file(
-            client_secrets_path,
-            scopes=[
-                "https://www.googleapis.com/auth/yt-analytics.readonly",
-                "https://www.googleapis.com/auth/youtube.readonly",
-            ],
-        )
-        creds.refresh(flow)
+        from google.auth.transport.requests import Request
+        creds.refresh(Request())
 
     return creds
 
