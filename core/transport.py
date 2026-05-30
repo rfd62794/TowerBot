@@ -15,7 +15,7 @@ from telegram.ext import (
     filters,
 )
 
-from router import route
+from core.router import route
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
