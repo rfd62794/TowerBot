@@ -16,6 +16,7 @@ from .games import get_game_metrics, get_installed_games, get_sale_info
 from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather
 from .goals import save_commitment
 from .calendar import get_today_schedule, get_upcoming_events, check_availability
+from .gmail import get_inbox_summary, search_email, check_sender, read_email
 from .personal import (
     add_personal_task,
     list_personal_tasks,
@@ -419,6 +420,74 @@ TOOL_REGISTRY = {
                     "type": "object",
                     "properties": {},
                     "required": [],
+                },
+            },
+        },
+    },
+    "get_inbox_summary": {
+        "fn": get_inbox_summary,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_inbox_summary",
+                "description": "WHEN: Robert asks about email, 'any emails?', 'check my inbox', 'how many unread', 'what's in my email', 'did anyone email me'. Also called in morning briefing context.\n\nRETURNS: unread_count (int), has_unread (bool), recent (list of up to 3 — each has from, subject, date, snippet).\n\nDO NOT CALL: if user asks about a specific sender — use check_sender instead. DO NOT CALL: if user wants to search by topic — use search_email instead.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                },
+            },
+        },
+    },
+    "search_email": {
+        "fn": search_email,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "search_email",
+                "description": "WHEN: Robert asks to find emails, 'find emails about X', 'search for Y in email', 'any emails mentioning Z', topic or keyword searches.\n\nRETURNS: query, count, messages list each with from, subject, date, snippet.\n\nPARAMS: query (Gmail search syntax — from:, subject:, is:unread, after:YYYY/MM/DD etc), max_results (int, default 5).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Gmail search query. Supports from:, subject:, is:unread, in:inbox, after:, before:, etc."},
+                        "max_results": {"type": "integer", "description": "Max messages to return. Default 5."},
+                    },
+                    "required": ["query"],
+                },
+            },
+        },
+    },
+    "check_sender": {
+        "fn": check_sender,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "check_sender",
+                "description": "WHEN: Robert asks if a specific person replied or emailed, 'did X reply', 'any emails from Y', 'has Z responded', 'check if client emailed'.\n\nRETURNS: sender, count, has_messages (bool — False means no emails found), messages list with subject and snippet.\n\nPARAMS: sender (email address or name), unread_only (bool, default True).\n\nDO NOT CALL: for general inbox check — use get_inbox_summary instead.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sender": {"type": "string", "description": "Email address or name to check"},
+                        "unread_only": {"type": "boolean", "description": "Only return unread emails. Default true."},
+                    },
+                    "required": ["sender"],
+                },
+            },
+        },
+    },
+    "read_email": {
+        "fn": read_email,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "read_email",
+                "description": "WHEN: Robert wants to read the content of a specific email, 'what does that email say', 'read that', 'what did they write'. Requires a message_id from a prior search.\n\nRETURNS: from, subject, date, body (first 2000 chars).\n\nPARAMS: message_id (string — get this from search_email or check_sender results first).\n\nDO NOT CALL: without a message_id. Always search first.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "message_id": {"type": "string", "description": "Gmail message ID from a prior search result"},
+                    },
+                    "required": ["message_id"],
                 },
             },
         },

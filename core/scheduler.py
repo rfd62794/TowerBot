@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from tools.youtube import get_channel_summary, get_channel_summary_range
 from tools.calendar import get_today_schedule
 from tools.api.google_calendar_api import get_events_soon
+from tools.gmail import get_inbox_summary
 
 from core.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
@@ -150,6 +151,21 @@ async def morning_briefing(send_fn) -> None:
                 msg += f"\n\n\U0001f4c5 Today:\n{lines}"
         except Exception as e:
             logger.debug(f"Calendar check failed: {e}")
+
+        # Add email unread count
+        try:
+            inbox = get_inbox_summary()
+            if inbox["unread_count"] > 0:
+                line = f"\U0001f4ec Unread: {inbox['unread_count']}"
+                if inbox["recent"]:
+                    senders = list({
+                        msg["from"].split("<")[0].strip()
+                        for msg in inbox["recent"]
+                    })[:3]
+                    line += f" \u2014 {', '.join(senders)}"
+                msg += f"\n{line}"
+        except Exception as e:
+            logger.debug(f"Gmail check failed: {e}")
 
         # Add today's tasks section
         try:
