@@ -17,6 +17,7 @@ from core.db import (
 from core.report import report
 from core.model_manager import get_status_report, get_throttled_models
 from core.rate_limits import rate_limits
+from core.polling import polling_manager
 from tools.goals import (
     get_goals_list,
     get_goal_detail,
@@ -64,6 +65,20 @@ def handle_status() -> str:
         lines.append(f"⚠️ Rate limited: {', '.join(l['api'] for l in limited)}")
     elif status_data:
         lines.append("✅ All APIs available")
+
+    # Polling status
+    poll_status = polling_manager.status()
+    in_progress = [p for p in poll_status if p["in_progress"]]
+    overdue = [p for p in poll_status if p["overdue"]]
+
+    if in_progress:
+        keys = [p["key"] for p in in_progress]
+        lines.append(f"🔄 Polling: {', '.join(keys)}")
+    elif overdue:
+        keys = [p["key"] for p in overdue]
+        lines.append(f"⚠️ Overdue polls: {', '.join(keys)}")
+    elif poll_status:
+        lines.append("✅ All polls current")
 
     if last_deploy:
         lines.append(f"\nCurrent commit: {last_deploy['commit_hash'][:7] if last_deploy['commit_hash'] else 'unknown'}")

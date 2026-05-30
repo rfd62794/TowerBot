@@ -264,6 +264,18 @@ CREATE TABLE IF NOT EXISTS api_call_log (
 );
 
 CREATE INDEX IF NOT EXISTS idx_api_call_log_name_time ON api_call_log(api_name, called_at DESC);
+
+CREATE TABLE IF NOT EXISTS poll_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    poll_key TEXT NOT NULL,
+    polled_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+    success INTEGER DEFAULT 1,
+    duration_ms INTEGER,
+    from_cache INTEGER DEFAULT 0,
+    error_msg TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_poll_log_key_time ON poll_log(poll_key, polled_at DESC);
 """
 
 _conn: sqlite3.Connection | None = None
