@@ -2,6 +2,7 @@
 
 from .youtube import get_channel_summary, get_top_videos
 from .recommendations import get_content_recommendations
+from .games import get_game_metrics
 
 TOOL_REGISTRY = {
     "get_youtube_stats": {
@@ -73,6 +74,26 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": [],
+                },
+            },
+        },
+    },
+    "get_game_metrics": {
+        "fn": get_game_metrics,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_game_metrics",
+                "description": "Get detailed metrics for a specific game by Steam AppID. Call when asked how a specific game is doing, player counts, or YouTube coverage.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "appid": {
+                            "type": "integer",
+                            "description": "Steam AppID of the game",
+                        }
+                    },
+                    "required": ["appid"],
                 },
             },
         },
