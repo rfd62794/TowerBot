@@ -7,6 +7,8 @@ import pytz
 from datetime import datetime, timedelta
 
 from tools.youtube import get_channel_summary, get_channel_summary_range
+from tools.calendar import get_today_schedule
+from tools.api.google_calendar_api import get_events_soon
 
 from core.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
@@ -139,6 +141,15 @@ async def morning_briefing(send_fn) -> None:
                     msg += f"\n📅 Scheduled today: {vid['title']} at {vid['scheduled_time'][11:16]}"
         except Exception:
             pass
+
+        # Add today's calendar events
+        try:
+            schedule = get_today_schedule()
+            if schedule["count"] > 0:
+                lines = "\n".join(schedule["formatted"][:5])
+                msg += f"\n\n\U0001f4c5 Today:\n{lines}"
+        except Exception as e:
+            logger.debug(f"Calendar check failed: {e}")
 
         # Add today's tasks section
         try:
@@ -334,6 +345,26 @@ async def heartbeat_check(send_fn) -> None:
                     logger.info(f"Sent personal task reminder: {task['title']}")
         except Exception as e:
             logger.debug(f"Personal task reminder check failed: {e}")
+
+        # Check 10 — pre-event calendar alerts
+        try:
+            import zlib
+            events_soon = get_events_soon(minutes=60)
+            for event in events_soon:
+                alert_key = f"cal_{event['id']}_{event['start'][:10]}"
+                alert_id = zlib.adler32(alert_key.encode()) & 0x7FFFFFFF
+                if not already_reminded(alert_id):
+                    mins = event.get("minutes_until")
+                    label = f"In ~{mins}min: " if mins is not None else ""
+                    msg = f"\U0001f4c5 {label}{event['title']}"
+                    if event.get("location"):
+                        msg += f"\n\U0001f4cd {event['location']}"
+                    if should_send_now("high"):
+                        await send_fn(msg)
+                        mark_reminded(alert_id)
+                        logger.info(f"Sent calendar alert: {event['title']}")
+        except Exception as e:
+            logger.debug(f"Calendar alert check failed: {e}")
 
         # Check 8 — Google Tasks sync
         try:

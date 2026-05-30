@@ -36,6 +36,7 @@ TEST_FILES = [
     "tests/test_deployments.py",
     "tests/test_personal_tasks.py",
     "tests/test_google_tasks_sync.py",
+    "tests/test_google_calendar.py",
 ]
 
 

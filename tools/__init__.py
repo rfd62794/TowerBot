@@ -15,6 +15,7 @@ from .recommendations import get_content_recommendations
 from .games import get_game_metrics, get_installed_games, get_sale_info
 from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather
 from .goals import save_commitment
+from .calendar import get_today_schedule, get_upcoming_events, check_availability
 from .personal import (
     add_personal_task,
     list_personal_tasks,
@@ -418,6 +419,55 @@ TOOL_REGISTRY = {
                     "type": "object",
                     "properties": {},
                     "required": [],
+                },
+            },
+        },
+    },
+    "get_today_schedule": {
+        "fn": get_today_schedule,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_today_schedule",
+                "description": "WHEN: Robert asks what's on his calendar today, 'what do I have today', 'am I busy today', 'what's scheduled', any morning context about the day. Also called as part of daily briefing context.\n\nRETURNS: count (int), formatted (list of readable time — event strings), events list with title, start, end, location, all_day.\n\nDO NOT CALL: for future days — use get_upcoming_events instead.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                },
+            },
+        },
+    },
+    "get_upcoming_events": {
+        "fn": get_upcoming_events,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_upcoming_events",
+                "description": "WHEN: Robert asks about upcoming events, 'what's this week', 'anything coming up', 'what's on my calendar', 'am I free this weekend', schedule questions beyond today.\n\nRETURNS: count, days (int), formatted (list of readable strings), events list.\n\nPARAMS: days (int, default 7 — pass 14 for two weeks, 30 for a month).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "days": {"type": "integer", "description": "How many days ahead to look. Default 7."},
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "check_availability": {
+        "fn": check_availability,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "check_availability",
+                "description": "WHEN: Robert asks if he is free on a specific date, 'am I busy Friday', 'is Saturday clear', 'do I have anything on June 15', 'is next Monday open'.\n\nRETURNS: date, busy (bool — True means has events), count, formatted list. busy=False means the day is clear.\n\nPARAMS: date (YYYY-MM-DD, required).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "date": {"type": "string", "description": "Date to check in YYYY-MM-DD format"},
+                    },
+                    "required": ["date"],
                 },
             },
         },
