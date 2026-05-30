@@ -2,6 +2,10 @@
 # SCHEMA RULE: All table creation and migrations belong in init_db() only.
 # Never run SQL at module import time — _conn is None until init_db() is
 # called from privybot.py startup.
+# TIMESTAMP FORMAT RULE: Always use datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# for timestamps written to SQLite. SQLite CURRENT_TIMESTAMP uses space separator.
+# Python's datetime.isoformat() uses T separator. Mixing them breaks datetime
+# comparisons. strftime format is the standard for this codebase.
 
 import os
 import sqlite3
