@@ -43,27 +43,35 @@ This document is supplemented by ADRs that capture key architectural decisions:
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ API Layer (tools/api/)                                      │
-│ External service clients (YouTube, Steam, Gmail, etc.)     │
-│ _base.py: cached_api_call() pattern                        │
+│ Layer 4: Memory (memory.py)                                 │
+│ Agent memory tools, TOOL_DEFINITIONS                        │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Tool Layer (tools/)                                         │
-│ Business logic, tool implementations                        │
-│ calendar.py, gmail.py, personal.py, goals.py, etc.         │
+│ Layer 5: Database (core/db/)                                │
+│ SQLite persistence, schema, migrations                      │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Core Layer (core/)                                          │
-│ Bot infrastructure                                          │
-│ agent.py, router.py, scheduler.py, model_manager.py        │
+│ Layer 5b: DBManager (core/db/manager.py)                   │
+│ Single owner of database access, retry logic, WAL mode      │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ DB Layer (core/db/)                                         │
-│ SQLite persistence                                          │
-│ schema.py, cache.py, personal_tasks.py, history.py, etc.    │
+│ Layer 6: Tool Logic (tools/*.py)                           │
+│ Business logic, scoring, verdicts, result shaping          │
+│ BaseTool: success(), error(), stale_notice()               │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 7: CacheManager (core/cache.py)                       │
+│ Single owner of cache behavior, TTL policy, stale fallback  │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 8: API Clients (tools/api/*.py)                       │
+│ Raw HTTP calls, auth, response parsing                      │
+│ BaseAPIHandler: CACHE_PREFIX, call(), hash()                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -243,7 +251,7 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - Pure database — no business logic
 
 **Files:**
-- `schema.py` — Schema, migrations, _exec
+- `schema.py` — Schema, migrations, _exec, WAL mode
 - `cache.py` — Cache functions (get_stale_cached_result, record_preload_result)
 - `memory.py` — Memory CRUD
 - `threads.py` — Thread CRUD
@@ -253,13 +261,141 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - `deployments.py` — Deploy history
 - `goals.py` — Goals, milestones, tasks, weekly plans
 - `queue.py` — Task queue
-- `models.py` — Model status tracking
+
+### Layer 5b: DBManager (`core/db/manager.py`)
+
+**Responsibility:** Single owner of database access
+
+- Centralized database access with retry logic
+- Exponential backoff for lock errors (0.1s, 0.2s, 0.4s, 0.8s, 1.6s)
+- WAL mode coordination
+- Future: connection pooling, query logging, metrics
+
+**Key Methods:**
+- `db.exec(sql, params, commit)` — Execute with automatic retry
+- `db.exec_many(sql, params_list, commit)` — Batch execution
+- `db.get_connection()` — Get current connection
 
 **Imports:**
-- None (pure SQLite, no external services)
+- `core.db.schema._exec` (internal only)
 
 **Never imports:**
-- Any other layer (bottom of the stack)
+- Business logic layers
+
+### Layer 6: Tool Logic (`tools/*.py`)
+
+**Responsibility:** Business logic, result shaping
+
+- Tool implementations (calendar, gmail, personal, goals, etc.)
+- Business logic, scoring, verdicts
+- Result shaping for agent consumption
+- Side effects (history writes, task updates)
+
+**BaseTool Pattern:**
+- `success(data, stale_result)` — Standard success return with `ok=True`, `stale_notice`
+- `error(message, code)` — Standard error return with `ok=False`, `error`, `error_code`
+- `stale_notice(result)` — Convenience wrapper for cache.stale_notice()
+- Internal key stripping — removes `_stale`, `_cached_at` from returned data
+
+**Return Shape:**
+```python
+# Success
+{
+    "ok": True,
+    "stale_notice": None,  # or string if stale
+    "temp_f": 83.6,        # tool-specific data
+    ...
+}
+
+# Error
+{
+    "ok": False,
+    "error": "Service unavailable",
+    "error_code": "api_failed",
+    "stale_notice": None
+}
+```
+
+**Imports:**
+- `tools.api.*` (Layer 8)
+- `core.cache` (Layer 7)
+- `core.db.*` (Layer 5/5b)
+
+**Never imports:**
+- `transport`, `router`, `agent` (higher layers)
+
+### Layer 7: CacheManager (`core/cache.py`)
+
+**Responsibility:** Single owner of cache behavior
+
+- TTL policy — canonical source of truth for all cache TTLs
+- Staleness budget — acceptable stale age per tool
+- Fresh hit detection, stale fallback logic
+- Preload coordination
+- Cache invalidation
+
+**Key Methods:**
+- `cache.call(key, params_hash, live_fn, stale_ok)` — Main entry point for API calls
+- `cache.get(key, params_hash)` — Fresh cache hit only
+- `cache.get_or_stale(key, params_hash)` — Fresh first, stale if expired
+- `cache.set(key, params_hash, data)` — Store with TTL from policy
+- `cache.stale_notice(result)` — Human-readable staleness string
+- `cache.invalidate(key, params_hash)` — Clear cached data
+- `cache.status()` — Health of all cached tools
+- `cache.preload(tasks)` — Warm cache from task list
+
+**TTL Policy:**
+- `weather`: 3600s (1h)
+- `gmail_personal`: 300s (5min)
+- `youtube_channel`: 86400s (24h)
+- `steam_library`: 86400s (24h)
+- etc. (see `CacheManager.TTL`)
+
+**Imports:**
+- `core.db.cache` (Layer 5) — storage functions only
+
+**Never imports:**
+- API layers, tool layers
+
+### Layer 8: API Clients (`tools/api/*.py`)
+
+**Responsibility:** Raw HTTP calls only
+
+- Authentication
+- Request formation
+- Response parsing
+- Error raising (typed)
+- No caching
+- No business logic
+
+**BaseAPIHandler Pattern:**
+- `CACHE_PREFIX` — Must be set by subclass (validated at runtime)
+- `cache_key(suffix)` — Namespaced cache key generation
+- `call(suffix, params_hash, live_fn, stale_ok)` — Delegates to CacheManager
+- `hash(*args, **kwargs)` — Convenience wrapper for cache.hash()
+- `_get_client()` — Abstract method for credential loading
+
+**Subclass Example:**
+```python
+class WeatherAPIHandler(BaseAPIHandler):
+    CACHE_PREFIX = "weather"
+
+    def _get_client(self):
+        return None  # Open-Meteo needs no auth
+
+    def get_current_weather(self) -> dict:
+        def _live():
+            # HTTP call
+            return {"temp_f": ..., ...}
+        return self.call("current", self.hash(), _live)
+```
+
+**Imports:**
+- `core.cache` (Layer 7)
+- External HTTP libraries (requests, httpx)
+
+**Never imports:**
+- Tool layers, business logic
 
 ### Model Manager (`model_manager.py`)
 
