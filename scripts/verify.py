@@ -8,6 +8,7 @@ Exit code 1 = fail (deploy blocked)
 import sys
 import os
 import sqlite3
+import subprocess
 from dotenv import load_dotenv
 
 # Set UTF-8 encoding for Windows console
