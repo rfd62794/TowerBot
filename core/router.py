@@ -7,6 +7,7 @@ PTB, OpenRouter, or direct SQLite (db.py only).
 
 import uuid
 import time
+import subprocess
 
 from core.agent import respond, get_last_model
 from core.db import create_thread, list_memories, list_threads
@@ -86,8 +87,30 @@ def help_text() -> str:
         "/memories — list what I know\n"
         "/models — free model availability\n"
         "/status — bot status\n"
+        "/deploy — pull main and restart (Tower only)\n"
         "/help — this message"
     )
+
+
+async def handle_deploy(chat_id: int) -> str:
+    """Handle /deploy command — run deploy script as subprocess."""
+    await report("tool_called", tool_name="deploy", result_summary="Starting deploy...")
+    
+    try:
+        result = subprocess.run(
+            ["uv", "run", "python", "scripts/deploy.py"],
+            capture_output=True,
+            text=True,
+            timeout=120  # 2 minute max
+        )
+        output = result.stdout.strip()
+        if not output:
+            output = result.stderr.strip()
+        return output or "Deploy completed."
+    except subprocess.TimeoutExpired:
+        return "Deploy timed out after 2 minutes."
+    except Exception as e:
+        return f"Deploy failed: {str(e)}"
 
 
 async def route(chat_id: int, text: str) -> str:
@@ -105,6 +128,8 @@ async def route(chat_id: int, text: str) -> str:
         return get_status_report()
     if text == "/status" or text.startswith("/status"):
         return handle_status()
+    if text == "/deploy" or text.startswith("/deploy"):
+        return await handle_deploy(chat_id)
     if text == "/help" or text.startswith("/help"):
         return help_text()
 

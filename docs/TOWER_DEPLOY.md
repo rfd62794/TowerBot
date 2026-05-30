@@ -222,6 +222,54 @@ git push origin main
 # /deploy from Telegram
 ```
 
+## Deploy via Telegram
+
+The `/deploy` command allows you to deploy to Tower directly from Telegram without SSH access.
+
+**How it works:**
+1. Send `/deploy` to the bot
+2. Bot runs `scripts/deploy.py` as a subprocess
+3. Script:
+   - Stashes any local changes
+   - Pulls from `origin/main`
+   - Runs `scripts/verify.py`
+   - If verification passes: restarts NSSM service
+   - If verification fails: rolls back via `git stash pop`
+4. Bot reports the result
+
+**Laptop mode:**
+- If NSSM is not available (laptop), the script skips the service restart step
+- Verification still runs to ensure code quality
+- Useful for testing the deploy workflow locally
+
+**Tower mode:**
+- NSSM is available
+- Full deploy: pull → verify → restart service
+- Automatic rollback on verification failure
+
+**Example output:**
+```
+Deploy successful (laptop mode).
+Service restart skipped — NSSM not available.
+verify.py: 21/21 passed.
+```
+
+Or on Tower:
+```
+Deploy successful.
+verify.py: 21/21 passed.
+Service restarted.
+```
+
+Or on failure:
+```
+Deploy blocked.
+verify.py failed:
+✗ youtube: channel summary returns views
+  Error: ...
+Rolled back to previous.
+```
+
 ## Troubleshooting
 
 ### Service Won't Start
