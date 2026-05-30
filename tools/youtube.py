@@ -1,47 +1,10 @@
 """YouTube tool — fetch channel performance data via YouTube Analytics API."""
 
-import os
 import hashlib
 import json
 from datetime import datetime, timedelta
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
 from core.db import cache_tool_result, get_cached_tool_result
-
-
-def _get_credentials() -> Credentials:
-    """Load OAuth credentials from token file."""
-    token_path = os.getenv("YOUTUBE_TOKEN_PATH", "config/youtube_token.json")
-    client_secrets_path = os.getenv("YOUTUBE_CLIENT_SECRETS", "config/client_secret.json")
-
-    if not os.path.exists(token_path):
-        raise FileNotFoundError(
-            f"OAuth token not found at {token_path}. "
-            f"Run 'uv run python scripts/youtube_auth.py' to authorize."
-        )
-
-    # Load credentials from token file
-    creds = Credentials.from_authorized_user_file(token_path)
-
-    # Refresh if expired
-    if creds.expired and creds.refresh_token:
-        from google_auth_oauthlib.flow import InstalledAppFlow
-        flow = InstalledAppFlow.from_client_secrets_file(
-            client_secrets_path,
-            scopes=[
-                "https://www.googleapis.com/auth/yt-analytics.readonly",
-                "https://www.googleapis.com/auth/youtube.readonly",
-            ],
-        )
-        creds.refresh(flow)
-
-    return creds
-
-
-def _build_analytics_client():
-    """Build YouTube Analytics API client."""
-    creds = _get_credentials()
-    return build("youtubeAnalytics", "v2", credentials=creds)
+from tools.api.youtube_api import query_channel_report, query_video_report
 
 
 def _hash_params(params: dict) -> str:
@@ -68,17 +31,14 @@ def get_channel_summary(days: int = 7) -> dict:
 
     # Fetch fresh data
     try:
-        client = _build_analytics_client()
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
-        response = client.reports().query(
-            ids="channel==MINE",
-            startDate=start,
-            endDate=end,
-            metrics="views,estimatedMinutesWatched,subscribersGained",
-        ).execute()
+        api_response = query_channel_report(start, end, "views,estimatedMinutesWatched,subscribersGained")
+        if "error" in api_response:
+            return api_response
 
+        response = api_response["raw"]
         rows = response.get("rows", [[0, 0, 0]])
         if not rows:
             return {"error": "No data returned from YouTube Analytics"}
@@ -112,15 +72,11 @@ def get_channel_summary_range(start_date: str, end_date: str) -> dict:
         Dict with views, watch_time, subscribers, and date range.
     """
     try:
-        client = _build_analytics_client()
+        api_response = query_channel_report(start_date, end_date, "views,estimatedMinutesWatched,subscribersGained")
+        if "error" in api_response:
+            return api_response
 
-        response = client.reports().query(
-            ids="channel==MINE",
-            startDate=start_date,
-            endDate=end_date,
-            metrics="views,estimatedMinutesWatched,subscribersGained",
-        ).execute()
-
+        response = api_response["raw"]
         rows = response.get("rows", [[0, 0, 0]])
         if not rows:
             return {"error": "No data returned from YouTube Analytics"}
@@ -157,20 +113,14 @@ def get_top_videos(days: int = 7, limit: int = 10) -> dict:
 
     # Fetch fresh data
     try:
-        client = _build_analytics_client()
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
-        response = client.reports().query(
-            ids="channel==MINE",
-            startDate=start,
-            endDate=end,
-            dimensions="video",
-            metrics="views,estimatedMinutesWatched",
-            sort="-views",
-            max_results=limit,
-        ).execute()
+        api_response = query_video_report(None, start, end, "views,estimatedMinutesWatched", dimensions="video")
+        if "error" in api_response:
+            return api_response
 
+        response = api_response["raw"]
         rows = response.get("rows", [])
         videos = []
         for row in rows:
@@ -212,19 +162,14 @@ def get_video_analytics(video_id: str, days: int = 28) -> dict:
 
     # Fetch fresh data
     try:
-        client = _build_analytics_client()
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
-        response = client.reports().query(
-            ids="channel==MINE",
-            startDate=start,
-            endDate=end,
-            dimensions="video",
-            filters=f"video=={video_id}",
-            metrics="views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage",
-        ).execute()
+        api_response = query_video_report(video_id, start, end, "views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage", dimensions="video")
+        if "error" in api_response:
+            return api_response
 
+        response = api_response["raw"]
         rows = response.get("rows", [])
         if not rows:
             return {"error": "No data returned for this video"}

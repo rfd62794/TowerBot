@@ -1,97 +1,54 @@
 """Content recommendations tool — Steam + YouTube demand analysis."""
 
-import os
-import requests
 from datetime import datetime, timedelta
-from tools.youtube import _get_credentials
-from googleapiclient.discovery import build
-
-# Constants
-STEAM_ID = os.getenv("STEAM_ID")
-STEAM_API_KEY = os.getenv("STEAM_API_KEY")
-STEAMSPY_API = "https://steamspy.com/api.php"
-STEAM_API = "https://api.steampowered.com"
+from tools.api.steam_api import get_game_library
+from tools.api.steamspy_api import get_app_details
+from tools.api.youtube_api import search_youtube, get_video_statistics
 
 
 def get_owned_games() -> list[dict]:
     """Get owned games from Steam Web API."""
-    if not STEAM_API_KEY or not STEAM_ID:
+    library_result = get_game_library()
+    if "error" in library_result:
         return []
-
-    try:
-        params = {
-            "key": STEAM_API_KEY,
-            "steamid": STEAM_ID,
-            "include_appinfo": 1,
-            "include_played_free_games": 1,
-        }
-        response = requests.get(
-            f"{STEAM_API}/IPlayerService/GetOwnedGames/v0001/",
-            params=params,
-            timeout=30
-        )
-        response.raise_for_status()
-        data = response.json()
-
-        games = []
-        for game in data.get("response", {}).get("games", []):
-            playtime_minutes = game.get("playtime_forever", 0)
-            games.append({
-                "appid": game.get("appid"),
-                "name": game.get("name", "Unknown"),
-                "playtime_hours": playtime_minutes / 60.0 if playtime_minutes else 0.0,
-            })
-        return games
-    except Exception:
-        return []
+    
+    return library_result["raw"]
 
 
 def get_steamspy_data(appid: int) -> dict:
     """Get SteamSpy data for a specific game."""
-    try:
-        params = {"request": "appdetails", "appid": appid}
-        response = requests.get(STEAMSPY_API, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return {
-            "owners": data.get("owners", "0 .. 0"),
-            "players_forever": data.get("players_forever", 0),
-            "players_2weeks": data.get("players_2weeks", 0),
-        }
-    except Exception:
+    result = get_app_details(appid)
+    if "error" in result:
         return {}
+    
+    data = result["raw"]
+    return {
+        "owners": data.get("owners", "0 .. 0"),
+        "players_forever": data.get("players_forever", 0),
+        "players_2weeks": data.get("players_2weeks", 0),
+    }
 
 
 def get_youtube_video_count(game_name: str, days: int = 30) -> dict:
     """Get YouTube video count and views for a game."""
     try:
-        creds = _get_credentials()
-        youtube = build("youtube", "v3", credentials=creds)
+        api_response = search_youtube(f"{game_name} gameplay", days, max_results=5)
+        if "error" in api_response:
+            return {"recent_upload_count": 0, "top_video_views": 0, "avg_views_top5": 0.0}
 
-        published_after = (datetime.now() - timedelta(days=days)).isoformat() + "Z"
-        query = f"{game_name} gameplay"
-
-        search_response = youtube.search().list(
-            q=query,
-            type="video",
-            publishedAfter=published_after,
-            maxResults=5,
-            order="viewCount",
-            part="snippet"
-        ).execute()
-
-        video_ids = [item["id"]["videoId"] for item in search_response.get("items", [])]
+        response = api_response["raw"]
+        video_ids = [item["id"]["videoId"] for item in response.get("items", [])]
 
         if not video_ids:
             return {"recent_upload_count": 0, "top_video_views": 0, "avg_views_top5": 0.0}
 
-        videos_response = youtube.videos().list(
-            part="statistics",
-            id=",".join(video_ids)
-        ).execute()
+        stats_response = get_video_statistics(video_ids)
+        if "error" in stats_response:
+            return {"recent_upload_count": len(video_ids), "top_video_views": 0, "avg_views_top5": 0.0}
 
+        stats = stats_response["raw"]
         view_counts = []
-        for video in videos_response.get("items", []):
+        for video in stats.get("items", []):
             views = int(video["statistics"].get("viewCount", 0))
             view_counts.append(views)
 
