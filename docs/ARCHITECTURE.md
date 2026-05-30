@@ -21,7 +21,8 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - [ADR-023: DBManager](adr/ADR-023.md) — Single owner of database access with retry logic
 - [ADR-024: fetch_url Browser Tool](adr/ADR-024.md) — Browser tool for reading full web page content
 - [ADR-025: think Scratchpad Tool](adr/ADR-025.md) — Scratchpad tool for context continuity
-- [ADR-026: RateLimitManager Layer](adr/ADR-026.md) — API rate limit tracking and quota awareness (planned)
+- [ADR-026: RateLimitManager Layer](adr/ADR-026.md) — API rate limit tracking and quota awareness
+- [ADR-027: PollingManager Layer](adr/ADR-027.md) — Single owner of polling behavior (planned)
 
 ## Layer Overview
 
@@ -75,7 +76,12 @@ This document is supplemented by ADRs that capture key architectural decisions:
 ┌─────────────────────────────────────────────────────────────┐
 │ Layer 7b: RateLimitManager (core/rate_limits.py)            │
 │ API rate limit tracking, quota awareness, call logging      │
-│ (planned, not yet built)                                    │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 7c: PollingManager (core/polling.py)                  │
+│ Single owner of polling behavior, per-key intervals         │
+│ (planned, not yet built)                                     │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -396,6 +402,52 @@ This document is supplemented by ADRs that capture key architectural decisions:
 
 **Never imports:**
 - API layers, tool layers
+
+### Layer 7c: PollingManager (`core/polling.py`)
+
+**Responsibility:** Single owner of polling behavior
+
+- Per-key polling intervals matching CacheManager TTL
+- Checks RateLimitManager before firing
+- Checks CacheManager — skip if still fresh
+- Own async loop runs alongside scheduler
+- Replaces heartbeat data fetching
+- Absorbs preload.py startup logic
+
+**Planned Features:**
+- DB table: `poll_log` (poll_key, polled_at, success, duration_ms, from_cache, error_msg)
+- Singleton: `polling_manager = PollingManager()`
+- Intervals: gmail_personal (300s), calendar_today (900s), youtube_channel (86400s), etc.
+- Concurrency: `wait_for(key)` to prevent briefing reading stale data mid-poll
+
+**Status:** Planned (not yet built)
+
+**Imports:**
+- `core.cache` (Layer 7)
+- `core.rate_limits` (Layer 7b)
+- `core.db.*` (Layer 5) — for poll log storage
+
+**Never imports:**
+- API layers, tool layers
+
+### Infrastructure Services — Layer 7 Cluster
+
+The three infrastructure managers form a coherent group:
+
+**CacheManager** (Layer 7) answers: "what data do we have?"
+- TTL policy, stale fallback, cache invalidation
+- Single owner of cache behavior
+
+**RateLimitManager** (Layer 7b) answers: "can we call right now?"
+- API rate limit tracking, quota awareness
+- Proactive 429 prevention
+
+**PollingManager** (Layer 7c) answers: "when do we call next?"
+- Per-key polling intervals
+- Coordinates with Cache + RateLimit
+- Own async loop for data freshness
+
+All three are singletons, consulted by BaseAPIHandler, have DB backing, and visible in `/status`.
 
 ### Layer 8: API Clients (`tools/api/*.py`)
 

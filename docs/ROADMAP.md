@@ -299,9 +299,9 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 
 ---
 
-## Phase 10 — Offline-First Cache Strategy 🔄 IN PROGRESS
+## Phase 10 — Offline-First Cache Strategy 🔄 DONE
 
-**Status**: In Progress (Phase 1 complete, Phase 2 in progress)
+**Status**: Complete
 **Duration**: 2 weeks
 **Key Deliverables**:
 - Phase 1 (Complete): Cache plumbing infrastructure
@@ -312,53 +312,58 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
   - tools/api/_base.py — cached_api_call() wrapper pattern
   - stale_notice() — human-readable staleness formatting
   - 15 tests, 124/124 passing
-- Phase 2 (In Progress): Wire all API files to use cached_api_call()
+- Phase 2 (Complete): Wire all API files to use cached_api_call()
   - **Infrastructure Complete**:
     - CacheManager (core/cache.py) — single owner of all cache behavior
     - DBManager (core/db/manager.py) — single owner of database access with retry logic
     - BaseAPIHandler (tools/api/_handler.py) — base class for API clients
-    - BaseTool (tools/_tool.py) — base class for tool functions
+    - BaseTool (tools/api/_handler.py) — base class for tool functions
+    - RateLimitManager (core/rate_limits.py) — proactive API rate limit tracking
     - WAL mode enabled for concurrent access
-    - 165/165 tests passing
-  - **Migrated API files** (8/10):
+    - 179/179 tests passing
+  - **Migrated API files** (11/11):
     - weather_api.py — uses WeatherAPIHandler(BaseAPIHandler)
     - ddg_api.py — uses DDGAPIHandler(BaseAPIHandler)
     - wikipedia_api.py — uses WikipediaAPIHandler(BaseAPIHandler)
     - reddit_api.py — uses RedditAPIHandler(BaseAPIHandler)
-    - fetch_api.py — uses FetchAPIHandler(BaseAPIHandler) — NEW
-  - **Pending API files** (2/10):
-    - youtube_api.py — 6 hours (Analytics), 24 hours (Data)
-    - steam_api.py — 24 hours
-    - gmail_api.py — 5 minutes
-    - google_calendar_api.py — 15 minutes
-    - google_tasks_api.py — 5 minutes
-    - itad_api.py, steamspy_api.py
+    - fetch_api.py — uses FetchAPIHandler(BaseAPIHandler)
+    - youtube_api.py — uses YouTubeAPIHandler(BaseAPIHandler)
+    - steam_api.py — uses SteamAPIHandler(BaseAPIHandler)
+    - steamspy_api.py — uses SteamSpyAPIHandler(BaseAPIHandler)
+    - itad_api.py — uses ITADAPIHandler(BaseAPIHandler)
+    - gmail_api.py — uses GmailAPIHandler(BaseAPIHandler) — dual account support
+    - google_calendar_api.py — uses CalendarAPIHandler(BaseAPIHandler)
+    - google_tasks_api.py — uses TasksAPIHandler(BaseAPIHandler) — read/write separation
   - **New Tools Added**:
     - fetch_url — browser tool for reading full web page content (requests + beautifulsoup4)
     - think — scratchpad tool for context continuity across model switches
-- Phase 3 (Pending): Preloader on startup
-  - scripts/preload.py — warm cache on bot startup
-  - privybot.py _initial_sync — call run_preload()
-  - scheduler.py health_check — stale data detection
-  - scheduler.py morning_briefing — stale notice cap (max 2)
+- Phase 3 (Pending): Preloader on startup — absorbed by PollingManager (Phase 14)
 
 **Key Decisions**:
 - Staleness budget per API — some data ages slowly (YouTube, Steam)
 - On API failure: fall back to stale data with timestamp warning
-- Preload on startup: reduce first-query latency
+- Preload on startup: reduce first-query latency (moved to PollingManager)
 - Stale notice format: "⚠️ Data from 4h ago (2026-05-30 09:15)"
 - Morning briefing stale notice cap: max 2 individual, then collapse to summary
+- All API functions return dict (not int/list) for consistent type safety
+- Account params included in cache hashes for multi-account APIs (Gmail)
+- Write operations bypass cache (Google Tasks push/complete/delete)
+- Time-sensitive calls use stale_ok=False (calendar get_events_soon)
 
 **Unlocked**:
 - Bot remains functional during API outages
-- First query latency reduced via preload
+- First query latency reduced via preload (moved to PollingManager)
 - User informed when data is stale
 - Reduced API quota usage
+- Proactive rate limit awareness before 429 errors
+- Consistent return shapes across all APIs
 
 **Related ADRs**:
 - ADR-018: Offline-First Cache Strategy
 - ADR-019: Staleness Budget per API
 - ADR-020: Preload on Startup Pattern
+- ADR-023: DBManager Layer
+- ADR-026: RateLimitManager Layer
 
 ---
 
@@ -465,6 +470,57 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 
 ---
 
+## Phase 14 — PollingManager 🔄 PLANNED
+
+**Status**: Planned
+**Duration**: 1 week
+**Key Deliverables**:
+- PollingManager (core/polling.py) — single owner of all polling behavior
+  - Layer 7c — parallel to CacheManager (7) and RateLimitManager (7b)
+  - Singleton: polling_manager
+  - Each data source registered with interval matching CacheManager TTL
+  - Checks RateLimitManager before firing
+  - Checks CacheManager — skip if still fresh
+  - Own async loop runs alongside scheduler
+  - DB table: poll_log (poll_key, polled_at, success, duration_ms, from_cache, error_msg)
+- Absorbs:
+  - scripts/preload.py — startup preload
+  - heartbeat data fetching
+  - _initial_sync in privybot.py
+- Keeps in scheduler:
+  - Morning briefing send
+  - Nightly summary send
+  - Alert detection
+  - Health checks
+- Concurrency:
+  - PollingManager.wait_for(key) to prevent briefing reading stale data mid-poll
+
+**Key Decisions**:
+- Intervals match CacheManager TTL exactly:
+  - gmail_personal: 300s (5min)
+  - gmail_rfd: 300s (5min)
+  - calendar_today: 900s (15min)
+  - google_tasks: 300s (5min)
+  - youtube_channel: 86400s (24h)
+  - steam_library: 86400s (24h)
+  - weather: 3600s (1h)
+  - ddg/wiki/reddit: None (on-demand only)
+- Scheduler keeps: sends, alerts
+- PollingManager owns: data fetching
+
+**Unlocked**:
+- Each data source polls at correct rate
+- Gmail fresh at 5min not 60min
+- Briefing always reads warm cache
+- No duplicate fetching between preload and heartbeat
+- Single point of polling control
+- Visible in /status command
+
+**Related ADRs**:
+- ADR-027: PollingManager Layer
+
+---
+
 ## Phase Progress Summary
 
 | Phase | Status | Completion |
@@ -478,12 +534,13 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 | Phase 7 — Tower | 🖥️ PLANNED | 0% |
 | Phase 8 — Publish | 📚 FUTURE | 0% |
 | Phase 9 — Local Model | 🤖 PLANNED | 0% |
-| Phase 10 — Offline Cache | 🔄 IN PROGRESS | 30% |
+| Phase 10 — Offline Cache | 🔄 DONE | 100% |
 | Phase 11 — API Hardening | 🔒 PLANNED | 0% |
 | Phase 12 — DB Hardening | 💾 IN PROGRESS | 10% |
 | Phase 13 — Logging | 📊 PLANNED | 0% |
+| Phase 14 — PollingManager | 🔄 PLANNED | 0% |
 
-**Overall Progress**: 46% (6/13 phases complete)
+**Overall Progress**: 46% (6/14 phases complete)
 
 ---
 
