@@ -389,13 +389,13 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - Proactive rate limit awareness before 429 errors
 - Graceful degradation when approaching limits
 
-**Planned Features:**
+**Features:**
 - DB tables: `api_rate_limits`, `api_call_log`
 - Singleton: `rate_limits = RateLimitManager()`
 - BaseAPIHandler integration before live calls
 - Known limits: YouTube (10k units/day), Gmail (5 req/sec), Steam (200 req/5min), etc.
 
-**Status:** Planned (not yet built)
+**Status:** Accepted (built May 2026)
 
 **Imports:**
 - `core.db.*` (Layer 5) — for rate limit storage
@@ -414,13 +414,13 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - Replaces heartbeat data fetching
 - Absorbs preload.py startup logic
 
-**Planned Features:**
+**Features:**
 - DB table: `poll_log` (poll_key, polled_at, success, duration_ms, from_cache, error_msg)
 - Singleton: `polling_manager = PollingManager()`
 - Intervals: gmail_personal (300s), calendar_today (900s), youtube_channel (86400s), etc.
 - Concurrency: `wait_for(key)` to prevent briefing reading stale data mid-poll
 
-**Status:** Planned (not yet built)
+**Status:** Accepted (built May 2026)
 
 **Imports:**
 - `core.cache` (Layer 7)
