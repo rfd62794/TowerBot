@@ -34,10 +34,11 @@ def _teardown():
     try:
         from core.db.schema import _exec
         for title in _TEST_TASK_TITLES:
-            _exec("DELETE FROM personal_tasks WHERE title = ?", (title,))
+            _exec("DELETE FROM personal_tasks WHERE title = ?", (title,), commit=True)
         _exec(
             "DELETE FROM task_reminders WHERE task_id NOT IN "
-            "(SELECT id FROM personal_tasks)"
+            "(SELECT id FROM personal_tasks)",
+            commit=True,
         )
     except Exception:
         pass
