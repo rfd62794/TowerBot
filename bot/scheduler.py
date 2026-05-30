@@ -189,12 +189,15 @@ async def morning_briefing(send_fn) -> None:
         try:
             tasks_today = get_tasks_due_today()
             if tasks_today:
+                display_tasks = tasks_today[:5]
                 msg += f"\n\n📋 Today's Tasks ({len(tasks_today)}):"
-                for task in tasks_today:
+                for task in display_tasks:
                     status_icon = "✓" if task["status"] == "complete" else "○"
                     msg += f"\n{status_icon} {task['title']}"
                     if task.get("scheduled_at"):
                         msg += f" at {task['scheduled_at'][11:16]}"
+                if len(tasks_today) > 5:
+                    msg += f"\n...and {len(tasks_today) - 5} more"
         except Exception as e:
             logger.debug(f"Tasks check failed: {e}")
 
@@ -202,11 +205,14 @@ async def morning_briefing(send_fn) -> None:
         try:
             personal_today = get_personal_tasks("today")
             if personal_today:
+                display_personal = personal_today[:5]
                 task_lines = "\n".join(
                     f"○ {t['title']}" + (f" at {t['due_time']}" if t.get("due_time") else "")
-                    for t in personal_today
+                    for t in display_personal
                 )
                 msg += f"\n\n📝 Personal tasks today:\n{task_lines}"
+                if len(personal_today) > 5:
+                    msg += f"\n...and {len(personal_today) - 5} more"
         except Exception as e:
             logger.debug(f"Personal tasks check failed: {e}")
 
