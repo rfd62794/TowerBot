@@ -8,6 +8,7 @@ import os
 import json
 import sqlite3
 import threading
+from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "privy.db")
 
@@ -128,6 +129,50 @@ CREATE TABLE IF NOT EXISTS task_queue (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     scheduled_for DATETIME,
     sent INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS goals (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    description TEXT,
+    deadline TEXT,
+    status TEXT DEFAULT 'active',
+    progress_pct INTEGER DEFAULT 0,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS milestones (
+    id TEXT PRIMARY KEY,
+    goal_id TEXT,
+    title TEXT,
+    deadline TEXT,
+    status TEXT DEFAULT 'not_started',
+    notes TEXT,
+    FOREIGN KEY (goal_id) REFERENCES goals(id)
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    milestone_id TEXT,
+    title TEXT,
+    due_date TEXT,
+    scheduled_at DATETIME,
+    status TEXT DEFAULT 'pending',
+    recurrence TEXT,
+    reminder_minutes INTEGER DEFAULT 60,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS weekly_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    week_start TEXT,
+    week_end TEXT,
+    focus TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -495,3 +540,137 @@ def flush_morning_queue() -> list[dict]:
         )
     
     return observations
+
+
+# ── Goals ──
+def upsert_goal(goal_id: str, title: str, description: str, deadline: str, 
+               status: str = "active", progress_pct: int = 0, notes: str = None) -> None:
+    _exec(
+        "INSERT OR REPLACE INTO goals (id, title, description, deadline, status, progress_pct, notes, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+        (goal_id, title, description, deadline, status, progress_pct, notes), commit=True,
+    )
+
+
+def get_goals(status: str = None) -> list[dict]:
+    if status:
+        rows = _exec(
+            "SELECT * FROM goals WHERE status = ? ORDER BY deadline ASC",
+            (status,),
+        ).fetchall()
+    else:
+        rows = _exec("SELECT * FROM goals ORDER BY deadline ASC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_goal(goal_id: str) -> dict | None:
+    row = _exec("SELECT * FROM goals WHERE id = ?", (goal_id,)).fetchone()
+    return dict(row) if row else None
+
+
+# ── Milestones ──
+def upsert_milestone(milestone_id: str, goal_id: str, title: str, deadline: str,
+                     status: str = "not_started", notes: str = None) -> None:
+    _exec(
+        "INSERT OR REPLACE INTO milestones (id, goal_id, title, deadline, status, notes) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (milestone_id, goal_id, title, deadline, status, notes), commit=True,
+    )
+
+
+def get_milestones(goal_id: str = None) -> list[dict]:
+    if goal_id:
+        rows = _exec(
+            "SELECT * FROM milestones WHERE goal_id = ? ORDER BY deadline ASC",
+            (goal_id,),
+        ).fetchall()
+    else:
+        rows = _exec("SELECT * FROM milestones ORDER BY deadline ASC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_milestone(milestone_id: str) -> dict | None:
+    row = _exec("SELECT * FROM milestones WHERE id = ?", (milestone_id,)).fetchone()
+    return dict(row) if row else None
+
+
+# ── Tasks ──
+def upsert_task(task_id: str, title: str, due_date: str, milestone_id: str = None,
+                scheduled_at: str = None, status: str = "pending", recurrence: str = None,
+                reminder_minutes: int = 60) -> None:
+    _exec(
+        "INSERT OR REPLACE INTO tasks (id, milestone_id, title, due_date, scheduled_at, status, recurrence, reminder_minutes) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (task_id, milestone_id, title, due_date, scheduled_at, status, recurrence, reminder_minutes), commit=True,
+    )
+
+
+def get_tasks(status: str = None, due_date: str = None) -> list[dict]:
+    if status and due_date:
+        rows = _exec(
+            "SELECT * FROM tasks WHERE status = ? AND due_date = ? ORDER BY due_date ASC",
+            (status, due_date),
+        ).fetchall()
+    elif status:
+        rows = _exec(
+            "SELECT * FROM tasks WHERE status = ? ORDER BY due_date ASC",
+            (status,),
+        ).fetchall()
+    elif due_date:
+        rows = _exec(
+            "SELECT * FROM tasks WHERE due_date = ? ORDER BY due_date ASC",
+            (due_date,),
+        ).fetchall()
+    else:
+        rows = _exec("SELECT * FROM tasks ORDER BY due_date ASC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_task(task_id: str) -> dict | None:
+    row = _exec("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def update_task_status(task_id: str, status: str) -> None:
+    completed_at = "CURRENT_TIMESTAMP" if status == "complete" else "NULL"
+    _exec(
+        f"UPDATE tasks SET status = ?, completed_at = {completed_at} WHERE id = ?",
+        (status, task_id), commit=True,
+    )
+
+
+def get_tasks_due_today() -> list[dict]:
+    today = datetime.now().strftime("%Y-%m-%d")
+    rows = _exec(
+        "SELECT * FROM tasks WHERE due_date = ? AND status != 'complete' ORDER BY scheduled_at ASC",
+        (today,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_upcoming_scheduled(hours: int = 24) -> list[dict]:
+    rows = _exec(
+        "SELECT * FROM tasks WHERE scheduled_at IS NOT NULL "
+        "AND scheduled_at BETWEEN datetime('now') AND datetime('now', '+' || ? || ' hours') "
+        "AND status != 'complete' ORDER BY scheduled_at ASC",
+        (hours,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ── Weekly plans ──
+def upsert_weekly_plan(week_start: str, week_end: str, focus: str, notes: str = None) -> None:
+    _exec(
+        "INSERT OR REPLACE INTO weekly_plans (week_start, week_end, focus, notes) "
+        "VALUES (?, ?, ?, ?)",
+        (week_start, week_end, focus, notes), commit=True,
+    )
+
+
+def get_current_weekly_plan() -> dict | None:
+    today = datetime.now().strftime("%Y-%m-%d")
+    row = _exec(
+        "SELECT * FROM weekly_plans WHERE ? BETWEEN week_start AND week_end ORDER BY created_at DESC LIMIT 1",
+        (today,),
+    ).fetchone()
+    return dict(row) if row else None

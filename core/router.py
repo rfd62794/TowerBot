@@ -13,6 +13,15 @@ from core.agent import respond, get_last_model
 from core.db import create_thread, list_memories, list_threads
 from core.report import report
 from core.model_manager import get_status_report, get_throttled_models
+from tools.goals import (
+    get_goals_list,
+    get_goal_detail,
+    get_current_plan,
+    get_tasks_today,
+    update_task,
+    update_task_status,
+    get_milestone,
+)
 
 _current_threads: dict[int, str] = {}
 _ROUTER_STARTUP = time.time()
@@ -88,8 +97,144 @@ def help_text() -> str:
         "/models — free model availability\n"
         "/status — bot status\n"
         "/deploy — pull main and restart (Tower only)\n"
+        "/goals — list active goals\n"
+        "/goal [id] — show goal details\n"
+        "/tasks — show this week's tasks\n"
+        "/tasks today — show today's tasks\n"
+        "/task done [id] — mark task complete\n"
+        "/plan — show current week plan\n"
+        "/confirm [id] — confirm milestone complete\n"
+        "/reject [id] — dismiss suggestion\n"
         "/help — this message"
     )
+
+
+def handle_goals() -> str:
+    """Handle /goals command — list active goals."""
+    result = get_goals_list(status="active")
+    if "error" in result:
+        return result["error"]
+    
+    lines = ["🎯 Active Goals:"]
+    for goal in result["goals"]:
+        lines.append(f"\n• {goal['title']} ({goal['progress_pct']}%)")
+        lines.append(f"  Deadline: {goal['deadline']}")
+        for milestone in goal.get("milestones", []):
+            status_icon = "✓" if milestone["status"] == "complete" else "○"
+            lines.append(f"  {status_icon} {milestone['title']}")
+    
+    return "\n".join(lines)
+
+
+def handle_goal(goal_id: str) -> str:
+    """Handle /goal [id] command — show goal details."""
+    result = get_goal_detail(goal_id)
+    if "error" in result:
+        return result["error"]
+    
+    goal = result
+    lines = [
+        f"🎯 {goal['title']}",
+        f"Progress: {goal['progress_pct']}%",
+        f"Deadline: {goal['deadline']}",
+        f"Status: {goal['status']}",
+    ]
+    
+    if goal.get("description"):
+        lines.append(f"\n{goal['description']}")
+    
+    lines.append("\nMilestones:")
+    for milestone in goal.get("milestones", []):
+        status_icon = "✓" if milestone["status"] == "complete" else "○"
+        lines.append(f"  {status_icon} {milestone['title']} — {milestone['deadline']}")
+        
+        for task in milestone.get("tasks", []):
+            task_icon = "✓" if task["status"] == "complete" else "○"
+            lines.append(f"    {task_icon} {task['title']}")
+    
+    return "\n".join(lines)
+
+
+def handle_tasks(filter_today: bool = False) -> str:
+    """Handle /tasks command — show tasks."""
+    if filter_today:
+        result = get_tasks_today()
+        header = "📋 Today's Tasks:"
+    else:
+        result = get_current_plan()
+        if "error" in result:
+            return result["error"]
+        header = f"📋 This Week's Tasks ({result['plan']['focus']}):"
+        result = {"tasks": result["tasks"]}
+    
+    if "error" in result:
+        return result["error"]
+    
+    lines = [header]
+    for task in result["tasks"]:
+        status_icon = "✓" if task["status"] == "complete" else "○"
+        lines.append(f"\n{status_icon} {task['title']}")
+        lines.append(f"  Due: {task['due_date']}")
+        if task.get("scheduled_at"):
+            lines.append(f"  Scheduled: {task['scheduled_at']}")
+    
+    return "\n".join(lines)
+
+
+def handle_task_done(task_id: str) -> str:
+    """Handle /task done [id] command — mark task complete."""
+    result = update_task(task_id, "complete")
+    if "error" in result:
+        return result["error"]
+    
+    return f"✓ Task marked complete: {result['title']}"
+
+
+def handle_plan() -> str:
+    """Handle /plan command — show current week plan."""
+    result = get_current_plan()
+    if "error" in result:
+        return result["error"]
+    
+    plan = result["plan"]
+    lines = [
+        f"📅 Week: {plan['week_start']} to {plan['week_end']}",
+        f"Focus: {plan['focus']}",
+    ]
+    
+    if plan.get("notes"):
+        lines.append(f"Notes: {plan['notes']}")
+    
+    lines.append(f"\nTasks: {len(result['tasks'])}")
+    for task in result["tasks"]:
+        status_icon = "✓" if task["status"] == "complete" else "○"
+        lines.append(f"  {status_icon} {task['title']} — {task['due_date']}")
+    
+    return "\n".join(lines)
+
+
+def handle_confirm(milestone_id: str) -> str:
+    """Handle /confirm [id] command — mark milestone complete."""
+    milestone = get_milestone(milestone_id)
+    if not milestone:
+        return f"Milestone not found: {milestone_id}"
+    
+    from core.db import upsert_milestone
+    upsert_milestone(
+        milestone_id=milestone_id,
+        goal_id=milestone["goal_id"],
+        title=milestone["title"],
+        deadline=milestone["deadline"],
+        status="complete",
+        notes=milestone.get("notes"),
+    )
+    
+    return f"✓ Milestone marked complete: {milestone['title']}"
+
+
+def handle_reject(milestone_id: str) -> str:
+    """Handle /reject [id] command — dismiss suggestion."""
+    return f"Dismissed suggestion for milestone: {milestone_id}"
 
 
 async def handle_deploy(chat_id: int) -> str:
@@ -132,6 +277,28 @@ async def route(chat_id: int, text: str) -> str:
         return await handle_deploy(chat_id)
     if text == "/help" or text.startswith("/help"):
         return help_text()
+    
+    # Goals commands
+    if text == "/goals" or text.startswith("/goals"):
+        return handle_goals()
+    if text.startswith("/goal "):
+        goal_id = text[len("/goal "):].strip()
+        return handle_goal(goal_id)
+    if text == "/tasks" or text.startswith("/tasks"):
+        if text == "/tasks today":
+            return handle_tasks(filter_today=True)
+        return handle_tasks(filter_today=False)
+    if text.startswith("/task done "):
+        task_id = text[len("/task done "):].strip()
+        return handle_task_done(task_id)
+    if text == "/plan" or text.startswith("/plan"):
+        return handle_plan()
+    if text.startswith("/confirm "):
+        milestone_id = text[len("/confirm "):].strip()
+        return handle_confirm(milestone_id)
+    if text.startswith("/reject "):
+        milestone_id = text[len("/reject "):].strip()
+        return handle_reject(milestone_id)
 
     if text.startswith("/think"):
         model_key, message = "think", text[len("/think"):].strip()
