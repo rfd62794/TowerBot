@@ -205,5 +205,48 @@ def test_geographic_breakdown():
     assert len(result["countries"]) > 0, "Expected at least one country"
 
 
+@test("search: web search returns results")
+def test_web_search():
+    from tools.search_tools import web_search
+    result = web_search("Python programming", max_results=3)
+    assert "count" in result, "Expected count key"
+    assert result["count"] >= 0, "Expected count >= 0"
+    assert "results" in result, "Expected results key"
+
+
+@test("search: news search returns results")
+def test_news_search():
+    from tools.search_tools import news_search
+    result = news_search("technology", max_results=3)
+    assert "count" in result, "Expected count key"
+    assert result["count"] >= 0, "Expected count >= 0"
+    assert "results" in result, "Expected results key"
+
+
+@test("search: wiki lookup finds article")
+def test_wiki_lookup():
+    from tools.search_tools import wiki_lookup
+    result = wiki_lookup("Python programming")
+    assert "found" in result, "Expected found key"
+    assert result["found"] == True, "Expected article to be found"
+
+
+@test("search: reddit search returns posts")
+def test_reddit_search():
+    from tools.search_tools import reddit_search
+    result = reddit_search("incremental games", limit=5)
+    assert "count" in result, "Expected count key"
+    assert result["count"] >= 0, "Expected count >= 0"
+    assert "results" in result, "Expected results key"
+
+
+@test("search: weather returns temperature")
+def test_weather():
+    from tools.search_tools import get_weather
+    result = get_weather()
+    assert "error" not in result, f"Weather error: {result.get('error')}"
+    assert "temp_f" in result, "Expected temp_f key"
+
+
 if __name__ == "__main__":
     run_all()
