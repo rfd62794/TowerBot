@@ -119,6 +119,16 @@ CREATE TABLE IF NOT EXISTS scheduled_videos (
     privacy_status TEXT,
     last_checked DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS task_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_name TEXT,
+    message TEXT,
+    priority TEXT DEFAULT 'normal',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    scheduled_for DATETIME,
+    sent INTEGER DEFAULT 0
+);
 """
 
 _conn: sqlite3.Connection | None = None
@@ -439,3 +449,49 @@ def clear_old_scheduled() -> None:
         "DELETE FROM scheduled_videos WHERE scheduled_time < datetime('now', '-7 days')",
         commit=True,
     )
+
+
+# ── Task queue ──
+def queue_observation(task_name: str, message: str, priority: str = "normal", scheduled_for: str = None) -> None:
+    """Queue an observation for later sending."""
+    if scheduled_for is None:
+        scheduled_for = "datetime('now')"
+    _exec(
+        "INSERT INTO task_queue (task_name, message, priority, scheduled_for) "
+        "VALUES (?, ?, ?, " + scheduled_for + ")",
+        (task_name, message, priority), commit=True,
+    )
+
+
+def get_pending_observations() -> list[dict]:
+    """Get unsent observations whose scheduled time has arrived."""
+    rows = _exec(
+        "SELECT * FROM task_queue WHERE sent = 0 AND scheduled_for <= datetime('now') "
+        "ORDER BY priority DESC, created_at ASC"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def mark_sent(observation_id: int) -> None:
+    """Mark an observation as sent."""
+    _exec(
+        "UPDATE task_queue SET sent = 1 WHERE id = ?",
+        (observation_id,), commit=True,
+    )
+
+
+def flush_morning_queue() -> list[dict]:
+    """Get all unsent queued observations and mark them sent."""
+    rows = _exec(
+        "SELECT * FROM task_queue WHERE sent = 0 ORDER BY priority DESC, created_at ASC"
+    ).fetchall()
+    observations = [dict(r) for r in rows]
+    
+    # Mark all as sent
+    if observations:
+        _exec(
+            "UPDATE task_queue SET sent = 1 WHERE sent = 0",
+            commit=True,
+        )
+    
+    return observations
