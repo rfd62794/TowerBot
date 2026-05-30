@@ -36,6 +36,8 @@ class CacheManager:
         "youtube_devices": 86400,
         "youtube_daily": 21600,  # 6h
         "youtube_geography": 86400,
+        "youtube_playlist_id": 86400,  # 24h
+        "youtube_playlist_items": 86400,  # 24h
         "gmail_personal": 300,  # 5min
         "gmail_rfd": 300,  # 5min
         "calendar_today": 900,  # 15min

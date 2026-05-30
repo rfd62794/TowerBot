@@ -34,6 +34,8 @@ def test_channel_summary():
     result = get_channel_summary(days=7)
     assert "error" not in result, f"Channel summary error: {result.get('error')}"
     assert result.get("views", 0) > 0, f"Expected views > 0, got {result.get('views')}"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("youtube: channel summary has required keys")
@@ -53,6 +55,8 @@ def test_top_videos():
     assert "error" not in result, f"Top videos error: {result.get('error')}"
     assert "videos" in result, "Expected 'videos' key"
     assert isinstance(result["videos"], list), "Expected list"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("youtube: top videos has titles not just IDs")
@@ -79,6 +83,8 @@ def test_video_analytics():
     result = get_video_analytics("yZMuKQ2WEWA", days=28)
     assert "error" not in result, f"Video analytics error: {result.get('error')}"
     assert result.get("views", 0) > 0, f"Expected views > 0, got {result.get('views')}"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("youtube: video analytics handles unknown video (null safety)")
@@ -98,6 +104,8 @@ def test_traffic_sources():
     assert "error" not in result, f"Traffic sources error: {result.get('error')}"
     assert "top_search_terms" in result, "Expected 'top_search_terms' key"
     assert isinstance(result["top_search_terms"], list), "Expected list"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("youtube: demographics returns age and gender")
@@ -107,6 +115,8 @@ def test_demographics():
     assert "error" not in result, f"Demographics error: {result.get('error')}"
     assert "age_groups" in result, "Expected 'age_groups' key"
     assert "gender" in result, "Expected 'gender' key"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("youtube: retention curve returns curve key")
@@ -115,6 +125,8 @@ def test_retention_curve():
     result = get_retention_curve("yZMuKQ2WEWA", days=28)
     assert "error" not in result, f"Retention curve error: {result.get('error')}"
     assert "curve" in result, "Expected 'curve' key"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("youtube: device breakdown returns devices")
@@ -123,6 +135,8 @@ def test_device_breakdown():
     result = get_device_breakdown(days=28)
     assert "error" not in result, f"Device breakdown error: {result.get('error')}"
     assert "devices" in result, "Expected 'devices' key"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("youtube: daily views returns days list")
@@ -132,6 +146,8 @@ def test_daily_views():
     assert "error" not in result, f"Daily views error: {result.get('error')}"
     assert "days" in result, "Expected 'days' key"
     assert len(result["days"]) > 0, "Expected at least one day of data"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("youtube: geographic breakdown returns countries")
@@ -141,6 +157,8 @@ def test_geographic_breakdown():
     assert "error" not in result, f"Geographic breakdown error: {result.get('error')}"
     assert "countries" in result, "Expected 'countries' key"
     assert len(result["countries"]) > 0, "Expected at least one country"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 if __name__ == "__main__":
