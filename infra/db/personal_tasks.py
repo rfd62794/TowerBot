@@ -164,7 +164,7 @@ def complete_personal_task(task_id: int) -> dict:
             next_due_str = next_date
             new_datetime = _compute_due_datetime(next_date, task.get("due_time"))
             _exec(
-                "INSERT INTO personal_tasks "
+                "INSERT OR REPLACE INTO personal_tasks "
                 "(title, notes, due_date, due_time, due_datetime, recurrence, "
                 "reminder_minutes, next_due) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
