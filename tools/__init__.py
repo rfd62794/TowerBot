@@ -28,12 +28,6 @@ from .personal import (
     delete_personal_task,
 )
 from .meta import think
-from core.memory import (
-    tool_save_memory,
-    tool_update_memory,
-    tool_retire_memory,
-    tool_get_memories,
-)
 
 TOOL_REGISTRY = {
     "get_youtube_stats": {
@@ -724,79 +718,6 @@ TOOL_REGISTRY = {
                         },
                     },
                     "required": ["content"],
-                },
-            },
-        },
-    },
-    "save_memory": {
-        "fn": tool_save_memory,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "save_memory",
-                "description": "WHEN: User shares information worth remembering — projects, decisions, preferences, goals, people, technical choices. NOT for casual conversation.\n\nRETURNS: status ('saved'), key, layer, content.\n\nPARAMS: key (string — short identifier), content (string — what to remember), layer (string — one of: technical, project, personal, business, content).\n\nDO NOT CALL: for temporary chat context. Only for long-term memory.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "key": {"type": "string", "description": "Short identifier for the memory"},
-                        "content": {"type": "string", "description": "What to remember"},
-                        "layer": {"type": "string", "description": "One of: technical, project, personal, business, content"},
-                    },
-                    "required": ["key", "content", "layer"],
-                },
-            },
-        },
-    },
-    "update_memory": {
-        "fn": tool_update_memory,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "update_memory",
-                "description": "WHEN: User corrects information or when you learn something that changes an existing memory.\n\nRETURNS: status ('updated'), key, reason, content.\n\nPARAMS: key (string — existing memory key), content (string — new content), reason (string — what changed and why).\n\nDO NOT CALL: for new memories — use save_memory instead.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "key": {"type": "string", "description": "Existing memory key to update"},
-                        "content": {"type": "string", "description": "New content"},
-                        "reason": {"type": "string", "description": "What changed and why"},
-                    },
-                    "required": ["key", "content", "reason"],
-                },
-            },
-        },
-    },
-    "retire_memory": {
-        "fn": tool_retire_memory,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "retire_memory",
-                "description": "WHEN: User says information is no longer true or relevant, or when a memory should be archived.\n\nRETURNS: status ('retired'), key, reason.\n\nPARAMS: key (string — memory key to retire), reason (string — why it's being retired).\n\nDO NOT CALL: for corrections — use update_memory instead.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "key": {"type": "string", "description": "Memory key to retire"},
-                        "reason": {"type": "string", "description": "Why it's being retired"},
-                    },
-                    "required": ["key", "reason"],
-                },
-            },
-        },
-    },
-    "get_memories": {
-        "fn": tool_get_memories,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "get_memories",
-                "description": "WHEN: Starting a new topic or when you need context about Robert. Search active memories before responding.\n\nRETURNS: status ('found' or 'empty'), count, memories list with key, content, layer.\n\nPARAMS: query (string — search term, matches key or content).\n\nDO NOT CALL: for every message. Use when genuinely needing context.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "Search term — matches key or content"},
-                    },
-                    "required": ["query"],
                 },
             },
         },
