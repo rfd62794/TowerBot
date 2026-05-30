@@ -13,6 +13,14 @@ from openai import OpenAI
 
 logger = logging.getLogger("privy.agent")
 
+# Track last model used for /status command
+_last_model_used: str | None = None
+
+
+def get_last_model() -> str:
+    """Return the last model used, or 'none' if none yet."""
+    return _last_model_used or "none"
+
 from db import (
     get_context,
     add_message,
@@ -133,6 +141,7 @@ def _extract_retry_after(error) -> float | None:
 
 async def _rotate(messages: list, tools):
     """Try dynamically-discovered free models, skipping those in cooldown."""
+    global _last_model_used
     while True:
         fallback = get_available_model()
         if fallback is None:
@@ -140,6 +149,7 @@ async def _rotate(messages: list, tools):
         try:
             resp = _call(fallback, messages, tools)
             handle_success(fallback)
+            _last_model_used = fallback
             await report("model_routed", model=fallback, reason="fallback on 429")
             return resp, fallback
         except Exception as e:
@@ -153,9 +163,11 @@ async def _rotate(messages: list, tools):
 
 
 async def _chat(model: str, messages: list, tools, allow_rotation: bool = True):
+    global _last_model_used
     try:
         resp = _call(model, messages, tools)
         handle_success(model)
+        _last_model_used = model
         return resp, model
     except Exception as e:
         if _is_429(e):

@@ -6,13 +6,44 @@ PTB, OpenRouter, or direct SQLite (db.py only).
 """
 
 import uuid
+import time
 
-from agent import respond
-from db import create_thread, list_memories
+from agent import respond, get_last_model
+from db import create_thread, list_memories, list_threads
 from report import report
-from model_manager import get_status_report
+from model_manager import get_status_report, get_throttled_models
 
 _current_threads: dict[int, str] = {}
+_ROUTER_STARTUP = time.time()
+
+
+def handle_status() -> str:
+    """Return bot status: uptime, memory count, thread count, last model, throttle status."""
+    uptime = time.time() - _ROUTER_STARTUP
+    hours = int(uptime // 3600)
+    minutes = int((uptime % 3600) // 60)
+    uptime_str = f"{hours}h {minutes}m" if hours else f"{minutes}m"
+
+    memories = list_memories()
+    threads = list_threads()
+    last_model = get_last_model()
+    throttled = get_throttled_models()
+
+    lines = [
+        "📊 PrivyBot Status",
+        f"Uptime: {uptime_str}",
+        f"Memories: {len(memories)}",
+        f"Threads: {len(threads)}",
+        f"Last model: {last_model}",
+        f"Throttled models: {len(throttled)}",
+    ]
+    if throttled:
+        lines.append("\nThrottled:")
+        for m in throttled[:5]:
+            lines.append(f"  • {m}")
+        if len(throttled) > 5:
+            lines.append(f"  ... and {len(throttled) - 5} more")
+    return "\n".join(lines)
 
 
 async def _ensure_thread(chat_id: int) -> str:
@@ -54,6 +85,7 @@ def help_text() -> str:
         "/new — start fresh thread\n"
         "/memories — list what I know\n"
         "/models — free model availability\n"
+        "/status — bot status\n"
         "/help — this message"
     )
 
@@ -71,6 +103,8 @@ async def route(chat_id: int, text: str) -> str:
         return handle_memories(chat_id)
     if text == "/models" or text.startswith("/models"):
         return get_status_report()
+    if text == "/status" or text.startswith("/status"):
+        return handle_status()
     if text == "/help" or text.startswith("/help"):
         return help_text()
 
