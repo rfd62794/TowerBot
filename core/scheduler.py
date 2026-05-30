@@ -10,6 +10,7 @@ from tools.youtube import get_channel_summary, get_channel_summary_range
 from tools.calendar import get_today_schedule
 from tools.api.google_calendar_api import get_events_soon
 from tools.gmail import get_all_inbox_summary
+from core.polling import polling_manager
 
 from core.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
@@ -64,6 +65,13 @@ async def morning_briefing(send_fn) -> None:
     Formats and sends via Telegram. No LLM unless anomaly detected.
     """
     try:
+        # Wait for any in-progress polls before reading time-sensitive data
+        # Max 5s each — don't block briefing
+        await polling_manager.wait_for("gmail_personal", timeout=5.0)
+        await polling_manager.wait_for("gmail_rfd", timeout=5.0)
+        await polling_manager.wait_for("calendar_today", timeout=5.0)
+        await polling_manager.wait_for("google_tasks", timeout=5.0)
+
         today = datetime.now()
         week_start = (today - timedelta(days=7)).strftime("%Y-%m-%d")
         week_end = today.strftime("%Y-%m-%d")
@@ -392,17 +400,6 @@ async def heartbeat_check(send_fn) -> None:
                         logger.info(f"Sent calendar alert: {event['title']}")
         except Exception as e:
             logger.debug(f"Calendar alert check failed: {e}")
-
-        # Check 8 — Google Tasks sync
-        try:
-            from tools.sync_tasks import run_sync
-            sync_result = run_sync()
-            if sync_result.get("pulled_new", 0) > 0:
-                logger.info(f"Synced {sync_result['pulled_new']} new tasks from Google")
-            if sync_result.get("status") == "error":
-                logger.warning(f"Google Tasks sync error: {sync_result.get('error')}")
-        except Exception as e:
-            logger.debug(f"Google Tasks sync failed: {e}")
 
         # Check 9 — overdue and pending personal task reminder
         try:

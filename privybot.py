@@ -27,6 +27,7 @@ from core.db import init_db
 from core.report import init_report
 from core.transport import handle_message
 from core.scheduler import run_scheduler, check_missed_briefing
+from core.polling import polling_manager
 from telegram.ext import ApplicationBuilder, MessageHandler, filters
 
 # Track startup time for /status command
@@ -85,19 +86,24 @@ if __name__ == "__main__":
     # Layer 5 — database
     init_db()
 
-    async def _initial_sync():
+    async def _start_polling():
+        """
+        Start PollingManager with graceful fallback.
+        If it fails — heartbeat continues as before.
+        """
         await asyncio.sleep(5)
         try:
-            from tools.sync_tasks import run_sync
-            run_sync()
-        except Exception:
-            pass
+            polling_manager.register_defaults()
+            asyncio.create_task(polling_manager.run_loop())
+            logging.info("[startup] PollingManager started")
+        except Exception as e:
+            logging.warning(f"[startup] PollingManager failed: {e} — using heartbeat polling only")
 
     # Build PTB app with post_init hook for scheduler
     async def post_init(application):
         asyncio.create_task(run_scheduler(send_to_telegram))
         asyncio.create_task(check_missed_briefing(send_to_telegram))
-        asyncio.create_task(_initial_sync())
+        asyncio.create_task(_start_polling())
 
     app = (ApplicationBuilder()
            .token(os.getenv("TELEGRAM_BOT_TOKEN"))
