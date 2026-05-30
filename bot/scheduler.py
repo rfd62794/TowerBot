@@ -53,8 +53,9 @@ def _trend(current: int, prior: int) -> str:
     if prior == 0:
         return "+∞%"
     pct = ((current - prior) / prior) * 100
-    sign = "+" if pct >= 0 else ""
-    return f"{sign}{pct:.0f}%"
+    rounded = round(pct)
+    sign = "+" if rounded >= 0 else ""
+    return f"{sign}{rounded}%"
 
 
 async def morning_briefing(send_fn) -> None:
