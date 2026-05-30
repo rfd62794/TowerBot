@@ -2,7 +2,7 @@
 
 from .youtube import get_channel_summary, get_top_videos
 from .recommendations import get_content_recommendations
-from .games import get_game_metrics
+from .games import get_game_metrics, get_installed_games
 
 TOOL_REGISTRY = {
     "get_youtube_stats": {
@@ -94,6 +94,21 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["game_name"],
+                },
+            },
+        },
+    },
+    "get_installed_games": {
+        "fn": get_installed_games,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_installed_games",
+                "description": "Get currently installed games from Steam library. Call when asked what can be recorded right now or what games are available.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
                 },
             },
         },

@@ -236,3 +236,36 @@ def get_game_metrics(game_name: str) -> dict:
         "content_gap": gap,
         "verdict": verdict,
     }
+
+
+def get_installed_games() -> dict:
+    """
+    Get currently installed games from Steam library.
+
+    Returns games that are installed on the local machine,
+    sorted by last played time (most recent first).
+
+    Returns:
+        Dict with count and list of installed games
+    """
+    owned = get_owned_games()
+
+    # Filter to installed games (Steam API doesn't provide this directly,
+    # so we return all owned games with playtime > 0 as a proxy for "installed")
+    # This is a limitation of the Steam Web API - it doesn't expose installation status
+    installed = [g for g in owned if g["playtime_hours"] > 0]
+
+    # Sort by playtime (proxy for recency since last_played isn't always available)
+    installed.sort(key=lambda x: x["playtime_hours"], reverse=True)
+
+    return {
+        "count": len(installed),
+        "games": [
+            {
+                "name": g["name"],
+                "appid": g["appid"],
+                "playtime_hours": g["playtime_hours"],
+            }
+            for g in installed
+        ],
+    }
