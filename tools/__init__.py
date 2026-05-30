@@ -13,7 +13,7 @@ from .youtube import (
 )
 from .recommendations import get_content_recommendations
 from .games import get_game_metrics, get_installed_games, get_sale_info
-from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather
+from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url
 from .goals import save_commitment
 from .calendar import get_today_schedule, get_upcoming_events, check_availability
 from .gmail import (
@@ -27,6 +27,7 @@ from .personal import (
     snooze_personal_task,
     delete_personal_task,
 )
+from .meta import think
 
 TOOL_REGISTRY = {
     "get_youtube_stats": {
@@ -672,6 +673,51 @@ TOOL_REGISTRY = {
                         },
                     },
                     "required": ["description"],
+                },
+            },
+        },
+    },
+    "fetch_url": {
+        "fn": fetch_url,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "fetch_url",
+                "description": "WHEN: A previous search returned a URL that needs deeper reading. User asks 'what does that article say', 'read that page', 'get more detail from that link'. A search snippet is clearly incomplete.\n\nRETURNS: title (str), content (str — first 3000 chars of page text), truncated (bool — more exists), char_count (int).\n\nDO NOT CALL: speculatively on every search result. Only when a specific URL's full content is needed. Never fetch without a URL from a prior search result. Never fetch login-required pages.\n\nCHAIN: Always call web_search or wiki_lookup first to find the URL. Then fetch_url for full content.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "The full URL to fetch including https:// prefix",
+                        },
+                        "max_chars": {
+                            "type": "integer",
+                            "description": "Maximum characters to return. Default 3000. Max 5000.",
+                            "default": 3000,
+                        },
+                    },
+                    "required": ["url"],
+                },
+            },
+        },
+    },
+    "think": {
+        "fn": think,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "think",
+                "description": "WHEN: Before a complex tool chain where multiple steps are needed. When the question requires planning before executing. When switching between topics or when resuming after a tool failure.\n\nWHY: Creates visible context that persists across model switches. If one model throttles and another takes over, the thought record lets the new model continue from where the previous model left off.\n\nRETURNS: thought recorded, ok=True. No side effects. No storage.\n\nDO NOT CALL: for every single message. Use for genuinely complex multi-step reasoning only.\n\nEXAMPLE: think('I need to find the top video first, then check its retention curve to see where viewers drop.') → then call get_top_videos() → then call get_retention_curve()",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "thought": {
+                            "type": "string",
+                            "description": "Your reasoning step or plan",
+                        },
+                    },
+                    "required": ["thought"],
                 },
             },
         },

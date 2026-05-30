@@ -128,6 +128,35 @@ class SearchTools(BaseTool):
             "results": results
         }, stale_result=raw)
 
+    def fetch_url(self, url: str, max_chars: int = 3000) -> dict:
+        """
+        Fetch and read the full text content of a web page.
+
+        Args:
+            url: The full URL to fetch including https:// prefix
+            max_chars: Maximum characters to return (default 3000)
+
+        Returns:
+            Dict with url, title, content, char_count, truncated
+        """
+        from tools.api.fetch_api import fetch_api
+
+        raw = fetch_api.fetch_url(url, max_chars)
+
+        if raw.get("_live_failed"):
+            return self.error(f"Could not fetch: {url}", code="api_failed")
+
+        if "error" in raw:
+            return self.error(raw["error"])
+
+        return self.success({
+            "url": url,
+            "title": raw.get("title", ""),
+            "content": raw.get("content", ""),
+            "char_count": raw.get("char_count", 0),
+            "truncated": raw.get("truncated", False)
+        }, stale_result=raw)
+
 
 # Module-level instance
 _search = SearchTools()
@@ -192,3 +221,17 @@ def reddit_search(query: str, subreddit: str = None, limit: int = 10) -> dict:
 
 def get_weather() -> dict:
     return _search.get_weather()
+
+
+def fetch_url(url: str, max_chars: int = 3000) -> dict:
+    """
+    Fetch and read the full text content of a web page.
+
+    Args:
+        url: The full URL to fetch including https:// prefix
+        max_chars: Maximum characters to return (default 3000)
+
+    Returns:
+        Dict with url, title, content, char_count, truncated
+    """
+    return _search.fetch_url(url, max_chars)

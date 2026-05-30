@@ -47,6 +47,11 @@ def _format(event_type: str, kwargs: dict):
         return f"🔴 Error: {kwargs.get('message')}"
     if event_type == "model_routed":
         return None  # log only, never surfaces
+    if event_type == "thought":
+        thought = kwargs.get("thought", "")
+        if not thought:
+            return None
+        return f"💭 {thought}"
     return None
 
 
