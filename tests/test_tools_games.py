@@ -35,6 +35,8 @@ def test_duckov_resolves():
     result = get_game_metrics("Duckov")
     assert "error" not in result, f"Game metrics error: {result.get('error')}"
     assert result.get("name") is not None, "Expected game name"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("games: unknown game returns error dict (not exception)")
@@ -44,6 +46,7 @@ def test_unknown_game_safe():
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "error" in result, \
         "Expected 'error' key for unknown game — never raise"
+    assert result.get("ok") == False, "Expected ok=False for error"
 
 
 @test("games: installed games library returns 100+ games")
@@ -61,6 +64,8 @@ def test_sale_info():
     result = get_sale_info(["Scritchy Scratchy"])
     assert "games" in result, "Expected 'games' key in result"
     assert len(result["games"]) > 0, "Expected at least one game result"
+    assert result.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result, "Expected stale_notice key"
 
 
 @test("games: resolve_appid returns dict with appid")
@@ -81,6 +86,8 @@ def test_game_metrics_cache():
     assert "error" not in result2, f"Second call failed: {result2.get('error')}"
     assert result1["appid"] == result2["appid"], \
         "Cache returned different appid on second call"
+    assert result2.get("ok") == True, "Expected ok=True"
+    assert "stale_notice" in result2, "Expected stale_notice key"
 
 
 if __name__ == "__main__":

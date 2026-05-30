@@ -47,6 +47,7 @@ class CacheManager:
         "steam_metrics": 7200,  # 2h
         "steamspy": 14400,  # 4h
         "itad_prices": 7200,  # 2h
+        "itad_lookup": 7200,  # 2h
         "weather": 3600,  # 1h
         "ddg_search": 1800,  # 30min
         "wikipedia": 86400,  # 24h
@@ -70,6 +71,7 @@ class CacheManager:
         "wikipedia": 86400,
         "steamspy": 14400,
         "itad_prices": 7200,
+        "itad_lookup": 7200,
         "steam_metrics": 7200,
         "youtube_videos": 21600,
         "youtube_analytics": 86400,
