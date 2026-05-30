@@ -78,9 +78,9 @@ def test_think_ok():
 @test("think: think returns thought in result")
 def test_think_content():
     from tools.meta import think
-    test_thought = "Testing the think tool"
-    result = think(test_thought)
-    assert result.get("thought") == test_thought, f"Expected thought '{test_thought}', got {result.get('thought')}"
+    test_content = "Testing the think tool"
+    result = think(test_content)
+    assert result.get("thought") == test_content, f"Expected thought '{test_content}', got {result.get('thought')}"
 
 
 @test("think: think with empty string returns ok=True")
