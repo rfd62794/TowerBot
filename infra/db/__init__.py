@@ -4,6 +4,8 @@ Re-exports all public functions so external imports are unchanged:
     from infra.db import init_db, add_message, get_channel_history
 """
 
+# CRITICAL: schema.py must be imported first to avoid circular import issues
+# Submodules import from schema.py, and schema has _exec/_conn that depend on init_db()
 from infra.db.schema import DB_PATH, init_db, _exec
 
 from infra.db.threads import (
@@ -33,15 +35,31 @@ from infra.db.models import (
     get_model_status_all,
 )
 
-from infra.db.cache import (
-    cache_model_list,
-    get_cached_model_list,
-    cache_tool_result,
-    get_cached_tool_result,
-    get_stale_cached_result,
-    record_preload_result,
-    get_preload_status,
-)
+# Cache functions - lazy import to avoid circular dependency with manager
+def _get_cache_module():
+    from infra.db import cache as _cache
+    return _cache
+
+def cache_model_list(models: list) -> None:
+    return _get_cache_module().cache_model_list(models)
+
+def get_cached_model_list() -> list | None:
+    return _get_cache_module().get_cached_model_list()
+
+def cache_tool_result(tool_name: str, params_hash: str, result: dict, ttl_hours: float) -> None:
+    return _get_cache_module().cache_tool_result(tool_name, params_hash, result, ttl_hours)
+
+def get_cached_tool_result(tool_name: str, params_hash: str) -> dict | None:
+    return _get_cache_module().get_cached_tool_result(tool_name, params_hash)
+
+def get_stale_cached_result(tool_name: str, params_hash: str) -> dict | None:
+    return _get_cache_module().get_stale_cached_result(tool_name, params_hash)
+
+def record_preload_result(tool_name: str, params_hash: str, result: dict, ttl_hours: float, success: bool, duration_ms: int, error_msg: str = None) -> None:
+    return _get_cache_module().record_preload_result(tool_name, params_hash, result, ttl_hours, success, duration_ms, error_msg)
+
+def get_preload_status() -> list[dict]:
+    return _get_cache_module().get_preload_status()
 
 from infra.db.history import (
     record_channel_day,
