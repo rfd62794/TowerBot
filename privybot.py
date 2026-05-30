@@ -29,6 +29,7 @@ from core.transport import handle_message
 from core.scheduler import run_scheduler, check_missed_briefing
 from core.polling import polling_manager
 from telegram.ext import ApplicationBuilder, MessageHandler, filters
+from telegram.request import HTTPXRequest
 
 # Track startup time for /status command
 STARTUP_TIME = time.time()
@@ -79,6 +80,35 @@ def _validate_startup() -> None:
     logging.info("Startup validation passed.")
 
 
+def start_with_retry(application, max_attempts: int = 5, delay: int = 3):
+    """
+    Retry bot startup on TLS errors.
+    These are transient Windows networking issues that resolve on retry.
+    Creates a fresh event loop before each attempt since PTB closes it on failure.
+    """
+    for attempt in range(1, max_attempts + 1):
+        try:
+            # Create fresh event loop for each attempt
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            logging.info(f"Starting bot (attempt {attempt}/{max_attempts})")
+            application.run_polling(drop_pending_updates=True)
+            break  # clean exit
+        except Exception as e:
+            err = str(e).lower()
+            is_tls = any(word in err for word in [
+                "connecterror", "tls", "ssl", "handshake", "connect"
+            ])
+            if is_tls and attempt < max_attempts:
+                logging.warning(f"TLS error on attempt {attempt}. Retrying in {delay}s: {e}")
+                time.sleep(delay)
+                delay *= 2  # exponential backoff
+            else:
+                logging.error(f"Fatal error after {attempt} attempts: {e}")
+                raise
+
+
 if __name__ == "__main__":
     # Validate before starting
     _validate_startup()
@@ -105,8 +135,18 @@ if __name__ == "__main__":
         asyncio.create_task(check_missed_briefing(send_to_telegram))
         asyncio.create_task(_start_polling())
 
+    # HTTPXRequest with extended timeouts for Windows TLS handshake reliability
+    request = HTTPXRequest(
+        connection_pool_size=8,
+        read_timeout=30,
+        write_timeout=30,
+        connect_timeout=30,
+        pool_timeout=30,
+    )
+
     app = (ApplicationBuilder()
            .token(os.getenv("TELEGRAM_BOT_TOKEN"))
+           .request(request)
            .post_init(post_init)
            .build())
 
@@ -124,5 +164,5 @@ if __name__ == "__main__":
     init_report(send_to_telegram)
     app.add_error_handler(on_error)
 
-    # Run
-    app.run_polling(drop_pending_updates=True)
+    # Run with retry wrapper for TLS errors
+    start_with_retry(app)
