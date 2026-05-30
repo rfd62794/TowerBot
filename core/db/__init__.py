@@ -83,6 +83,17 @@ from core.db.goals import (
     list_commitments,
 )
 
+from core.db.personal_tasks import (
+    add_personal_task,
+    get_personal_tasks,
+    get_tasks_due_soon,
+    complete_personal_task,
+    snooze_personal_task,
+    delete_personal_task,
+    mark_reminded,
+    already_reminded,
+)
+
 from core.db.deployments import (
     record_deploy,
     mark_verify_passed,
@@ -111,6 +122,9 @@ __all__ = [
     "get_tasks_due_today", "get_upcoming_scheduled",
     "upsert_weekly_plan", "get_current_weekly_plan",
     "add_commitment", "list_commitments",
+    "add_personal_task", "get_personal_tasks", "get_tasks_due_soon",
+    "complete_personal_task", "snooze_personal_task", "delete_personal_task",
+    "mark_reminded", "already_reminded",
     "record_deploy", "mark_verify_passed", "mark_stable", "mark_rolled_back",
     "get_last_stable_commit", "get_last_deploy", "get_deploy_history",
 ]

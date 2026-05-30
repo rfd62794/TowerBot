@@ -14,6 +14,7 @@ from core.db import (
     get_upcoming_scheduled, get_tasks_due_today, get_current_weekly_plan,
     get_channel_history, get_tasks,
     get_last_stable_commit, get_last_deploy, record_deploy, mark_verify_passed, mark_stable,
+    get_personal_tasks, get_tasks_due_soon, mark_reminded, already_reminded,
 )
 
 logger = logging.getLogger("privy.scheduler")
@@ -151,6 +152,18 @@ async def morning_briefing(send_fn) -> None:
                         msg += f" at {task['scheduled_at'][11:16]}"
         except Exception as e:
             logger.debug(f"Tasks check failed: {e}")
+
+        # Add personal tasks today
+        try:
+            personal_today = get_personal_tasks("today")
+            if personal_today:
+                task_lines = "\n".join(
+                    f"○ {t['title']}" + (f" at {t['due_time']}" if t.get("due_time") else "")
+                    for t in personal_today
+                )
+                msg += f"\n\n📝 Personal tasks today:\n{task_lines}"
+        except Exception as e:
+            logger.debug(f"Personal tasks check failed: {e}")
 
         # Add weekly focus
         try:
@@ -298,7 +311,30 @@ async def heartbeat_check(send_fn) -> None:
                 await send_fn(obs["message"])
                 mark_sent(obs["id"])
                 logger.info(f"Sent queued observation: {obs['task_name']}")
-        
+
+        # Check 7 — personal task reminders
+        try:
+            tasks_soon = get_tasks_due_soon(minutes=90)
+            now = datetime.now()
+            for task in tasks_soon:
+                if not already_reminded(task["id"]):
+                    if task.get("due_datetime"):
+                        try:
+                            due_dt = datetime.fromisoformat(
+                                task["due_datetime"].replace(" ", "T")
+                            )
+                            minutes_left = int((due_dt - now).total_seconds() / 60)
+                        except Exception:
+                            minutes_left = None
+                    else:
+                        minutes_left = None
+                    label = f"In ~{minutes_left}min: " if minutes_left is not None else ""
+                    await send_fn(f"\U0001f514 {label}{task['title']}")
+                    mark_reminded(task["id"])
+                    logger.info(f"Sent personal task reminder: {task['title']}")
+        except Exception as e:
+            logger.debug(f"Personal task reminder check failed: {e}")
+
         logger.info("Heartbeat check complete")
         
     except Exception as e:

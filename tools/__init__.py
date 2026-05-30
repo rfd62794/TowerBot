@@ -15,6 +15,13 @@ from .recommendations import get_content_recommendations
 from .games import get_game_metrics, get_installed_games, get_sale_info
 from .search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather
 from .goals import save_commitment
+from .personal import (
+    add_personal_task,
+    list_personal_tasks,
+    complete_personal_task,
+    snooze_personal_task,
+    delete_personal_task,
+)
 
 TOOL_REGISTRY = {
     "get_youtube_stats": {
@@ -411,6 +418,96 @@ TOOL_REGISTRY = {
                     "type": "object",
                     "properties": {},
                     "required": [],
+                },
+            },
+        },
+    },
+    "add_personal_task": {
+        "fn": add_personal_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "add_personal_task",
+                "description": "WHEN: Robert wants to add a reminder, to-do, or personal task. Triggers: 'remind me to X', 'add X to my list', 'I need to do X', 'don't let me forget X', 'every Monday do X', 'pick up X at Y time'.\n\nDIFFERENT FROM add_task: add_task = project task in weekly plan. add_personal_task = personal reminder or to-do with no goal linkage needed.\n\nRETURNS: status ('added'), id, title, due, recurrence if set.\n\nDO NOT CALL: for project tasks that belong in the weekly plan — use add_task instead.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string", "description": "What to do"},
+                        "due": {"type": "string", "description": "When — natural language ok: 'tomorrow', 'Friday at 6PM', 'YYYY-MM-DD'. Optional."},
+                        "time": {"type": "string", "description": "Time of day as HH:MM. Optional — use if due doesn't include time."},
+                        "recurrence": {"type": "string", "description": "Recurrence pattern — natural language ok: 'every Monday', 'every day', 'every weekday'. Optional."},
+                        "notes": {"type": "string", "description": "Extra notes. Optional."},
+                    },
+                    "required": ["title"],
+                },
+            },
+        },
+    },
+    "list_personal_tasks": {
+        "fn": list_personal_tasks,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_personal_tasks",
+                "description": "WHEN: Robert asks what's on his list, personal reminders, 'what do I have today', to-do list, 'what am I forgetting', /todo command.\n\nRETURNS: filter, count, tasks list with id, title, due_date, due_time, recurrence, status.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "filter": {"type": "string", "enum": ["today", "upcoming", "overdue", "all"], "description": "Which tasks to show. Default: 'today'."},
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "complete_personal_task": {
+        "fn": complete_personal_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "complete_personal_task",
+                "description": "WHEN: Robert says he did something, 'done with X', 'finished X', 'mark X done' for a personal task. If recurring, automatically creates next occurrence.\n\nRETURNS: status ('completed'), id, title, next_due if recurring.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "integer", "description": "ID of the personal task to mark done"},
+                    },
+                    "required": ["task_id"],
+                },
+            },
+        },
+    },
+    "snooze_personal_task": {
+        "fn": snooze_personal_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "snooze_personal_task",
+                "description": "WHEN: Robert says 'remind me later', 'snooze that', 'not now but later' for a personal task.\n\nRETURNS: status ('snoozed'), id, new_due datetime.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "integer", "description": "ID of the task to snooze"},
+                        "minutes": {"type": "integer", "description": "Minutes to push forward. Default: 60."},
+                    },
+                    "required": ["task_id"],
+                },
+            },
+        },
+    },
+    "delete_personal_task": {
+        "fn": delete_personal_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "delete_personal_task",
+                "description": "WHEN: Robert says 'remove X', 'delete X', 'cancel X' for a personal task.\n\nRETURNS: status ('deleted'), id.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "integer", "description": "ID of the task to delete"},
+                    },
+                    "required": ["task_id"],
                 },
             },
         },
