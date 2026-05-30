@@ -26,7 +26,7 @@ if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
 from core.db import init_db
 from core.report import init_report
 from core.transport import handle_message
-from core.scheduler import run_scheduler
+from core.scheduler import run_scheduler, check_missed_briefing
 from telegram.ext import ApplicationBuilder, MessageHandler, filters
 
 # Track startup time for /status command
@@ -88,6 +88,7 @@ if __name__ == "__main__":
     # Build PTB app with post_init hook for scheduler
     async def post_init(application):
         asyncio.create_task(run_scheduler(send_to_telegram))
+        asyncio.create_task(check_missed_briefing(send_to_telegram))
 
     app = (ApplicationBuilder()
            .token(os.getenv("TELEGRAM_BOT_TOKEN"))
