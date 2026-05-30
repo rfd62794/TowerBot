@@ -228,38 +228,55 @@ async def _execute(thread_id: str, name: str, args: dict) -> dict:
         return r
     # Memory tools
     if name == "save_memory":
-        r = tool_save_memory(args["key"], args["content"], args["layer"])
+        key = args.get("key", "")
+        content = args.get("content", "")
+        layer = args.get("layer", "facts")
+        if not key or not content:
+            return {"error": "save_memory called without required key/content"}
+        r = tool_save_memory(key, content, layer)
         if r is None:
             r = {"error": "save_memory returned None"}
-        await report("memory_saved", key=args["key"], layer=args["layer"],
-                     content=args["content"])
+        await report("memory_saved", key=key, layer=layer, content=content)
         return r
     if name == "update_memory":
-        r = tool_update_memory(args["key"], args["content"], args.get("reason", ""))
+        key = args.get("key", "")
+        content = args.get("content", "")
+        if not key or not content:
+            return {"error": "update_memory called without required key/content"}
+        r = tool_update_memory(key, content, args.get("reason", ""))
         if r is None:
             r = {"error": "update_memory returned None"}
-        await report("memory_updated", key=args["key"], content=args["content"],
+        await report("memory_updated", key=key, content=content,
                      reason=args.get("reason", ""))
         return r
     if name == "retire_memory":
-        r = tool_retire_memory(args["key"], args.get("reason", ""))
+        key = args.get("key", "")
+        if not key:
+            return {"error": "retire_memory called without required key"}
+        r = tool_retire_memory(key, args.get("reason", ""))
         if r is None:
             r = {"error": "retire_memory returned None"}
-        await report("memory_retired", key=args["key"], reason=args.get("reason", ""))
+        await report("memory_retired", key=key, reason=args.get("reason", ""))
         return r
     if name == "get_memories":
-        r = tool_get_memories(args["query"])
+        query = args.get("query", "")
+        if not query:
+            return {"error": "get_memories called without required query"}
+        r = tool_get_memories(query)
         if r is None:
             r = {"error": "get_memories returned None", "memories": [], "count": 0}
         keys = [m.get("key") for m in r.get("memories", []) if isinstance(m, dict)]
-        await report("memory_retrieved", query=args["query"], count=r.get("count", 0),
+        await report("memory_retrieved", query=query, count=r.get("count", 0),
                      keys=keys)
         return r
     if name == "name_thread":
-        r = _handle_name_thread(thread_id, args["name"])
+        thread_name = args.get("name", "")
+        if not thread_name:
+            return {"error": "name_thread called without required name"}
+        r = _handle_name_thread(thread_id, thread_name)
         if r is None:
             r = {"error": "name_thread returned None"}
-        await report("thread_named", name=args["name"])
+        await report("thread_named", name=thread_name)
         return r
     return {"status": "error", "reason": f"unknown tool {name}"}
 
