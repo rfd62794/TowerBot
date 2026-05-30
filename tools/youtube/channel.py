@@ -13,6 +13,39 @@ from tools.api.youtube_api import (
 )
 
 
+def get_channel_summary_range(start_date: str, end_date: str) -> dict:
+    """
+    Get YouTube channel performance for a specific date range.
+
+    Args:
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+
+    Returns:
+        Dict with views, watch_time, subscribers, and date range.
+    """
+    try:
+        api_response = query_channel_report(start_date, end_date, "views,estimatedMinutesWatched,subscribersGained")
+        if "error" in api_response:
+            return api_response
+
+        response = api_response["raw"]
+        rows = response.get("rows", [[0, 0, 0]])
+        if not rows:
+            return {"error": "No data returned from YouTube Analytics"}
+
+        row = rows[0]
+        return {
+            "views": int(row[0]),
+            "watch_time_minutes": float(row[1]),
+            "subscribers_gained": int(row[2]),
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def _hash_params(params: dict) -> str:
     return hashlib.md5(json.dumps(params, sort_keys=True).encode()).hexdigest()
 

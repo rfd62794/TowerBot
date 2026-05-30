@@ -6,6 +6,7 @@ Re-exports all functions so external imports are unchanged:
 
 from tools.youtube.channel import (
     get_channel_summary,
+    get_channel_summary_range,
     get_daily_views,
     get_geographic_breakdown,
     get_audience_demographics,
@@ -24,6 +25,7 @@ from tools.youtube.discovery import (
 
 __all__ = [
     "get_channel_summary",
+    "get_channel_summary_range",
     "get_daily_views",
     "get_geographic_breakdown",
     "get_audience_demographics",
