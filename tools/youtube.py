@@ -1,6 +1,44 @@
-"""YouTube tool — fetch channel performance data."""
+"""YouTube tool — fetch channel performance data via YouTube Analytics API."""
 
+import os
 from datetime import datetime, timedelta
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+
+
+def _get_credentials() -> Credentials:
+    """Load OAuth credentials from token file."""
+    token_path = os.getenv("YOUTUBE_TOKEN_PATH", "config/youtube_token.json")
+    client_secrets_path = os.getenv("YOUTUBE_CLIENT_SECRETS", "config/client_secret.json")
+
+    if not os.path.exists(token_path):
+        raise FileNotFoundError(
+            f"OAuth token not found at {token_path}. "
+            f"Run 'uv run python scripts/youtube_auth.py' to authorize."
+        )
+
+    # Load credentials from token file
+    creds = Credentials.from_authorized_user_file(token_path)
+
+    # Refresh if expired
+    if creds.expired and creds.refresh_token:
+        from google_auth_oauthlib.flow import InstalledAppFlow
+        flow = InstalledAppFlow.from_client_secrets_file(
+            client_secrets_path,
+            scopes=[
+                "https://www.googleapis.com/auth/yt-analytics.readonly",
+                "https://www.googleapis.com/auth/youtube.readonly",
+            ],
+        )
+        creds.refresh(flow)
+
+    return creds
+
+
+def _build_analytics_client():
+    """Build YouTube Analytics API client."""
+    creds = _get_credentials()
+    return build("youtubeAnalytics", "v2", credentials=creds)
 
 
 def get_channel_summary(days: int = 7) -> dict:
@@ -11,35 +49,75 @@ def get_channel_summary(days: int = 7) -> dict:
         days: Number of days to look back (default: 7)
 
     Returns:
-        Dict with views, watch_time, subscribers, and top_series data.
-
-    Note:
-        This is a stub implementation. To integrate with ContentPipeline:
-        1. Import the actual ContentPipeline client function
-        2. Call it with start/end dates
-        3. Return the results in this format
-
-    Example integration:
-        from content_pipeline_client import get_summary
+        Dict with views, watch_time, subscribers, and date range.
+    """
+    try:
+        client = _build_analytics_client()
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-        return get_summary(start, end)
+
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start,
+            endDate=end,
+            metrics="views,estimatedMinutesWatched,subscribersGained",
+        ).execute()
+
+        rows = response.get("rows", [[0, 0, 0]])
+        if not rows:
+            return {"error": "No data returned from YouTube Analytics"}
+
+        row = rows[0]
+        return {
+            "views": int(row[0]),
+            "watch_time_minutes": float(row[1]),
+            "subscribers_gained": int(row[2]),
+            "start_date": start,
+            "end_date": end,
+            "period_days": days,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def get_top_videos(days: int = 7, limit: int = 10) -> dict:
     """
-    # Stub implementation — replace with actual ContentPipeline call
-    end = datetime.now().strftime("%Y-%m-%d")
-    start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    Get top videos by views for last N days.
 
-    # TODO: Replace with actual ContentPipeline integration
-    # from content_pipeline_client import get_summary
-    # return get_summary(start, end)
+    Args:
+        days: Number of days to look back (default: 7)
+        limit: Maximum number of videos to return (default: 10)
 
-    # Mock data for testing
-    return {
-        "status": "success",
-        "period": f"{start} to {end}",
-        "views": 1529,
-        "watch_time_minutes": 128,
-        "subscribers_gained": 7,
-        "top_series": "EIC",
-        "notes": "EIC performing best. Dune unproven — check by June 7.",
-    }
+    Returns:
+        Dict with list of top videos and their stats.
+    """
+    try:
+        client = _build_analytics_client()
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        response = client.reports().query(
+            ids="channel==MINE",
+            startDate=start,
+            endDate=end,
+            dimensions="video",
+            metrics="views,estimatedMinutesWatched",
+            sort="-views",
+            max_results=limit,
+        ).execute()
+
+        rows = response.get("rows", [])
+        videos = []
+        for row in rows:
+            videos.append({
+                "video_id": row[0],
+                "views": int(row[1]),
+                "watch_time_minutes": float(row[2]),
+            })
+
+        return {
+            "videos": videos,
+            "period_days": days,
+        }
+    except Exception as e:
+        return {"error": str(e)}
