@@ -10,7 +10,10 @@ import time
 import subprocess
 
 from core.agent import respond, get_last_model
-from core.db import create_thread, list_memories, list_threads
+from core.db import (
+    create_thread, list_memories, list_threads,
+    get_last_stable_commit, get_last_deploy, get_deploy_history,
+)
 from core.report import report
 from core.model_manager import get_status_report, get_throttled_models
 from tools.goals import (
@@ -28,7 +31,7 @@ _ROUTER_STARTUP = time.time()
 
 
 def handle_status() -> str:
-    """Return bot status: uptime, memory count, thread count, last model, throttle status."""
+    """Return bot status: uptime, memory count, deploy info, model status."""
     uptime = time.time() - _ROUTER_STARTUP
     hours = int(uptime // 3600)
     minutes = int((uptime % 3600) // 60)
@@ -38,6 +41,11 @@ def handle_status() -> str:
     threads = list_threads()
     last_model = get_last_model()
     throttled = get_throttled_models()
+    last_deploy = get_last_deploy()
+    stable = get_last_stable_commit()
+    history = get_deploy_history(limit=100)
+    deploy_count = sum(1 for d in history if not d["rolled_back"])
+    rollback_count = sum(1 for d in history if d["rolled_back"])
 
     lines = [
         "📊 PrivyBot Status",
@@ -47,6 +55,15 @@ def handle_status() -> str:
         f"Last model: {last_model}",
         f"Throttled models: {len(throttled)}",
     ]
+
+    if last_deploy:
+        lines.append(f"\nCurrent commit: {last_deploy['commit_hash'][:7] if last_deploy['commit_hash'] else 'unknown'}")
+        lines.append(f"  \"{last_deploy['commit_message']}\"")
+        lines.append(f"  Deployed: {last_deploy['deployed_at']}")
+    if stable and last_deploy and stable["id"] != last_deploy["id"]:
+        lines.append(f"Last stable: {stable['commit_hash'][:7] if stable['commit_hash'] else 'unknown'}")
+    lines.append(f"Deploys: {deploy_count}  Rollbacks: {rollback_count}")
+
     if throttled:
         lines.append("\nThrottled:")
         for m in throttled[:5]:
@@ -97,6 +114,8 @@ def help_text() -> str:
         "/models — free model availability\n"
         "/status — bot status\n"
         "/deploy — pull main and restart (Tower only)\n"
+        "/rollback — revert to last stable commit\n"
+        "/history — show recent deploy history\n"
         "/goals — list active goals\n"
         "/goal [id] — show goal details\n"
         "/tasks — show this week's tasks\n"
@@ -246,7 +265,7 @@ async def handle_deploy(chat_id: int) -> str:
             ["uv", "run", "python", "scripts/deploy.py"],
             capture_output=True,
             text=True,
-            timeout=120  # 2 minute max
+            timeout=120
         )
         output = result.stdout.strip()
         if not output:
@@ -256,6 +275,50 @@ async def handle_deploy(chat_id: int) -> str:
         return "Deploy timed out after 2 minutes."
     except Exception as e:
         return f"Deploy failed: {str(e)}"
+
+
+async def handle_rollback(chat_id: int) -> str:
+    """Handle /rollback command — run rollback script as subprocess."""
+    await report("tool_called", tool_name="rollback", result_summary="Starting rollback...")
+
+    try:
+        result = subprocess.run(
+            ["uv", "run", "python", "scripts/rollback.py"],
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        output = result.stdout.strip()
+        if not output:
+            output = result.stderr.strip()
+        return output or "Rollback completed."
+    except subprocess.TimeoutExpired:
+        return "Rollback timed out after 2 minutes."
+    except Exception as e:
+        return f"Rollback failed: {str(e)}"
+
+
+def handle_history() -> str:
+    """Handle /history command — show recent deploy history."""
+    records = get_deploy_history(limit=5)
+    if not records:
+        return "No deploy history yet."
+
+    lines = ["📋 Deploy history:"]
+    for d in records:
+        if d["rolled_back"]:
+            icon = "↩️"
+        elif d["stable"]:
+            icon = "✅"
+        elif d["verify_passed"]:
+            icon = "⚠️"
+        else:
+            icon = "🔴"
+        short_hash = d["commit_hash"][:7] if d["commit_hash"] else "unknown"
+        msg = d["commit_message"] or ""
+        deployed_at = d["deployed_at"] or ""
+        lines.append(f"{icon} {short_hash} — {msg} ({deployed_at[:10]})")
+    return "\n".join(lines)
 
 
 async def route(chat_id: int, text: str) -> str:
@@ -275,6 +338,10 @@ async def route(chat_id: int, text: str) -> str:
         return handle_status()
     if text == "/deploy" or text.startswith("/deploy"):
         return await handle_deploy(chat_id)
+    if text == "/rollback" or text.startswith("/rollback"):
+        return await handle_rollback(chat_id)
+    if text == "/history" or text.startswith("/history"):
+        return handle_history()
     if text == "/help" or text.startswith("/help"):
         return help_text()
     
