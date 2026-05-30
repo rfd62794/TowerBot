@@ -5,7 +5,7 @@ import os
 import logging
 
 from googleapiclient.discovery import build
-from tools.api.youtube_api import _get_credentials
+from api.google.youtube_api import _get_credentials
 from api._handler import BaseAPIHandler
 
 logger = logging.getLogger("privy.gmail_api")
