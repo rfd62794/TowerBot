@@ -7,8 +7,11 @@ or commands. No formatting (that is report.py), no direct SQLite (only db.py).
 
 import os
 import json
+import logging
 
 from openai import OpenAI
+
+logger = logging.getLogger("privy.agent")
 
 from db import (
     get_context,
@@ -235,7 +238,9 @@ async def respond(message: str, thread_id: str, model_key: str = "default") -> s
                     args = json.loads(tc.function.arguments or "{}")
                 except json.JSONDecodeError:
                     args = {}
+                logger.info("TOOL CALL [%s]: %s %s", model, tc.function.name, args)
                 result = await _execute(thread_id, tc.function.name, args)
+                logger.info("TOOL RESULT: %s", result)
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tc.id,
@@ -243,8 +248,15 @@ async def respond(message: str, thread_id: str, model_key: str = "default") -> s
                 })
             resp, model = await _chat(model, messages, None, allow_rotation)
             msg = resp.choices[0].message
+        else:
+            logger.info("NO TOOL CALLS in response from [%s]", model)
 
         text = msg.content or ""
+        if any(tok in text for tok in ("<tool_call>", "<arg_key>", "<function", "```tool")):
+            logger.warning(
+                "RAW TOOL-CALL TEXT leaked from [%s] (model faked tools): %.200s",
+                model, text,
+            )
         add_message(thread_id, "assistant", text)
         update_thread_active(thread_id)
         return text
