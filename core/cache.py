@@ -56,6 +56,7 @@ class CacheManager:
         "ddg_search": 1800,  # 30min (legacy key)
         "wikipedia": 86400,  # 24h (legacy key)
         "reddit": 900,  # 15min (legacy key)
+        "fetch_page": 3600,  # 1 hour
     }
 
     # ─── Staleness budget ─────────────────
@@ -92,6 +93,7 @@ class CacheManager:
         "youtube_playlist_id": 86400,
         "youtube_playlist_items": 86400,
         "calendar_upcoming": 900,
+        "fetch_page": 3600,
     }
 
     # ─── Core methods ─────────────────────

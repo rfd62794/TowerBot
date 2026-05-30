@@ -140,7 +140,15 @@ def _system_prompt() -> str:
         "2. Base your answer on the results returned\n"
         "3. If results are empty — say so honestly\n\n"
         "Never guess factual information. Never fill gaps with plausible content. "
-        "The EIC hallucination happened because you guessed. Don't guess. Search."
+        "The EIC hallucination happened because you guessed. Don't guess. Search.\n\n"
+        "THINK BEFORE COMPLEX ACTIONS:\n"
+        "For questions requiring multiple tool calls or multi-step reasoning:\n"
+        "  1. Call think() with your plan first\n"
+        "  2. Execute the plan step by step\n"
+        "  3. Call think() again if direction changes\n\n"
+        "For simple single-tool questions:\n"
+        "  Skip think() — answer directly.\n\n"
+        "think() output is visible to you and to Robert — use it honestly."
     )
 
 
@@ -223,6 +231,8 @@ async def _execute(thread_id: str, name: str, args: dict) -> dict:
             await report("commitment_saved",
                          description=args.get("description", ""),
                          deadline=args.get("deadline"))
+        elif name == "think":
+            await report("thought", thought=args.get("thought", ""))
         else:
             await report("tool_called", tool_name=name)
         return r
