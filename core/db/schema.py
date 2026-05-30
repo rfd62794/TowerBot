@@ -178,6 +178,28 @@ CREATE TABLE IF NOT EXISTS commitments (
     resolved_at DATETIME
 );
 
+CREATE TABLE IF NOT EXISTS personal_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    notes TEXT,
+    due_date TEXT,
+    due_time TEXT,
+    due_datetime DATETIME,
+    recurrence TEXT,
+    recurrence_days TEXT,
+    status TEXT DEFAULT 'pending',
+    reminder_minutes INTEGER DEFAULT 30,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME,
+    next_due DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS task_reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL,
+    reminded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS deploy_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     commit_hash TEXT,

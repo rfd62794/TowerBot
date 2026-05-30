@@ -34,6 +34,7 @@ TEST_FILES = [
     "tests/test_tools_goals.py",
     "tests/test_api.py",
     "tests/test_deployments.py",
+    "tests/test_personal_tasks.py",
 ]
 
 

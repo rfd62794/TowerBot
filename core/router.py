@@ -124,6 +124,11 @@ def help_text() -> str:
         "/plan — show current week plan\n"
         "/confirm [id] — confirm milestone complete\n"
         "/reject [id] — dismiss suggestion\n"
+        "/todo — today's personal tasks\n"
+        "/todo list — all pending tasks\n"
+        "/todo week — this week's tasks\n"
+        "/todo done [id] — mark task done\n"
+        "/todo add [text] — quick capture\n"
         "/help — this message"
     )
 
@@ -251,6 +256,44 @@ def handle_confirm(milestone_id: str) -> str:
     return f"✓ Milestone marked complete: {milestone['title']}"
 
 
+def handle_todo(sub: str, rest: str) -> str:
+    """Handle /todo subcommands — list, done. add is handled in route()."""
+    from tools.personal import list_personal_tasks, complete_personal_task
+
+    if sub == "list":
+        result = list_personal_tasks(filter="all")
+    elif sub == "week":
+        result = list_personal_tasks(filter="upcoming")
+    elif sub == "done" and rest:
+        try:
+            r = complete_personal_task(int(rest.strip()))
+            if "error" in r:
+                return r["error"]
+            out = f"\u2713 Done: {r['title']}"
+            if r.get("next_due"):
+                out += f"\n\u21bb Next: {r['next_due']}"
+            return out
+        except Exception as e:
+            return f"Error: {e}"
+    else:
+        result = list_personal_tasks(filter="today")
+
+    if result["count"] == 0:
+        return f"No personal tasks ({result['filter']})."
+
+    lines = [f"\U0001f4dd Personal tasks ({result['filter']}) \u2014 {result['count']}:"]
+    for t in result["tasks"]:
+        line = f"  [{t['id']}] {t['title']}"
+        if t.get("due_time"):
+            line += f" at {t['due_time']}"
+        elif t.get("due_date"):
+            line += f" ({t['due_date']})"
+        if t.get("recurrence"):
+            line += f" \u21bb"
+        lines.append(line)
+    return "\n".join(lines)
+
+
 def handle_reject(milestone_id: str) -> str:
     """Handle /reject [id] command — dismiss suggestion."""
     return f"Dismissed suggestion for milestone: {milestone_id}"
@@ -366,6 +409,14 @@ async def route(chat_id: int, text: str) -> str:
     if text.startswith("/reject "):
         milestone_id = text[len("/reject "):].strip()
         return handle_reject(milestone_id)
+    if text == "/todo" or text.startswith("/todo"):
+        parts = text[len("/todo"):].strip().split(None, 1)
+        sub = parts[0].lower() if parts else ""
+        rest = parts[1] if len(parts) > 1 else ""
+        if sub == "add" and rest:
+            thread_id = await _ensure_thread(chat_id)
+            return await respond(f"Add personal task: {rest}", thread_id)
+        return handle_todo(sub, rest)
 
     if text.startswith("/think"):
         model_key, message = "think", text[len("/think"):].strip()
