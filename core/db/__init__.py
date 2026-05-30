@@ -81,6 +81,16 @@ from core.db.goals import (
     get_current_weekly_plan,
 )
 
+from core.db.deployments import (
+    record_deploy,
+    mark_verify_passed,
+    mark_stable,
+    mark_rolled_back,
+    get_last_stable_commit,
+    get_last_deploy,
+    get_deploy_history,
+)
+
 __all__ = [
     "DB_PATH", "init_db",
     "create_thread", "update_thread_name", "update_thread_active", "list_threads",
@@ -98,4 +108,6 @@ __all__ = [
     "upsert_task", "get_tasks", "get_task", "update_task_status",
     "get_tasks_due_today", "get_upcoming_scheduled",
     "upsert_weekly_plan", "get_current_weekly_plan",
+    "record_deploy", "mark_verify_passed", "mark_stable", "mark_rolled_back",
+    "get_last_stable_commit", "get_last_deploy", "get_deploy_history",
 ]

@@ -168,6 +168,17 @@ CREATE TABLE IF NOT EXISTS weekly_plans (
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS deploy_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    commit_hash TEXT,
+    commit_message TEXT,
+    deployed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    verify_passed INTEGER DEFAULT 0,
+    stable INTEGER DEFAULT 0,
+    rolled_back INTEGER DEFAULT 0,
+    notes TEXT
+);
 """
 
 _conn: sqlite3.Connection | None = None
