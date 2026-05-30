@@ -14,8 +14,8 @@ from datetime import datetime
 import yaml
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-CONTEXT_PATH = os.path.join(BASE, "context.yaml")
-DB_PATH = os.path.join(BASE, "privy.db")
+CONTEXT_PATH = os.path.join(BASE, "..", "config", "context.yaml")
+DB_PATH = os.path.join(BASE, "..", "privy.db")
 
 # Mirror of the schema in privybot.py so seeding works on a fresh DB.
 MEMORY_SCHEMA = """

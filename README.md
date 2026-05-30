@@ -49,13 +49,21 @@ python privybot.py
 
 ## Deploy (Tower / NSSM)
 
-Install as a Windows service:
+See [docs/TOWER_DEPLOY.md](docs/TOWER_DEPLOY.md) for detailed deployment instructions.
+
+Quick install:
 
 ```powershell
-nssm install PrivyBot "C:\Path\To\python.exe" "C:\Github\PrivyBot\privybot.py"
+nssm install PrivyBot "C:\Path\To\python.exe" "-m uv run python privybot.py"
 nssm set PrivyBot AppDirectory "C:\Github\PrivyBot"
 nssm start PrivyBot
 ```
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Layered architecture and import rules
+- [docs/TOWER_DEPLOY.md](docs/TOWER_DEPLOY.md) — Windows tower deployment with NSSM
+- [docs/TOOLS.md](docs/TOOLS.md) — How to add new tools
 
 ## License
 
