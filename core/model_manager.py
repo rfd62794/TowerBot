@@ -40,7 +40,10 @@ SEED_FREE_MODELS = [
 
 # Models with tool-calling format incompatibilities (leak raw tool-call text)
 # Populated after test_models.py validation
-TOOL_INCOMPATIBLE = set()
+TOOL_INCOMPATIBLE = {
+    "openrouter/owl-alpha",  # Leaks raw longcat XML tool calls
+    "z-ai/glm-4.5-air:free",  # Known incompatibility
+}
 
 
 def fetch_free_tool_models() -> list:

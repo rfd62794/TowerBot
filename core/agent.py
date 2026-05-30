@@ -201,31 +201,45 @@ async def _execute(thread_id: str, name: str, args: dict) -> dict:
     if name in TOOL_REGISTRY:
         tool_fn = TOOL_REGISTRY[name]["fn"]
         r = tool_fn(**args)
+        if r is None:
+            r = {"error": f"Tool {name} returned None"}
+        elif not isinstance(r, dict):
+            r = {"error": f"Tool {name} returned unexpected type: {type(r)}"}
         await report("tool_called", tool_name=name)
         return r
     # Memory tools
     if name == "save_memory":
         r = tool_save_memory(args["key"], args["content"], args["layer"])
+        if r is None:
+            r = {"error": "save_memory returned None"}
         await report("memory_saved", key=args["key"], layer=args["layer"],
                      content=args["content"])
         return r
     if name == "update_memory":
         r = tool_update_memory(args["key"], args["content"], args.get("reason", ""))
+        if r is None:
+            r = {"error": "update_memory returned None"}
         await report("memory_updated", key=args["key"], content=args["content"],
                      reason=args.get("reason", ""))
         return r
     if name == "retire_memory":
         r = tool_retire_memory(args["key"], args.get("reason", ""))
+        if r is None:
+            r = {"error": "retire_memory returned None"}
         await report("memory_retired", key=args["key"], reason=args.get("reason", ""))
         return r
     if name == "get_memories":
         r = tool_get_memories(args["query"])
-        keys = [m["key"] for m in r.get("memories", [])]
+        if r is None:
+            r = {"error": "get_memories returned None", "memories": [], "count": 0}
+        keys = [m.get("key") for m in r.get("memories", []) if isinstance(m, dict)]
         await report("memory_retrieved", query=args["query"], count=r.get("count", 0),
                      keys=keys)
         return r
     if name == "name_thread":
         r = _handle_name_thread(thread_id, args["name"])
+        if r is None:
+            r = {"error": "name_thread returned None"}
         await report("thread_named", name=args["name"])
         return r
     return {"status": "error", "reason": f"unknown tool {name}"}

@@ -186,8 +186,11 @@ def get_top_videos(days: int = 7, limit: int = 10) -> dict:
         stats = stats_response["raw"]
         videos = []
         for video in stats.get("items", []):
+            snippet = video.get("snippet", {})
             videos.append({
                 "video_id": video["id"],
+                "title": snippet.get("title", "Unknown"),
+                "published_at": snippet.get("publishedAt", ""),
                 "views": int(video["statistics"].get("viewCount", 0)),
                 "watch_time_minutes": 0,  # YouTube Data API doesn't provide watch time
             })
@@ -234,10 +237,13 @@ def get_video_analytics(video_id: str, days: int = 28) -> dict:
         if "error" in api_response:
             return api_response
 
-        response = api_response["raw"]
+        response = api_response.get("raw")
+        if response is None:
+            return {"error": "No analytics data", "video_id": video_id}
+        
         rows = response.get("rows", [])
         if not rows:
-            return {"error": "No data returned for this video"}
+            return {"error": "No data returned for this video", "video_id": video_id}
 
         row = rows[0]
         result = {
@@ -508,7 +514,10 @@ def get_daily_views(days: int = 28) -> dict:
         if "error" in api_response:
             return api_response
 
-        response = api_response["raw"]
+        response = api_response.get("raw")
+        if response is None:
+            return {"error": "No data available", "days": []}
+        
         rows = response.get("rows", [])
         
         days_data = []
