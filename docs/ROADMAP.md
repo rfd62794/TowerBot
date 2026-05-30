@@ -417,6 +417,16 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
   - Single owner of database access with retry logic
   - Exponential backoff for lock errors (0.1s, 0.2s, 0.4s, 0.8s, 1.6s)
   - WAL mode coordination
+- UNIQUE partial index on personal_tasks (ADR-030) — DONE
+  - Deduplication for pending tasks with same title and due_date
+  - INSERT OR IGNORE on add_personal_task()
+- Dedup mechanisms across commitments + history tables (ADR-030) — DONE
+  - 24h window check in save_commitment()
+  - INSERT OR REPLACE on record_channel_day() and record_weather_day()
+- Missed task push-forward + recurrence recovery (ADR-031) — DONE
+  - next_recurrence_date() with never-same-day rule
+  - push_missed_tasks() with collision handling
+  - Nightly nudges for stale tasks
 - Connection pooling: SQLite connection pool for concurrent access (planned)
 - Transaction management: explicit BEGIN/COMMIT/ROLLBACK (planned)
 - Migration versioning: track schema versions, apply migrations incrementally (planned)
@@ -470,9 +480,9 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 
 ---
 
-## Phase 14 — PollingManager 🔄 PLANNED
+## Phase 14 — PollingManager ✅ DONE
 
-**Status**: Planned
+**Status**: Complete
 **Duration**: 1 week
 **Key Deliverables**:
 - PollingManager (infra/polling.py) — single owner of all polling behavior
@@ -538,9 +548,9 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 | Phase 11 — API Hardening | 🔒 PLANNED | 0% |
 | Phase 12 — DB Hardening | 💾 IN PROGRESS | 10% |
 | Phase 13 — Logging | 📊 PLANNED | 0% |
-| Phase 14 — PollingManager | 🔄 PLANNED | 0% |
+| Phase 14 — PollingManager | ✅ DONE | 100% |
 
-**Overall Progress**: 46% (6/14 phases complete)
+**Overall Progress**: 50% (7/14 phases complete)
 
 ---
 
