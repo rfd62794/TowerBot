@@ -135,6 +135,15 @@ def get_current_weekly_plan() -> dict | None:
 
 
 def add_commitment(description: str, deadline: str = None) -> int:
+    # Check for duplicate within last 24 hours
+    existing = _exec(
+        "SELECT id FROM commitments "
+        "WHERE description = ? AND created_at > datetime('now', '-24 hours')",
+        (description,),
+    ).fetchone()
+    if existing:
+        return existing["id"]
+    
     cur = _exec(
         "INSERT INTO commitments (description, deadline) VALUES (?, ?)",
         (description, deadline),
