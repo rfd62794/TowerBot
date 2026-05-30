@@ -21,11 +21,11 @@ class SteamAPIHandler(BaseAPIHandler):
     def get_owned_games(self) -> dict:
         """Raw Steam API call — internal use only."""
         def _live():
-            if not self.STEAM_API_KEY or not self.STEAM_ID:
+            if not self.STEAM_KEY or not self.STEAM_ID:
                 return {"raw": []}
 
             params = {
-                "key": self.STEAM_API_KEY,
+                "key": self.STEAM_KEY,
                 "steamid": self.STEAM_ID,
                 "include_appinfo": 1,
                 "include_played_free_games": 1,
