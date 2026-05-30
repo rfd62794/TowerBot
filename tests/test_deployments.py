@@ -85,6 +85,7 @@ def _teardown():
         _exec(
             f"DELETE FROM deploy_history WHERE commit_hash IN ({placeholders})",
             tuple(_TEST_HASHES),
+            commit=True,
         )
     except Exception:
         pass
