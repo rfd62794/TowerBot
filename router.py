@@ -10,6 +10,7 @@ import uuid
 from agent import respond
 from db import create_thread, list_memories
 from report import report
+from model_manager import get_status_report
 
 _current_threads: dict[int, str] = {}
 
@@ -52,6 +53,7 @@ def help_text() -> str:
         "/claude [msg] — Claude Sonnet\n"
         "/new — start fresh thread\n"
         "/memories — list what I know\n"
+        "/models — free model availability\n"
         "/help — this message"
     )
 
@@ -67,6 +69,8 @@ async def route(chat_id: int, text: str) -> str:
         return "New thread started."
     if text == "/memories" or text.startswith("/memories"):
         return handle_memories(chat_id)
+    if text == "/models" or text.startswith("/models"):
+        return get_status_report()
     if text == "/help" or text.startswith("/help"):
         return help_text()
 
