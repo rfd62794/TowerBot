@@ -26,10 +26,14 @@ from memory import (
     tool_get_memories,
 )
 from report import report
+from model_manager import get_available_model, handle_429, handle_success
 
+# max_retries=0: we manage 429 rotation ourselves; the SDK's internal retries
+# add 19-23s blocking waits before our fallback logic can run.
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY"),
+    max_retries=0,
 )
 
 MODELS = {
@@ -57,14 +61,6 @@ NAME_THREAD_TOOL = {
 
 ALL_TOOLS = TOOL_DEFINITIONS + [NAME_THREAD_TOOL]
 
-
-# Confirmed-valid free models with tool-calling. Invalid IDs (hermes-3-405b,
-# gemma-4-31b) were removed after OpenRouter rejected them as not-a-valid-model.
-FREE_MODEL_FALLBACKS = [
-    "deepseek/deepseek-v4-flash:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "moonshotai/kimi-k2.6:free",
-]
 
 # Cap output tokens: some providers (e.g. Venice for Llama) reject the model's
 # large default max_completion_tokens. 8000 is well under provider caps.
@@ -123,38 +119,53 @@ def _call(model: str, messages: list, tools):
     return client.chat.completions.create(**kwargs)
 
 
-async def _rotate_fallbacks(messages: list, tools, failed_model: str):
-    for m in FREE_MODEL_FALLBACKS:
-        if m == failed_model:
-            continue
-        try:
-            resp = _call(m, messages, tools)
-            await report("model_routed", model=m, reason="fallback on 429")
-            return resp, m
-        except Exception as e:
-            # Skip any unavailable model (throttled, invalid id, etc.).
-            await report("model_routed", model=m, reason=f"skip: {e}")
-            continue
-    raise _AllRateLimited()
-
-
-async def _chat(model: str, messages: list, tools):
+def _extract_retry_after(error) -> float | None:
+    """Pull retry_after_seconds from an OpenRouter 429 error body, if present."""
     try:
-        return _call(model, messages, tools), model
+        body = json.loads(error.response.text)
+        return float(body["error"]["metadata"]["retry_after_seconds"])
+    except Exception:
+        return None
+
+
+async def _rotate(messages: list, tools):
+    """Try dynamically-discovered free models, skipping those in cooldown."""
+    while True:
+        fallback = get_available_model()
+        if fallback is None:
+            raise _AllRateLimited()
+        try:
+            resp = _call(fallback, messages, tools)
+            handle_success(fallback)
+            await report("model_routed", model=fallback, reason="fallback on 429")
+            return resp, fallback
+        except Exception as e:
+            if _is_429(e):
+                handle_429(fallback, _extract_retry_after(e) or 60.0)
+            else:
+                # Invalid id or other error: cooldown briefly so it is skipped.
+                handle_429(fallback, 300.0)
+            await report("model_routed", model=fallback, reason=f"skip: {e}")
+            continue
+
+
+async def _chat(model: str, messages: list, tools, allow_rotation: bool = True):
+    try:
+        resp = _call(model, messages, tools)
+        handle_success(model)
+        return resp, model
     except Exception as e:
         if _is_429(e):
-            return await _rotate_fallbacks(messages, tools, failed_model=model)
+            if not allow_rotation:
+                raise
+            handle_429(model, _extract_retry_after(e) or 60.0)
+            return await _rotate(messages, tools)
         if not _is_402(e):
             raise
         if model == MODELS["default"]:
             raise _CreditsExhausted()
         await report("error", message="Credit limit hit, fell back to free model")
-        try:
-            return _call(MODELS["default"], messages, tools), MODELS["default"]
-        except Exception as e2:
-            if _is_402(e2):
-                raise _CreditsExhausted()
-            raise
+        return await _chat(MODELS["default"], messages, tools, allow_rotation=True)
 
 
 async def _execute(thread_id: str, name: str, args: dict) -> dict:
@@ -212,8 +223,9 @@ async def respond(message: str, thread_id: str, model_key: str = "default") -> s
         messages = [{"role": "system", "content": _system_prompt()}]
         messages.extend(get_context(thread_id, 10))
 
+        allow_rotation = (model_key == "default")
         model = MODELS.get(model_key) or MODELS["default"]
-        resp, model = await _chat(model, messages, ALL_TOOLS)
+        resp, model = await _chat(model, messages, ALL_TOOLS, allow_rotation)
         msg = resp.choices[0].message
 
         if msg.tool_calls:
@@ -229,7 +241,7 @@ async def respond(message: str, thread_id: str, model_key: str = "default") -> s
                     "tool_call_id": tc.id,
                     "content": json.dumps(result),
                 })
-            resp, model = await _chat(model, messages, None)
+            resp, model = await _chat(model, messages, None, allow_rotation)
             msg = resp.choices[0].message
 
         text = msg.content or ""

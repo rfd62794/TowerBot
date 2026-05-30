@@ -5,6 +5,7 @@ Pure database: no agent, Telegram, or OpenRouter logic.
 """
 
 import os
+import json
 import sqlite3
 import threading
 
@@ -35,6 +36,21 @@ CREATE TABLE IF NOT EXISTS memory (
     created DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated DATETIME DEFAULT CURRENT_TIMESTAMP,
     active INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS model_status (
+    model_id TEXT PRIMARY KEY,
+    last_429 DATETIME,
+    retry_after_seconds REAL DEFAULT 60,
+    fail_count INTEGER DEFAULT 0,
+    last_success DATETIME,
+    last_checked DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS kv_cache (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -144,3 +160,64 @@ def list_memories(layer: str | None = None) -> list[dict]:
             "ORDER BY layer, key"
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Model status / throttle tracking ──
+def record_throttle(model_id: str, retry_after: float) -> None:
+    _exec(
+        "INSERT INTO model_status "
+        "(model_id, last_429, retry_after_seconds, fail_count, last_checked) "
+        "VALUES (?, CURRENT_TIMESTAMP, ?, 1, CURRENT_TIMESTAMP) "
+        "ON CONFLICT(model_id) DO UPDATE SET "
+        "last_429 = CURRENT_TIMESTAMP, "
+        "retry_after_seconds = excluded.retry_after_seconds, "
+        "fail_count = model_status.fail_count + 1, "
+        "last_checked = CURRENT_TIMESTAMP",
+        (model_id, retry_after), commit=True,
+    )
+
+
+def record_success(model_id: str) -> None:
+    _exec(
+        "INSERT INTO model_status "
+        "(model_id, last_success, fail_count, last_429, last_checked) "
+        "VALUES (?, CURRENT_TIMESTAMP, 0, NULL, CURRENT_TIMESTAMP) "
+        "ON CONFLICT(model_id) DO UPDATE SET "
+        "last_success = CURRENT_TIMESTAMP, "
+        "fail_count = 0, last_429 = NULL, last_checked = CURRENT_TIMESTAMP",
+        (model_id,), commit=True,
+    )
+
+
+def get_throttled_models() -> list[str]:
+    rows = _exec(
+        "SELECT model_id FROM model_status WHERE last_429 IS NOT NULL "
+        "AND datetime(last_429, '+' || retry_after_seconds || ' seconds') "
+        "> datetime('now')"
+    ).fetchall()
+    return [r["model_id"] for r in rows]
+
+
+def get_model_status_all() -> list[dict]:
+    rows = _exec(
+        "SELECT model_id, last_429, retry_after_seconds, fail_count, last_success "
+        "FROM model_status ORDER BY model_id"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ── KV cache ──
+def cache_model_list(models: list) -> None:
+    _exec(
+        "INSERT OR REPLACE INTO kv_cache (key, value, updated) "
+        "VALUES ('free_tool_models', ?, CURRENT_TIMESTAMP)",
+        (json.dumps(models),), commit=True,
+    )
+
+
+def get_cached_model_list() -> list | None:
+    row = _exec(
+        "SELECT value FROM kv_cache WHERE key = 'free_tool_models' "
+        "AND datetime(updated, '+24 hours') > datetime('now')"
+    ).fetchone()
+    return json.loads(row["value"]) if row else None
