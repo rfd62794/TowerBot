@@ -202,6 +202,82 @@ def test_parse_recurrence_daily():
     assert result == "daily", f"Expected 'daily', got {result}"
 
 
+@test("personal: next_recurrence_date daily adds 1 day")
+def test_next_recurrence_date_daily():
+    from infra.db.personal_tasks import next_recurrence_date
+    from datetime import datetime, timedelta
+    anchor = datetime.now().strftime("%Y-%m-%d")
+    result = next_recurrence_date("daily", anchor)
+    expected = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    assert result == expected, f"Expected {expected}, got {result}"
+
+
+@test("personal: next_recurrence_date weekly:wednesday from wednesday adds 7 days")
+def test_next_recurrence_date_weekly_same_day():
+    from infra.db.personal_tasks import next_recurrence_date
+    from datetime import datetime, timedelta
+    # Create a Wednesday anchor
+    wednesday = datetime(2026, 5, 27)  # Wednesday
+    anchor = wednesday.strftime("%Y-%m-%d")
+    result = next_recurrence_date("weekly:wednesday", anchor)
+    expected = (wednesday + timedelta(days=7)).strftime("%Y-%m-%d")
+    assert result == expected, f"Expected {expected}, got {result}"
+
+
+@test("personal: next_recurrence_date unknown format falls back to tomorrow")
+def test_next_recurrence_date_unknown():
+    from infra.db.personal_tasks import next_recurrence_date
+    from datetime import datetime, timedelta
+    anchor = datetime.now().strftime("%Y-%m-%d")
+    result = next_recurrence_date("gibberish", anchor)
+    expected = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    assert result == expected, f"Expected {expected}, got {result}"
+
+
+@test("personal: push_missed_tasks pushes non-recurring to tomorrow")
+def test_push_missed_tasks_non_recurring():
+    from infra.db.personal_tasks import add_personal_task, push_missed_tasks, get_personal_tasks
+    from datetime import datetime, timedelta
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    task_id = add_personal_task("Missed non-recurring", due_date=yesterday)
+    pushed = push_missed_tasks()
+    
+    assert len(pushed) > 0, "Expected at least one pushed task"
+    found = any(t["id"] == task_id for t in pushed)
+    assert found, "Expected task to be in pushed list"
+    
+    # Verify due_date updated
+    task = get_personal_tasks(filter="all")
+    updated = [t for t in task if t["id"] == task_id][0]
+    assert updated["due_date"] == tomorrow, f"Expected due_date {tomorrow}, got {updated['due_date']}"
+
+
+@test("personal: push_missed_tasks handles collision with existing pending task")
+def test_push_missed_tasks_collision():
+    from infra.db.personal_tasks import add_personal_task, push_missed_tasks, get_personal_tasks
+    from datetime import datetime, timedelta
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    # Create collision: missed task + future task with same title/date
+    missed_id = add_personal_task("Collision test", due_date=yesterday)
+    future_id = add_personal_task("Collision test", due_date=tomorrow)
+    
+    pushed = push_missed_tasks()
+    
+    # Missed task should be deleted (collision), future task untouched
+    tasks = get_personal_tasks(filter="all")
+    task_ids = [t["id"] for t in tasks]
+    assert missed_id not in task_ids, "Missed task should be deleted on collision"
+    assert future_id in task_ids, "Future task should remain"
+    
+    # Still should be in pushed list (nudge queued)
+    found = any(t["id"] == missed_id for t in pushed)
+    assert found, "Deleted task should still be in pushed list for nudge"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

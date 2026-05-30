@@ -276,6 +276,30 @@ async def check_missed_briefing(send_fn) -> None:
         await morning_briefing(send_fn)
 
 
+async def nightly_summary(send_fn) -> None:
+    """
+    Nightly job to push forward missed tasks and send nudges.
+    Runs at 23:59.
+    """
+    try:
+        from infra.db.personal_tasks import push_missed_tasks
+        
+        pushed = push_missed_tasks()
+        
+        if pushed:
+            msg = "⚠️ Missed tasks pushed forward:\n"
+            for task in pushed:
+                msg += f"• {task['title']} (was due {task['old_date']}) → now due {task['new_date']}\n"
+            msg += "\nGet them done or remove them from your list."
+            await send_fn(msg)
+            logger.info(f"Nightly: pushed {len(pushed)} missed tasks")
+        else:
+            logger.info("Nightly: no missed tasks to push")
+            
+    except Exception as e:
+        logger.error(f"Nightly summary failed: {e}")
+
+
 async def heartbeat_check(send_fn) -> None:
     """
     Hourly heartbeat check for proactive observations.
@@ -571,7 +595,7 @@ async def run_scheduler(send_fn) -> None:
         # Check fixed tasks
         tasks = [
             ("07:00", "morning_briefing", morning_briefing),
-            ("23:59", "nightly_summary", None),  # Placeholder for nightly_summary
+            ("23:59", "nightly_summary", nightly_summary),
         ]
         
         for time_str, task_name, task_fn in tasks:

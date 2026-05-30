@@ -14,6 +14,54 @@ def _compute_due_datetime(due_date: str | None, due_time: str | None) -> str | N
     return None
 
 
+def next_recurrence_date(recurrence: str, anchor: str) -> str:
+    """
+    Return next recurrence date from anchor date.
+    
+    Supported formats:
+      "daily"           → anchor + 1 day
+      "weekly:monday"   → next Monday from anchor, never same day
+      "weekly:tuesday"  → next Tuesday, etc. (all 7 days)
+      unknown format    → anchor + 1 day (safe fallback)
+    
+    "never same day" rule: if anchor is already the target weekday,
+    return anchor + 7 days, not anchor.
+    """
+    try:
+        base = datetime.fromisoformat(anchor[:10])
+
+        if recurrence == "daily":
+            return (base + timedelta(days=1)).strftime("%Y-%m-%d")
+
+        if recurrence.startswith("weekly:"):
+            day_map = {
+                "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+                "friday": 4, "saturday": 5, "sunday": 6,
+            }
+            target_day = recurrence[7:].strip().lower()
+            if target_day not in day_map:
+                # Unknown day, fallback to tomorrow
+                return (base + timedelta(days=1)).strftime("%Y-%m-%d")
+            
+            target_weekday = day_map[target_day]
+            nxt = base + timedelta(days=1)
+            
+            # Find next occurrence of target weekday
+            for _ in range(7):
+                if nxt.weekday() == target_weekday:
+                    return nxt.strftime("%Y-%m-%d")
+                nxt += timedelta(days=1)
+            
+            # Should never reach here, but fallback
+            return (base + timedelta(days=7)).strftime("%Y-%m-%d")
+
+        # Unknown format, safe fallback
+        return (base + timedelta(days=1)).strftime("%Y-%m-%d")
+    except Exception:
+        # Any error, fallback to tomorrow
+        return (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+
 def _calc_next_due(recurrence: str, from_date: str) -> str | None:
     """Return next due date string given a recurrence pattern and base date."""
     try:
@@ -226,6 +274,76 @@ def delete_personal_task(task_id: int) -> dict:
         commit=True,
     )
     return {"status": "deleted", "id": task_id}
+
+
+def push_missed_tasks() -> list[dict]:
+    """
+    Push forward all missed pending tasks to future dates.
+    
+    Query: due_date < today AND status = 'pending'
+    For each row:
+      - Recurring:     next_recurrence_date(recurrence, anchor=today)
+      - Non-recurring: today + 1 day
+    
+    Collision check:
+      If same title already pending at new_date, delete old row.
+      Otherwise, UPDATE old row to new_date.
+    
+    Return list of pushed tasks: [{id, title, old_date, new_date}]
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    # Find all missed pending tasks
+    missed = _exec(
+        "SELECT id, title, due_date, recurrence, due_time FROM personal_tasks "
+        "WHERE due_date < ? AND status = 'pending'",
+        (today,),
+    ).fetchall()
+    
+    pushed = []
+    
+    for task in missed:
+        task_dict = dict(task)
+        task_id = task_dict["id"]
+        title = task_dict["title"]
+        old_date = task_dict["due_date"]
+        recurrence = task_dict.get("recurrence")
+        
+        # Compute new date
+        if recurrence:
+            new_date = next_recurrence_date(recurrence, today)
+        else:
+            new_date = tomorrow
+        
+        # Collision check
+        existing = _exec(
+            "SELECT id FROM personal_tasks "
+            "WHERE title = ? AND due_date = ? AND status = 'pending' AND id != ?",
+            (title, new_date, task_id),
+        ).fetchone()
+        
+        if existing:
+            # Collision: delete old row, future row already covers it
+            _exec("DELETE FROM personal_tasks WHERE id = ?", (task_id,), commit=True)
+        else:
+            # No collision: update old row
+            new_datetime = _compute_due_datetime(new_date, task_dict.get("due_time"))
+            _exec(
+                "UPDATE personal_tasks "
+                "SET due_date = ?, due_datetime = ? WHERE id = ?",
+                (new_date, new_datetime, task_id),
+                commit=True,
+            )
+        
+        pushed.append({
+            "id": task_id,
+            "title": title,
+            "old_date": old_date,
+            "new_date": new_date,
+        })
+    
+    return pushed
 
 
 def set_google_task_id(task_id: int, google_task_id: str) -> None:
