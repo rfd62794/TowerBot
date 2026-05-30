@@ -233,6 +233,18 @@ def init_db() -> None:
     _conn.row_factory = sqlite3.Row
     _conn.executescript(SCHEMA)
     _conn.commit()
+    _run_migrations()
+
+
+def _run_migrations() -> None:
+    """Apply incremental schema migrations for existing tables."""
+    try:
+        cols = {row[1] for row in _conn.execute("PRAGMA table_info(personal_tasks)").fetchall()}
+        if cols and "google_task_id" not in cols:
+            _conn.execute("ALTER TABLE personal_tasks ADD COLUMN google_task_id TEXT")
+            _conn.commit()
+    except Exception:
+        pass
 
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
