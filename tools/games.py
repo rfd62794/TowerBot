@@ -134,6 +134,8 @@ def get_youtube_coverage(game_name: str, days: int = 30) -> dict:
         return result
 
 
+# DEAD CODE — superseded by GameTools class below
+# Remove during next cleanup pass
 def get_game_metrics(game_name: str) -> dict:
     """
     Get detailed metrics for a specific game by name.

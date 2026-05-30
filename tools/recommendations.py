@@ -2,6 +2,7 @@
 
 import hashlib
 from datetime import datetime, timedelta
+from tools._tool import BaseTool
 from tools.api.steam_api import get_game_library
 from tools.api.steamspy_api import get_app_details
 from tools.api.youtube_api import search_youtube, get_video_statistics
@@ -122,3 +123,65 @@ def get_content_recommendations(limit: int = 5, min_playtime: float = 1.0) -> di
     }
     cache_tool_result("get_content_recommendations", params_hash, result, ttl_hours=12)
     return result
+
+
+class RecommendationsTools(BaseTool):
+    """Content recommendations tools with BaseTool pattern."""
+
+    def get_content_recommendations(self, limit: int = 5, min_playtime: float = 1.0) -> dict:
+        """
+        Get game recommendations for content recording.
+
+        Combines Steam playtime with YouTube demand signals to rank games
+        by content opportunity.
+
+        Args:
+            limit: Maximum number of recommendations to return
+            min_playtime: Minimum playtime hours threshold
+
+        Returns:
+            Dict with count and list of recommendations
+        """
+        params_hash = hashlib.md5(f"{limit}_{min_playtime}".encode()).hexdigest()
+        cached = get_cached_tool_result("get_content_recommendations", params_hash)
+        if cached:
+            return self.success(cached)
+
+        games = get_owned_games()
+        games = [g for g in games if g["playtime_hours"] >= min_playtime]
+        games.sort(key=lambda x: x["playtime_hours"], reverse=True)
+
+        results = []
+        for game in games[:20]:  # Top 20 by playtime
+            steam_data = get_steamspy_data(game["appid"])
+            yt_data = get_youtube_video_count(game["name"])
+
+            game["composite_score"] = score_game(game, steam_data, yt_data)
+            game["content_demand_score"] = yt_data.get("top_video_views", 0) / 100000
+            game["recent_upload_count"] = yt_data.get("recent_upload_count", 0)
+            results.append(game)
+
+        results.sort(key=lambda x: x["composite_score"], reverse=True)
+
+        if not results:
+            return self.success({
+                "recommendations": [],
+                "count": 0,
+                "message": "No recommendations available"
+            })
+
+        result = {
+            "count": min(limit, len(results)),
+            "recommendations": results[:limit]
+        }
+        cache_tool_result("get_content_recommendations", params_hash, result, ttl_hours=12)
+        return self.success(result)
+
+
+# Module-level instance
+_recs = RecommendationsTools()
+
+
+# Backwards compat wrapper — registry unchanged
+def get_content_recommendations(limit: int = 5, min_playtime: float = 1.0) -> dict:
+    return _recs.get_content_recommendations(limit, min_playtime)
