@@ -62,6 +62,18 @@ CREATE TABLE IF NOT EXISTS tool_cache (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tool_cache ON tool_cache(tool_name, params_hash);
 
+CREATE TABLE IF NOT EXISTS preload_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tool_name TEXT NOT NULL,
+    params_hash TEXT,
+    fetched_at TEXT NOT NULL,
+    success INTEGER DEFAULT 0,
+    duration_ms INTEGER,
+    error_msg TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_preload_log_tool ON preload_log(tool_name, fetched_at DESC);
+
 CREATE TABLE IF NOT EXISTS channel_history (
     date TEXT PRIMARY KEY,
     views INTEGER,
