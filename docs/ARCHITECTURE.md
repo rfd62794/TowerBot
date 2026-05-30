@@ -2,6 +2,23 @@
 
 PrivyBot is a personal AI assistant built with a layered architecture. Each layer has a single responsibility and clear import boundaries.
 
+## Architecture Decision Records (ADRs)
+
+This document is supplemented by ADRs that capture key architectural decisions:
+
+- [ADR-001: API/Tool Separation Pattern](adr/ADR-001.md) — Separation between API clients and tool logic
+- [ADR-002: Tool Registry Pattern](adr/ADR-002.md) — Centralized tool discovery via TOOL_REGISTRY
+- [ADR-003: Caching Strategy](adr/ADR-003.md) — SQLite-based caching with per-tool TTL
+- [ADR-004: Layered Architecture](adr/ADR-004.md) — Six-layer architecture with strict import boundaries
+- [ADR-005: Model Routing Strategy](adr/ADR-005.md) — OpenRouter with dynamic model discovery and throttle tracking
+- [ADR-006: Autonomous Memory Management](adr/ADR-006.md) — Agent-driven memory with transparency
+- [ADR-007: SQLite as Persistence Layer](adr/ADR-007.md) — Single SQLite database for all state
+- [ADR-008: Telegram as Primary Interface](adr/ADR-008.md) — Telegram Bot API with polling and single-user gate
+- [ADR-009: Python 3.12 + uv](adr/ADR-009.md) — Python 3.12 due to 3.14 TLS bug, uv for dependency management
+- [ADR-010: Context Window Strategy](adr/ADR-010.md) — 10-message sliding window with thread isolation
+- [ADR-011: Tool Architecture](adr/ADR-011.md) — Tools as plug-ins with TOOL_REGISTRY pattern
+- [ADR-012: Morning Briefing Design](adr/ADR-012.md) — Template-based briefing with LLM anomaly analysis
+
 ## Layer Overview
 
 ```
