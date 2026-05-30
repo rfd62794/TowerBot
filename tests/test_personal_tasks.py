@@ -13,7 +13,10 @@ load_dotenv(os.path.join(_root, ".env"))
 from infra.db import init_db
 init_db()
 
+from datetime import datetime
+
 TESTS = []
+_TEST_START = None
 
 
 def test(name):
@@ -23,30 +26,29 @@ def test(name):
     return decorator
 
 
-_TEST_TASK_TITLES = [
-    "Test dentist call", "Filter test task", "Dentist at 10am",
-    "Test task for snooze", "Due soon task", "Snooze me",
-    "Complete me task", "Daily standup", "YouTube analytics review",
-]
-
-
 def _teardown():
     """Remove test personal tasks so they don't show up in heartbeat reminders."""
     try:
         from infra.db.schema import _exec
-        for title in _TEST_TASK_TITLES:
-            _exec("DELETE FROM personal_tasks WHERE title = ?", (title,), commit=True)
-        _exec(
-            "DELETE FROM task_reminders WHERE task_id NOT IN "
-            "(SELECT id FROM personal_tasks)",
-            commit=True,
-        )
+        if _TEST_START:
+            _exec(
+                "DELETE FROM personal_tasks WHERE created_at >= ?",
+                (_TEST_START,),
+                commit=True,
+            )
+            _exec(
+                "DELETE FROM task_reminders WHERE task_id NOT IN "
+                "(SELECT id FROM personal_tasks)",
+                commit=True,
+            )
     except Exception:
         pass
 
 
 def run_all() -> tuple[int, int]:
     from tests._harness import run_all as _run
+    global _TEST_START
+    _TEST_START = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     result = _run(TESTS)
     _teardown()
     return result
