@@ -220,7 +220,7 @@ async def morning_briefing(send_fn) -> None:
         try:
             from tools.search.search_tools import get_weather
             weather = get_weather()
-            if not weather.get("_live_failed"):
+            if weather.get("ok"):
                 temp = weather.get("temp_f", "?")
                 condition = weather.get("condition", "")
                 msg += f"\n\n{temp}°F, {condition}, South Florida."
