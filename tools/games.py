@@ -16,8 +16,7 @@ STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 STEAMSPY_API = "https://steamspy.com/api.php"
 STEAM_API = "https://api.steampowered.com"
 STEAM_CATALOG_CACHE = Path("config/steam_catalog.json")
-ITAD_CLIENT_ID = os.getenv("ITAD_CLIENT_ID")
-ITAD_CLIENT_SECRET = os.getenv("ITAD_CLIENT_SECRET")
+ITAD_API_KEY = os.getenv("ITAD_API_KEY")
 ITAD_API = "https://api.isthereanydeal.com"
 
 
@@ -284,75 +283,102 @@ def get_sale_info(game_names: list[str]) -> dict:
     Returns:
         Dict with per-game sale information
     """
-    if not ITAD_CLIENT_ID or not ITAD_CLIENT_SECRET:
-        return {"error": "ITAD credentials not configured"}
+    if not ITAD_API_KEY:
+        return {"error": "ITAD API key not configured"}
 
     results = {}
+    game_ids = []
 
+    # Step 1: Lookup all game IDs via search
+    headers = {"ITAD-API-Key": ITAD_API_KEY}
     for game_name in game_names:
         try:
-            # Step 1: Find game ID via lookup
-            lookup_response = requests.post(
-                f"{ITAD_API}/games/lookup/v1",
-                json={"gameTitle": game_name},
+            search_params = {
+                "title": game_name,
+                "results": 1
+            }
+            search_response = requests.get(
+                f"{ITAD_API}/games/search/v1",
+                params=search_params,
+                headers=headers,
                 timeout=10
             )
-            lookup_response.raise_for_status()
-            lookup_data = lookup_response.json()
+            search_response.raise_for_status()
+            search_data = search_response.json()
 
-            if not lookup_data or not isinstance(lookup_data, list) or len(lookup_data) == 0:
+            if search_data and isinstance(search_data, list) and len(search_data) > 0:
+                game_id = search_data[0].get("id")
+                if game_id:
+                    game_ids.append(game_id)
+                    results[game_name] = {"id": game_id}
+                else:
+                    results[game_name] = {"error": "not found"}
+            else:
                 results[game_name] = {"error": "not found"}
-                continue
+        except Exception as e:
+            results[game_name] = {"error": str(e)}
 
-            game_id = lookup_data[0].get("id")
-            if not game_id:
-                results[game_name] = {"error": "not found"}
-                continue
-
-            # Step 2: Get prices
-            params = {
-                "id": game_id,
-                "country": "US",
-            }
-            prices_response = requests.get(
+    # Step 2: Get prices for all found games (batch request)
+    if game_ids:
+        try:
+            prices_response = requests.post(
                 f"{ITAD_API}/games/prices/v3",
-                params=params,
+                params={"country": "US"},
+                headers=headers,
+                json=game_ids,
                 timeout=10
             )
             prices_response.raise_for_status()
             prices_data = prices_response.json()
 
-            if not prices_data or not isinstance(prices_data, list) or len(prices_data) == 0:
-                results[game_name] = {"error": "no price data"}
-                continue
+            # Map game IDs to price data
+            price_map = {}
+            for price_info in prices_data:
+                game_id = price_info.get("id")
+                if game_id:
+                    price_map[game_id] = price_info
 
-            # Find best current deal
-            best_deal = None
-            for deal in prices_data:
-                if deal.get("price_new") and deal.get("price_cut"):
-                    if best_deal is None or deal["price_cut"] > best_deal["price_cut"]:
-                        best_deal = deal
+            # Merge price data into results
+            for game_name, data in results.items():
+                if "error" in data:
+                    continue
+                game_id = data.get("id")
+                if game_id in price_map:
+                    price_info = price_map[game_id]
+                    deals = price_info.get("deals", [])
+                    history_low = price_info.get("historyLow", {})
 
-            if best_deal:
-                results[game_name] = {
-                    "current_price": best_deal.get("price_new", 0.0),
-                    "current_discount_pct": best_deal.get("price_cut", 0),
-                    "historical_low": best_deal.get("price_low", 0.0),
-                    "on_sale": best_deal.get("price_cut", 0) > 0,
-                    "store_name": best_deal.get("shop", {}).get("name", "Unknown"),
-                    "store_url": best_deal.get("url", ""),
-                }
-            else:
-                results[game_name] = {
-                    "current_price": prices_data[0].get("price_new", 0.0),
-                    "current_discount_pct": 0,
-                    "historical_low": prices_data[0].get("price_low", 0.0),
-                    "on_sale": False,
-                    "store_name": "Steam",
-                    "store_url": "",
-                }
+                    # Find best current deal
+                    best_deal = None
+                    for deal in deals:
+                        if deal.get("price") and deal.get("cut"):
+                            if best_deal is None or deal["cut"] > best_deal["cut"]:
+                                best_deal = deal
+
+                    if best_deal:
+                        results[game_name] = {
+                            "current_price": best_deal.get("price", {}).get("amount", 0.0),
+                            "current_discount_pct": best_deal.get("cut", 0),
+                            "historical_low": history_low.get("price", {}).get("amount", 0.0),
+                            "on_sale": best_deal.get("cut", 0) > 0,
+                            "store_name": best_deal.get("shop", {}).get("name", "Unknown"),
+                            "store_url": best_deal.get("url", ""),
+                        }
+                    else:
+                        results[game_name] = {
+                            "current_price": history_low.get("price", {}).get("amount", 0.0),
+                            "current_discount_pct": 0,
+                            "historical_low": history_low.get("price", {}).get("amount", 0.0),
+                            "on_sale": False,
+                            "store_name": "Steam",
+                            "store_url": "",
+                        }
+                else:
+                    results[game_name] = {"error": "no price data"}
 
         except Exception as e:
-            results[game_name] = {"error": str(e)}
+            for game_name in results:
+                if "error" not in results[game_name]:
+                    results[game_name] = {"error": f"price fetch failed: {str(e)}"}
 
     return {"games": results}
