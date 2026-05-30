@@ -116,13 +116,11 @@ def get_weather() -> dict:
     Returns:
         Dict with current weather data
     """
-    params_hash = hashlib.md5("weather".encode()).hexdigest()
-    cached = get_cached_tool_result("get_weather", params_hash)
-    if cached:
-        return cached
-
     result = get_current_weather()
-    cache_tool_result("get_weather", params_hash, result, ttl_hours=1)
+
+    # Ensure stale_notice key always present
+    if "stale_notice" not in result:
+        result["stale_notice"] = None
 
     # Record to weather history if valid
     if "error" not in result and "temp_f" in result:

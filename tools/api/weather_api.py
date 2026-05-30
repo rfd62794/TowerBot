@@ -35,30 +35,45 @@ def get_current_weather() -> dict:
     Get current weather for South Florida.
 
     Returns:
-        Dict with temperature, condition, wind, precipitation
+        Dict with temperature, condition, wind, precipitation, and staleness metadata
     """
-    try:
-        url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": LATITUDE,
-            "longitude": LONGITUDE,
-            "current": "temperature_2m,weather_code,wind_speed_10m,precipitation",
-            "temperature_unit": "fahrenheit",
-            "wind_speed_unit": "mph",
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        current = data.get("current", {})
-        weather_code = current.get("weather_code", 0)
-        
-        return {
-            "temp_f": current.get("temperature_2m", 0),
-            "condition": WEATHER_CODE_MAP.get(weather_code, "Unknown"),
-            "wind_mph": current.get("wind_speed_10m", 0),
-            "precipitation_mm": current.get("precipitation", 0),
-        }
-    except Exception as e:
-        return {"error": str(e)}
+    from tools.api._base import cached_api_call, make_params_hash, stale_notice
+
+    tool_name = "weather_current"
+    params_hash = make_params_hash("south_florida")
+    ttl_seconds = 3600  # 1 hour
+
+    def _live() -> dict:
+        try:
+            url = "https://api.open-meteo.com/v1/forecast"
+            params = {
+                "latitude": LATITUDE,
+                "longitude": LONGITUDE,
+                "current": "temperature_2m,weather_code,wind_speed_10m,precipitation",
+                "temperature_unit": "fahrenheit",
+                "wind_speed_unit": "mph",
+            }
+
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+
+            current = data.get("current", {})
+            weather_code = current.get("weather_code", 0)
+
+            return {
+                "temp_f": current.get("temperature_2m", 0),
+                "condition": WEATHER_CODE_MAP.get(weather_code, "Unknown"),
+                "wind_mph": current.get("wind_speed_10m", 0),
+                "precipitation_mm": current.get("precipitation", 0),
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+    result = cached_api_call(tool_name, params_hash, _live, ttl_seconds, stale_ok=True)
+
+    # Add stale_notice to result
+    notice = stale_notice(result)
+    result["stale_notice"] = notice
+
+    return result
