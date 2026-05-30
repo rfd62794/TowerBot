@@ -16,6 +16,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Load environment
 load_dotenv()
 
+# Initialize database (required for caching)
+from core.db import init_db
+init_db()
+
 # Test registry
 TESTS = []
 
@@ -62,9 +66,6 @@ def run_all():
 
 @test("database: tables exist")
 def test_db():
-    from core.db import init_db
-    init_db()
-    
     conn = sqlite3.connect("privy.db")
     tables = conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'"
@@ -107,10 +108,7 @@ def test_youtube():
 def test_top_videos():
     from tools.youtube import get_top_videos
     result = get_top_videos(days=28)
-    # Skip - YouTube Analytics v2 doesn't support this query format
-    # This is a known API limitation, not a code issue
-    print("  (skipped - YouTube Analytics v2 query limitation)")
-    return
+    assert "error" not in result, f"Top videos error: {result.get('error')}"
 
 
 @test("youtube: video analytics works")

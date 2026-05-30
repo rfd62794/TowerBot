@@ -111,27 +111,43 @@ def get_top_videos(days: int = 7, limit: int = 10) -> dict:
     if cached:
         return cached
 
-    # Fetch fresh data
+    # Fetch fresh data using YouTube Data API v3 (Analytics v2 doesn't support video-level queries)
     try:
-        end = datetime.now().strftime("%Y-%m-%d")
-        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        from tools.api.youtube_api import search_youtube, get_video_statistics
 
-        api_response = query_video_report(None, start, end, "views,estimatedMinutesWatched", dimensions="video")
-        if "error" in api_response:
-            return api_response
+        # Search for videos in the channel
+        search_response = search_youtube("", days, max_results=limit)
+        if "error" in search_response:
+            return search_response
 
-        response = api_response["raw"]
-        rows = response.get("rows", [])
+        response = search_response["raw"]
+        video_ids = [item["id"]["videoId"] for item in response.get("items", [])]
+
+        if not video_ids:
+            return {
+                "videos": [],
+                "period_days": days,
+            }
+
+        # Get statistics for each video
+        stats_response = get_video_statistics(video_ids)
+        if "error" in stats_response:
+            return stats_response
+
+        stats = stats_response["raw"]
         videos = []
-        for row in rows:
+        for video in stats.get("items", []):
             videos.append({
-                "video_id": row[0],
-                "views": int(row[1]),
-                "watch_time_minutes": float(row[2]),
+                "video_id": video["id"],
+                "views": int(video["statistics"].get("viewCount", 0)),
+                "watch_time_minutes": 0,  # YouTube Data API doesn't provide watch time
             })
 
+        # Sort by views descending
+        videos.sort(key=lambda x: x["views"], reverse=True)
+
         result = {
-            "videos": videos,
+            "videos": videos[:limit],
             "period_days": days,
         }
 
