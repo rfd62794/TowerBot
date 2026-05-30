@@ -69,7 +69,7 @@ class RateLimitManager:
             "requests_per_day": None,
         },
         "fetch": {
-            "requests_per_minute": 10,
+            "requests_per_minute": 60,
             "requests_per_day": None,
         },
         "openrouter": {

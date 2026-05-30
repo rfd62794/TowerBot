@@ -6,6 +6,18 @@ load_dotenv()
 from core.db import init_db
 init_db()
 
+
+def _reset_fetch_rate_limit():
+    """Reset fetch rate limit state for clean test runs."""
+    from core.db.rate_limits_db import upsert_api_state
+    upsert_api_state(
+        "fetch",
+        calls_this_minute=0,
+        last_429_at=None,
+        retry_after_seconds=0
+    )
+
+
 def test_decorator(name):
     def wrapper(fn):
         fn.__name__ = name
@@ -99,6 +111,9 @@ def test_think_stale_notice():
 
 
 def run_all():
+    # Reset rate limit before tests run
+    _reset_fetch_rate_limit()
+    
     passed = 0
     failed = 0
     for name, fn in TESTS:
@@ -112,6 +127,10 @@ def run_all():
         except Exception as e:
             print(f"✗ {name}\n  Unexpected error: {e}")
             failed += 1
+    
+    # Reset rate limit after tests complete
+    _reset_fetch_rate_limit()
+    
     return passed, failed
 
 
