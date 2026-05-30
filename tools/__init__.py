@@ -84,16 +84,16 @@ TOOL_REGISTRY = {
             "type": "function",
             "function": {
                 "name": "get_game_metrics",
-                "description": "Get detailed metrics for a specific game by Steam AppID. Call when asked how a specific game is doing, player counts, or YouTube coverage.",
+                "description": "Get detailed metrics for a specific game by name. Call when asked how a game is performing, player counts, YouTube coverage, or whether it is worth recording. Takes game name not AppID.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "appid": {
-                            "type": "integer",
-                            "description": "Steam AppID of the game",
+                        "game_name": {
+                            "type": "string",
+                            "description": "Name of the game (e.g. \"Raccoin\", \"Duckov\", \"EIC\")",
                         }
                     },
-                    "required": ["appid"],
+                    "required": ["game_name"],
                 },
             },
         },
