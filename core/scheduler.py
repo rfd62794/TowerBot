@@ -10,7 +10,7 @@ from core.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
     queue_observation, get_pending_observations, mark_sent, flush_morning_queue,
     get_upcoming_scheduled, get_tasks_due_today, get_current_weekly_plan,
-    get_channel_history
+    get_channel_history, get_tasks
 )
 
 logger = logging.getLogger("privy.scheduler")
@@ -214,16 +214,7 @@ async def heartbeat_check(send_fn) -> None:
         now = datetime.now(EASTERN)
         observations = []
         
-        # Check 1 — commitments due today
-        try:
-            from core.db import get_commitments
-            # Note: get_commitments needs to be implemented in db.py
-            # For now, skip this check
-            pass
-        except Exception:
-            pass
-        
-        # Check 2 — content calendar gap
+        # Check 1 — content calendar gap
         try:
             scheduled = get_scheduled_videos()
             if scheduled:
@@ -286,7 +277,6 @@ async def heartbeat_check(send_fn) -> None:
         # Check 5 — overdue tasks
         try:
             today = now.strftime("%Y-%m-%d")
-            from core.db import get_tasks
             overdue = get_tasks(status="pending")
             for task in overdue:
                 if task["due_date"] < today:
@@ -325,6 +315,7 @@ async def run_scheduler(send_fn) -> None:
     """
     # Track which tasks have fired today
     fired_today = {}
+    last_heartbeat = None
     
     while True:
         now = datetime.now(EASTERN)
@@ -365,10 +356,10 @@ async def run_scheduler(send_fn) -> None:
                     logger.error(f"Task {task_name} failed: {e}")
         
         # Heartbeat — run every 60 minutes
-        if "heartbeat" not in fired_today or (now - datetime.now(EASTERN)).seconds >= 3600:
+        if last_heartbeat is None or (now - last_heartbeat).total_seconds() >= 3600:
             try:
                 await heartbeat_check(send_fn)
-                fired_today["heartbeat"] = now
+                last_heartbeat = now
             except Exception as e:
                 logger.error(f"Heartbeat failed: {e}")
         
