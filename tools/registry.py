@@ -61,6 +61,7 @@ from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 from .repo.audit import audit_repo_compliance
 from .repo.analysis import analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
+from .repo.synthesis import inspect_repo, generate_strategic_analysis
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -1086,6 +1087,47 @@ TOOL_REGISTRY = {
                 "parameters": {
                     "type": "object",
                     "properties": {},
+                    "required": []
+                }
+            }
+        }
+    },
+    "inspect_repo": {
+        "fn": inspect_repo,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "inspect_repo",
+                "description": "Comprehensive repository snapshot. Returns file counts, directory structure, and git status.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "format": {
+                            "type": "string",
+                            "description": "Output format: 'dict' or 'text'",
+                            "default": "dict"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "generate_strategic_analysis": {
+        "fn": generate_strategic_analysis,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "generate_strategic_analysis",
+                "description": "Orchestrate comprehensive strategic analysis. Calls audit, code quality, dependencies, opportunities, and doc alignment tools. Synthesizes into executive summary and recommendations.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "context": {
+                            "type": "string",
+                            "description": "Optional context string to focus analysis"
+                        }
+                    },
                     "required": []
                 }
             }

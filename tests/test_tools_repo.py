@@ -210,6 +210,42 @@ def test_analyze_documentation_alignment():
     assert "sdd_coverage" in result, "Expected 'sdd_coverage' key"
 
 
+@test("synthesis: inspect_repo returns ok=True")
+def test_inspect_repo():
+    from tools.repo.synthesis import inspect_repo
+    result = inspect_repo()
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert "structure" in result, "Expected 'structure' key"
+    assert "file_counts" in result, "Expected 'file_counts' key"
+    assert "git_status" in result, "Expected 'git_status' key"
+
+
+@test("synthesis: inspect_repo with format=text returns text")
+def test_inspect_repo_text_format():
+    from tools.repo.synthesis import inspect_repo
+    result = inspect_repo(format="text")
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert "text" in result, "Expected 'text' key when format='text'"
+
+
+@test("synthesis: generate_strategic_analysis returns ok=True")
+def test_generate_strategic_analysis():
+    from tools.repo.synthesis import generate_strategic_analysis
+    result = generate_strategic_analysis()
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert "executive_summary" in result, "Expected 'executive_summary' key"
+    assert "test_floor" in result, "Expected 'test_floor' key"
+    assert "quick_wins" in result, "Expected 'quick_wins' key"
+
+
+@test("synthesis: generate_strategic_analysis with context")
+def test_generate_strategic_analysis_with_context():
+    from tools.repo.synthesis import generate_strategic_analysis
+    result = generate_strategic_analysis(context="Phase 15")
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert result.get("context") == "Phase 15", "Expected context to be 'Phase 15'"
+
+
 def run_all():
     passed = 0
     failed = 0
