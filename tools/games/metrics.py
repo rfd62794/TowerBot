@@ -10,6 +10,7 @@ from api.steam.steamspy_api import get_app_details
 from api.steam.itad_api import lookup_game, get_prices
 from api.steam.catalog_api import get_full_catalog, fuzzy_match_catalog
 from api.google.youtube_api import search_youtube, get_video_statistics
+from api.web.itch_io_api import get_games
 from infra.db import record_game_day, get_game_history
 
 
@@ -689,6 +690,39 @@ class GameTools(BaseTool):
 
         return self.success(result, stale_result=prices_result if game_ids else None)
 
+    def get_itch_stats(self) -> dict:
+        """
+        Get analytics for all itch.io games.
+
+        Returns:
+            Dict with games array containing views, downloads, purchases, earnings
+        """
+        raw = get_games()
+
+        if raw.get("_live_failed") or "error" in raw:
+            return self.error("itch.io API unavailable", code="api_failed")
+
+        games = raw.get("games", [])
+
+        # Extract key metrics for each game
+        result_games = []
+        for game in games:
+            result_games.append({
+                "title": game.get("title"),
+                "url": game.get("url"),
+                "views_count": game.get("views_count", 0),
+                "downloads_count": game.get("downloads_count", 0),
+                "purchases_count": game.get("purchases_count", 0),
+                "published": game.get("published", False),
+                "published_at": game.get("published_at"),
+                "earnings": game.get("earnings", []),
+            })
+
+        return self.success({
+            "count": len(result_games),
+            "games": result_games
+        }, stale_result=raw)
+
 
 # Module-level instance
 _games = GameTools()
@@ -705,3 +739,13 @@ def get_installed_games() -> dict:
 
 def get_sale_info(game_names: list[str]) -> dict:
     return _games.get_sale_info(game_names)
+
+
+def get_itch_stats() -> dict:
+    """
+    Get analytics for all itch.io games.
+
+    Returns:
+        Dict with games array containing views, downloads, purchases, earnings
+    """
+    return _games.get_itch_stats()
