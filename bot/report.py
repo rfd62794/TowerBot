@@ -37,7 +37,7 @@ def _format(event_type: str, kwargs: dict):
     if event_type == "thread_named":
         return f"📎 Thread: {kwargs.get('name')}"
     if event_type == "thread_new":
-        return "🔄 New thread started"
+        return None  # typing indicator already signals receipt
     if event_type == "commitment_saved":
         deadline = kwargs.get("deadline") or "no deadline set"
         return f"📋 Commitment: {kwargs.get('description')}\nDue: {deadline}"

@@ -21,6 +21,16 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
 
 
+async def _keep_typing(chat_id: int, bot, stop_event: asyncio.Event) -> None:
+    """Re-send typing indicator every 4s until stop_event is set."""
+    while not stop_event.is_set():
+        try:
+            await bot.send_chat_action(chat_id=chat_id, action="typing")
+        except Exception:
+            pass
+        await asyncio.sleep(4)
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Gate — only respond to the allowed chat
     if update.effective_chat.id != ALLOWED_CHAT_ID:
@@ -29,13 +39,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     text = update.message.text or ""
     chat_id = update.effective_chat.id
 
-    # Typing is best-effort; a transient network blip must not block the reply.
+    stop = asyncio.Event()
+    typing_task = asyncio.create_task(_keep_typing(chat_id, context.bot, stop))
     try:
-        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
-    except Exception:
-        pass
-
-    response = await route(chat_id, text)
+        response = await route(chat_id, text)
+    finally:
+        stop.set()
+        typing_task.cancel()
 
     # Markdown safety + transient-network resilience: retry the send with a
     # short backoff (the Windows TLS handshake can intermittently reset), and
