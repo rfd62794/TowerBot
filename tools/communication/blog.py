@@ -17,15 +17,11 @@ class BlogTools(BaseTool):
         if "error" in result:
             return self.error(result["error"])
 
-        # cache.call() wraps non-dict results in {"value": result}
-        posts_list = result.get("value", result) if isinstance(result, dict) and "value" in result else result
-
-        # Handle case where result is already a list (no cache hit)
-        if not isinstance(posts_list, list):
-            return self.error(f"Expected list of posts, got {type(posts_list)}")
+        # Extract posts from wrapper dict
+        posts_data = result.get("posts", [])
 
         posts = []
-        for post in posts_list:
+        for post in posts_data:
             posts.append({
                 "id": post.get("id"),
                 "title": post.get("title", {}).get("rendered"),
