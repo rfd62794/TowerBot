@@ -894,7 +894,18 @@ TOOL_REGISTRY = {
             "type": "function",
             "function": {
                 "name": "run_openagent",
-                "description": "WHEN: planning PrivyBot's own expansion, analyzing the codebase for strategic gaps, generating next directives, checking repo health. Runs OpenAgent CLI (Robert's own tool) on a repository.\n\nRETURNS: strategic analysis output, repo inventory, or health status.\n\nCOMMANDS: analyze (strategic directives), inventory (structure), health (system status), costs (cost tracking).\n\nUSE analyze --context to focus on a specific area: 'next Phase 15 step', 'autonomous task gaps', 'Phase 16 expansion'.\n\nDO NOT CALL repeatedly — each call invokes an LLM. DO NOT CALL for non-planning tasks.",
+                "description": (
+                    "WHEN: planning PrivyBot's own expansion, analyzing the codebase "
+                    "for strategic gaps, generating next directives, checking repo health. "
+                    "Runs OpenAgent CLI (Robert's own tool) on a repository. "
+                    "RETURNS: strategic analysis output, repo inventory, or health status. "
+                    "COMMANDS: analyze (strategic directives), inventory (structure), "
+                    "health (system status), costs (cost tracking). "
+                    "USE analyze --context to focus: 'next Phase 15 step', "
+                    "'autonomous task gaps', 'Phase 16 expansion'. "
+                    "DO NOT CALL repeatedly — each call invokes an LLM. "
+                    "DO NOT CALL for non-planning tasks."
+                ),
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -906,11 +917,11 @@ TOOL_REGISTRY = {
                         },
                         "context": {
                             "type": "string",
-                            "description": "Focus context for analyze (e.g. 'next expansion phase')"
+                            "description": "Focus context for analyze command"
                         },
                         "repo_path": {
                             "type": "string",
-                            "description": "Repo to analyze. Defaults to PrivyBot repo."
+                            "description": "Repo path. Defaults to PrivyBot repo."
                         }
                     },
                     "required": []
