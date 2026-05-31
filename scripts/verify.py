@@ -54,6 +54,7 @@ TEST_FILES = [
     "tests/test_ollama_routing.py",
     "tests/test_transport.py",
     "tests/test_routes.py",
+    "tests/test_router_ai.py",
 ]
 
 
