@@ -147,6 +147,19 @@ youtube:
     content: Everything is Crab — Steam roguelite evolution game by a solo dev. Roberts best performing YouTube series. Top Short 595 views. Not Roblox. Not Electronic Intelligence Community.
     layer: content
   - key: content_pipeline_inventory
+    content: "Available topics: 20-year rebuild story, PhantomArbiter story, PrivyBot automation journey, VoidDrift dev logs, Bevy technical posts, incremental game design theory."
+    layer: content
+
+reddit:
+  - key: reddit_username
+    content: "Reddit username: FamiliarAnxiety9. Primary subreddits: r/incremental_games (VoidDrift audience), r/gamedev (broader dev community), r/bevy (engine community), r/rust_gamedev (language community), r/playtesters (feedback)."
+    layer: content
+  - key: reddit_strategy
+    content: "Post 2-3x per week consistently. VoidDrift Feedback Friday in r/incremental_games every two weeks (legitimate feedback request, not promotion). Voice: authentic, non-promotional, genuine connections. Example: Minecraft villages automation comment (8 upvotes, 594 views) — 'This makes me think of the automation that I wish Minecraft villages had.'"
+    layer: content
+  - key: reddit_voice
+    content: "Authentic voice works best. No promotion. Make genuine connections between what you're seeing and what you wish existed. The r/bevy Minecraft comment hit 594 views because it wasn't trying to sell anything — it was a real thought."
+    layer: content
     content: "70+ post topics inventoried across Developer Identity, AI/Directive Writing, Shipping, Content/Brand, Business, Game Design, Technical Craft, Personal. Gumroad target: 'How I Write Directives That Coding Agents Actually Follow' — $19-29 PDF. Five posts become the guide."
     layer: content
   - key: blog_humanization_status
