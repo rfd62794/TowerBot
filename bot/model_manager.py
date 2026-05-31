@@ -32,6 +32,27 @@ DAILY_PAID_CAPS = {
 # Current mode from env, defaults to production
 PRIVYBOT_MODE = os.getenv("PRIVYBOT_MODE", "production")
 
+# Known model limits for rate limit avoidance
+# Local models have None limits (no rate limiting)
+MODEL_LIMITS = {
+    # OpenRouter free — 200/day per model
+    "deepseek/deepseek-v4-flash:free": {"rpm": 20, "rpd": 200},
+    "google/gemma-4-31b-it:free": {"rpm": 20, "rpd": 200},
+    "openai/gpt-oss-120b:free": {"rpm": 20, "rpd": 200},
+    "moonshotai/kimi-k2.6:free": {"rpm": 20, "rpd": 200},
+    "nex-agi/deepseek-v3.1-nex-n1:free": {"rpm": 20, "rpd": 200},
+    "qwen/qwen3-coder:free": {"rpm": 20, "rpd": 200},
+    
+    # Groq free
+    "groq/llama-3.3-70b-versatile": {"rpm": 30, "rpd": 14400},
+    
+    # Google AI Studio free
+    "google/gemini-2.0-flash": {"rpm": 15, "rpd": 1500},
+    
+    # Ollama local — no limits
+    "ollama/gemma3:4b": {"rpm": None, "rpd": None},
+}
+
 # Known tool-capable free models, used only if the API call fails.
 # Prioritized by test results (PASS models from test_models.py)
 SEED_FREE_MODELS = [
@@ -143,6 +164,49 @@ def can_use_paid_model() -> bool:
     today_cost = state.get("quota_used_today", 0.0)
     
     return today_cost < daily_cap
+
+
+def should_skip_model(model_id: str) -> tuple[bool, str]:
+    """
+    Check if a model should be skipped based on rate limits and recent errors.
+    
+    Args:
+        model_id: Model identifier
+        
+    Returns:
+        Tuple of (should_skip, reason)
+    """
+    from datetime import datetime, timedelta
+    from infra.db.model_usage import count_model_calls, count_model_errors, get_last_error_time
+    
+    limits = MODEL_LIMITS.get(model_id, {})
+    
+    # Local models never skip
+    if limits.get("rpm") is None:
+        return False, "local"
+    
+    # Check daily usage — skip if within 5% of limit
+    rpd = limits.get("rpd", 200)
+    used_today = count_model_calls(model_id, hours=24)
+    if used_today >= rpd * 0.95:
+        return True, f"daily_limit ({used_today}/{rpd})"
+    
+    # Check recent 429s — exponential backoff
+    recent_429s = count_model_errors(model_id, error_code=429, minutes=60)
+    if recent_429s > 0:
+        last_429 = get_last_error_time(model_id, error_code=429)
+        if last_429:
+            backoff_seconds = min(300, 30 * (2 ** recent_429s))
+            if datetime.utcnow() < last_429 + timedelta(seconds=backoff_seconds):
+                return True, f"backoff ({backoff_seconds}s, {recent_429s} hits)"
+    
+    # Check RPM — skip if >80% of limit used in last minute
+    rpm = limits.get("rpm", 20)
+    used_minute = count_model_calls(model_id, minutes=1)
+    if used_minute >= rpm * 0.8:
+        return True, f"rpm_limit ({used_minute}/{rpm})"
+    
+    return False, "ok"
 
 
 def get_available_model() -> str | None:

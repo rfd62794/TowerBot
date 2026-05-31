@@ -362,6 +362,34 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
+    # Migration: add model_usage table
+    try:
+        _conn.execute("""
+            CREATE TABLE IF NOT EXISTS model_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                model_id TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                called_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+                tokens_in INTEGER DEFAULT 0,
+                tokens_out INTEGER DEFAULT 0,
+                cost_usd REAL DEFAULT 0.0,
+                success INTEGER DEFAULT 1,
+                error_code INTEGER,
+                latency_ms INTEGER
+            )
+        """)
+        _conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_model_usage_model_time
+            ON model_usage(model_id, called_at DESC)
+        """)
+        _conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_model_usage_provider_time
+            ON model_usage(provider, called_at DESC)
+        """)
+        _conn.commit()
+    except Exception:
+        pass
+
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
     with _lock:
