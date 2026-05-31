@@ -70,6 +70,25 @@ TASKS = {
             "Mark URGENT so Robert sees it in morning briefing."
         ),
     },
+    "blog_structure_generator": {
+        "schedule_type": "cron",
+        "hour": 1,
+        "minute": 0,
+        "day_of_week": 6,  # Sunday
+        "enabled": True,
+        "prompt": (
+            "Check memory for 'Blog humanization status' — are all 4 existing posts humanized? "
+            "If not: identify which post is next, pull its current content using read_local_file if available, "
+            "apply five-question extraction frame, draft opening rewrite. "
+            "Save as memory 'Blog rewrite ready: [post name]'. "
+            "If all 4 are humanized: check recent commits and YouTube performance, "
+            "pick the highest-resonance topic from the 70-post inventory, "
+            "generate five-question extraction skeleton using RFD Content Frame "
+            "(MOMENT → SURPRISE → STRUGGLE → LESSON → NEXT). "
+            "Save as memory 'Blog draft YYYY-MM-DD: [topic]'. "
+            "Mark URGENT."
+        ),
+    },
 }
 
 
@@ -151,14 +170,20 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
             logger.info(f"Registered interval task: {task_name} every {task['interval_minutes']}min")
 
         elif task["schedule_type"] == "cron":
+            job_kwargs = {
+                "hour": task["hour"],
+                "minute": task["minute"],
+                "args": [task_name, send_fn],
+                "id": task_name,
+                "max_instances": 1,
+                "replace_existing": True,
+            }
+            if "day_of_week" in task:
+                job_kwargs["day_of_week"] = task["day_of_week"]
             scheduler.add_job(
                 run_autonomous_task,
                 "cron",
-                hour=task["hour"],
-                minute=task["minute"],
-                args=[task_name, send_fn],
-                id=task_name,
-                max_instances=1,
-                replace_existing=True,
+                **job_kwargs
             )
-            logger.info(f"Registered cron task: {task_name} at {task['hour']:02d}:{task['minute']:02d}")
+            day_str = f" day {task['day_of_week']}" if "day_of_week" in task else ""
+            logger.info(f"Registered cron task: {task_name} at {task['hour']:02d}:{task['minute']:02d}{day_str}")
