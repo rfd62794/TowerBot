@@ -109,8 +109,15 @@ Edit `~/.config/claude/claude_desktop_config.json` (Linux/macOS) or `%APPDATA%\C
   "mcpServers": {
     "privybot": {
       "command": "uv",
-      "args": ["run", "python", "infra/mcp/server.py", "--transport", "stdio"],
-      "cwd": "C:/Github/PrivyBot"
+      "args": [
+        "--directory",
+        "C:\\Github\\PrivyBot",
+        "run",
+        "python",
+        "infra/mcp/server.py",
+        "--transport",
+        "stdio"
+      ]
     }
   }
 }
