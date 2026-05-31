@@ -58,6 +58,7 @@ from .productivity.personal import (
     delete_personal_task,
 )
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
+from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -925,6 +926,80 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": []
+                }
+            }
+        }
+    },
+    "read_local_file": {
+        "fn": read_local_file,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "read_local_file",
+                "description": "Read a local file from the PrivyBot repository. Bounded to C:/Github/PrivyBot/. Max 100KB with truncation notice.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path from repo root (e.g., 'privybot.py', 'docs/ROADMAP.md')"
+                        }
+                    },
+                    "required": ["path"]
+                }
+            }
+        }
+    },
+    "list_local_dir": {
+        "fn": list_local_dir,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_local_dir",
+                "description": "List directory contents in the PrivyBot repository. Returns entries with type, size, modified date.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path from repo root (empty string = repo root)"
+                        },
+                        "recursive": {
+                            "type": "boolean",
+                            "description": "If True, list all files recursively",
+                            "default": False
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "search_local_code": {
+        "fn": search_local_code,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "search_local_code",
+                "description": "Search for a regex pattern in code files. Returns matching lines with file + line number context.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "Regex pattern to search for"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path to search (None = entire repo)"
+                        },
+                        "file_pattern": {
+                            "type": "string",
+                            "description": "Glob pattern for files to search (default: *.py)",
+                            "default": "*.py"
+                        }
+                    },
+                    "required": ["pattern"]
                 }
             }
         }
