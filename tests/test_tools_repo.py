@@ -246,6 +246,63 @@ def test_generate_strategic_analysis_with_context():
     assert result.get("context") == "Phase 15", "Expected context to be 'Phase 15'"
 
 
+@test("directive: read_current_state returns ok=True")
+def test_read_current_state():
+    from tools.repo.directive import read_current_state
+    result = read_current_state()
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+
+
+@test("directive: read_current_state has required keys")
+def test_read_current_state_keys():
+    from tools.repo.directive import read_current_state
+    result = read_current_state()
+    assert "updated" in result, "Expected 'updated' key"
+    assert "test_floor" in result, "Expected 'test_floor' key"
+    assert "current_phase" in result, "Expected 'current_phase' key"
+    assert "what_is_next" in result, "Expected 'what_is_next' key"
+    assert "recent_commits" in result, "Expected 'recent_commits' key"
+
+
+@test("directive: read_current_state test_floor has passing count > 0")
+def test_read_current_state_test_floor():
+    from tools.repo.directive import read_current_state
+    result = read_current_state()
+    test_floor = result.get("test_floor", {})
+    assert test_floor.get("passing", 0) > 0, "Expected passing count > 0"
+
+
+@test("directive: elaborate_task returns ok=True with description")
+def test_elaborate_task():
+    from tools.repo.directive import elaborate_task
+    result = elaborate_task("Add type hints to API functions")
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert result.get("task_description") == "Add type hints to API functions", "Expected task_description to match"
+
+
+@test("directive: elaborate_task related_files is a list")
+def test_elaborate_task_related_files():
+    from tools.repo.directive import elaborate_task
+    result = elaborate_task("Add type hints to API functions")
+    related_files = result.get("related_files", [])
+    assert isinstance(related_files, list), "Expected related_files to be a list"
+
+
+@test("directive: generate_directive returns ok=True")
+def test_generate_directive():
+    from tools.repo.directive import generate_directive
+    result = generate_directive()
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+
+
+@test("directive: generate_directive has directive_template with title key")
+def test_generate_directive_template():
+    from tools.repo.directive import generate_directive
+    result = generate_directive()
+    directive_template = result.get("directive_template", {})
+    assert "title" in directive_template, "Expected 'title' key in directive_template"
+
+
 def run_all():
     passed = 0
     failed = 0

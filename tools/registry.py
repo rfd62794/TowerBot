@@ -62,6 +62,7 @@ from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 from .repo.audit import audit_repo_compliance
 from .repo.analysis import analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
 from .repo.synthesis import inspect_repo, generate_strategic_analysis
+from .repo.directive import read_current_state, elaborate_task, generate_directive
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -1126,6 +1127,70 @@ TOOL_REGISTRY = {
                         "context": {
                             "type": "string",
                             "description": "Optional context string to focus analysis"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "read_current_state": {
+        "fn": read_current_state,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "read_current_state",
+                "description": "Aggregate current state from live sources. Returns test floor, current phase, what is built/next, recent commits, overnight actions, spec drift, and open questions.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+    },
+    "elaborate_task": {
+        "fn": elaborate_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "elaborate_task",
+                "description": "Structural analysis of what a task affects. Returns related files, target file contents, patterns found, and suggested scope.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_description": {
+                            "type": "string",
+                            "description": "Description of the task"
+                        },
+                        "target_files": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional list of specific files to analyze"
+                        }
+                    },
+                    "required": ["task_description"]
+                }
+            }
+        }
+    },
+    "generate_directive": {
+        "fn": generate_directive,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "generate_directive",
+                "description": "Assemble directive template from current state + top opportunity. Returns structured directive template with title, context, current state, and placeholder fields for agent to fill.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "focus": {
+                            "type": "string",
+                            "description": "Optional focus area"
+                        },
+                        "analysis_context": {
+                            "type": "object",
+                            "description": "Optional pre-computed analysis context"
                         }
                     },
                     "required": []
