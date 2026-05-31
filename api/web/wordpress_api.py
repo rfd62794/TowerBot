@@ -54,6 +54,10 @@ class WordPressAPIHandler(BaseAPIHandler):
                 "status": "draft",
                 "tags": tags or []
             }
+            # Explicitly set author if WORDPRESS_AUTHOR_ID is present
+            author_id = os.environ.get("WORDPRESS_AUTHOR_ID")
+            if author_id:
+                data["author"] = int(author_id)
             response = requests.post(url, auth=self._get_client(), json=data)
             result = response.json()
             # Invalidate posts cache so next read is fresh
@@ -100,3 +104,119 @@ class WordPressAPIHandler(BaseAPIHandler):
             return result
         except Exception as e:
             return {"error": str(e), "_live_failed": True}
+
+    def get_categories(self) -> dict:
+        """GET /wp-json/wp/v2/categories"""
+        def _live():
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/categories"
+            params = {"per_page": 100}
+            response = requests.get(url, auth=self._get_client(), params=params)
+            categories = response.json()
+            if isinstance(categories, dict) and "code" in categories:
+                raise Exception(f"WordPress API error: {categories.get('message', 'Unknown error')}")
+            return {"categories": categories}
+        return self.call("categories", self.hash("all"), _live)
+
+    def set_excerpt(self, post_id: int, excerpt: str) -> dict:
+        """PUT /wp-json/wp/v2/posts/{id} with excerpt field"""
+        try:
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/posts/{post_id}"
+            data = {"excerpt": excerpt}
+            response = requests.put(url, auth=self._get_client(), json=data)
+            
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    return {"error": error_data.get("message", f"HTTP {response.status_code}"), "_live_failed": True}
+                except:
+                    return {"error": f"HTTP {response.status_code}", "_live_failed": True}
+            
+            result = response.json()
+            if not isinstance(result, dict) or "id" not in result:
+                return {"error": f"Invalid response from WordPress: {result}", "_live_failed": True}
+            
+            cache.invalidate(self.cache_key(f"post_{post_id}"))
+            return result
+        except Exception as e:
+            return {"error": str(e), "_live_failed": True}
+
+    def set_categories(self, post_id: int, category_ids: list) -> dict:
+        """PUT /wp-json/wp/v2/posts/{id} with category IDs"""
+        try:
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/posts/{post_id}"
+            data = {"categories": category_ids}
+            response = requests.put(url, auth=self._get_client(), json=data)
+            
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    return {"error": error_data.get("message", f"HTTP {response.status_code}"), "_live_failed": True}
+                except:
+                    return {"error": f"HTTP {response.status_code}", "_live_failed": True}
+            
+            result = response.json()
+            if not isinstance(result, dict) or "id" not in result:
+                return {"error": f"Invalid response from WordPress: {result}", "_live_failed": True}
+            
+            cache.invalidate(self.cache_key(f"post_{post_id}"))
+            return result
+        except Exception as e:
+            return {"error": str(e), "_live_failed": True}
+
+    def set_tags(self, post_id: int, tag_ids: list) -> dict:
+        """PUT /wp-json/wp/v2/posts/{id} with tag IDs"""
+        try:
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/posts/{post_id}"
+            data = {"tags": tag_ids}
+            response = requests.put(url, auth=self._get_client(), json=data)
+            
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    return {"error": error_data.get("message", f"HTTP {response.status_code}"), "_live_failed": True}
+                except:
+                    return {"error": f"HTTP {response.status_code}", "_live_failed": True}
+            
+            result = response.json()
+            if not isinstance(result, dict) or "id" not in result:
+                return {"error": f"Invalid response from WordPress: {result}", "_live_failed": True}
+            
+            cache.invalidate(self.cache_key(f"post_{post_id}"))
+            return result
+        except Exception as e:
+            return {"error": str(e), "_live_failed": True}
+
+    def schedule_post(self, post_id: int, publish_date: str) -> dict:
+        """PUT /wp-json/wp/v2/posts/{id} with date and status=future"""
+        try:
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/posts/{post_id}"
+            data = {"date": publish_date, "status": "future"}
+            response = requests.put(url, auth=self._get_client(), json=data)
+            
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    return {"error": error_data.get("message", f"HTTP {response.status_code}"), "_live_failed": True}
+                except:
+                    return {"error": f"HTTP {response.status_code}", "_live_failed": True}
+            
+            result = response.json()
+            if not isinstance(result, dict) or "id" not in result:
+                return {"error": f"Invalid response from WordPress: {result}", "_live_failed": True}
+            
+            cache.invalidate(self.cache_key(f"post_{post_id}"))
+            return result
+        except Exception as e:
+            return {"error": str(e), "_live_failed": True}
+
+    def search_posts(self, query: str) -> dict:
+        """GET /wp-json/wp/v2/posts?search={query}"""
+        def _live():
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/posts"
+            params = {"search": query, "per_page": 100}
+            response = requests.get(url, auth=self._get_client(), params=params)
+            posts = response.json()
+            if isinstance(posts, dict) and "code" in posts:
+                raise Exception(f"WordPress API error: {posts.get('message', 'Unknown error')}")
+            return {"posts": posts}
+        return self.call("search", self.hash(query), _live)
