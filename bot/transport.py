@@ -20,6 +20,15 @@ from bot.router import route
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
 
+THINKING_MESSAGES = [
+    "⚙️ Working...",
+    "💭 Still thinking...",
+    "🔍 Checking sources...",
+    "⚙️ Processing...",
+    "💭 Almost there...",
+    "🔄 Pulling it together...",
+]
+
 
 def _chunk_message(text: str, max_len: int = 4000) -> list[str]:
     if len(text) <= max_len:
@@ -47,6 +56,35 @@ async def _keep_typing(chat_id: int, bot, stop_event: asyncio.Event) -> None:
         await asyncio.sleep(4)
 
 
+async def _thinking_thread(chat_id: int, bot, stop_event: asyncio.Event) -> None:
+    """Send a rotating status message after a 2s grace period; delete when done."""
+    await asyncio.sleep(2)
+    if stop_event.is_set():
+        return
+    try:
+        msg = await bot.send_message(chat_id, THINKING_MESSAGES[0])
+    except Exception:
+        return
+    i = 1
+    while not stop_event.is_set():
+        await asyncio.sleep(3)
+        if stop_event.is_set():
+            break
+        try:
+            await bot.edit_message_text(
+                THINKING_MESSAGES[i % len(THINKING_MESSAGES)],
+                chat_id,
+                msg.message_id,
+            )
+            i += 1
+        except Exception:
+            pass
+    try:
+        await bot.delete_message(chat_id, msg.message_id)
+    except Exception:
+        pass
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Gate — only respond to the allowed chat
     if update.effective_chat.id != ALLOWED_CHAT_ID:
@@ -57,11 +95,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     stop = asyncio.Event()
     typing_task = asyncio.create_task(_keep_typing(chat_id, context.bot, stop))
+    thinking_task = asyncio.create_task(_thinking_thread(chat_id, context.bot, stop))
     try:
         response = await route(chat_id, text)
     finally:
         stop.set()
         typing_task.cancel()
+        thinking_task.cancel()
 
     # Split oversized responses before sending (Telegram hard limit: 4096 chars).
     # Each chunk gets the same Markdown → plain-text retry/fallback logic.

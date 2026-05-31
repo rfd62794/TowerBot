@@ -1,13 +1,15 @@
-"""Tests for transport-layer helpers — message chunking."""
+"""Tests for transport-layer helpers — message chunking and thinking thread."""
 
+import asyncio
 import sys
 import os
+from unittest.mock import AsyncMock, MagicMock
 
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
-from bot.transport import _chunk_message
+from bot.transport import _chunk_message, _thinking_thread
 
 
 def test_chunk_message_single_chunk_under_limit():
@@ -37,12 +39,82 @@ def test_chunk_message_splits_at_limit_when_no_newline():
     assert chunks[1] == "a" * 1000
 
 
+def test_thinking_thread_skips_on_fast_response():
+    """stop_event set before 2s grace — send_message never called."""
+    bot = MagicMock()
+    bot.send_message = AsyncMock()
+
+    async def _run():
+        stop = asyncio.Event()
+        stop.set()  # already done before thread even starts
+        await _thinking_thread(12345, bot, stop)
+
+    asyncio.run(_run())
+    bot.send_message.assert_not_called()
+
+
+def test_thinking_thread_sends_and_rotates():
+    """After 2s send_message fires; after another 3s edit_message_text fires."""
+    mock_msg = MagicMock()
+    mock_msg.message_id = 42
+
+    bot = MagicMock()
+    bot.send_message = AsyncMock(return_value=mock_msg)
+    bot.edit_message_text = AsyncMock()
+    bot.delete_message = AsyncMock()
+
+    async def _run():
+        stop = asyncio.Event()
+
+        async def _stop_after(delay):
+            await asyncio.sleep(delay)
+            stop.set()
+
+        await asyncio.gather(
+            _thinking_thread(12345, bot, stop),
+            _stop_after(6),  # let 2s grace + one 3s rotation elapse
+        )
+
+    asyncio.run(_run())
+    bot.send_message.assert_called_once_with(12345, "⚙️ Working...")
+    bot.edit_message_text.assert_called()
+
+
+def test_thinking_thread_deletes_on_completion():
+    """After stop_event is set, delete_message is called to clean up."""
+    mock_msg = MagicMock()
+    mock_msg.message_id = 99
+
+    bot = MagicMock()
+    bot.send_message = AsyncMock(return_value=mock_msg)
+    bot.edit_message_text = AsyncMock()
+    bot.delete_message = AsyncMock()
+
+    async def _run():
+        stop = asyncio.Event()
+
+        async def _stop_after(delay):
+            await asyncio.sleep(delay)
+            stop.set()
+
+        await asyncio.gather(
+            _thinking_thread(12345, bot, stop),
+            _stop_after(2.5),  # just past grace, before first rotation
+        )
+
+    asyncio.run(_run())
+    bot.delete_message.assert_called_once_with(12345, 99)
+
+
 # ── harness ────────────────────────────────────────────────────────────────
 
 TESTS = [
     test_chunk_message_single_chunk_under_limit,
     test_chunk_message_splits_at_newline,
     test_chunk_message_splits_at_limit_when_no_newline,
+    test_thinking_thread_skips_on_fast_response,
+    test_thinking_thread_sends_and_rotates,
+    test_thinking_thread_deletes_on_completion,
 ]
 
 
