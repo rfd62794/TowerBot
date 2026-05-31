@@ -125,20 +125,20 @@ def test_complete_recurring():
     from infra.db.personal_tasks import (
         add_personal_task, complete_personal_task, get_personal_tasks
     )
-    from datetime import datetime
-    today = datetime.now().strftime("%Y-%m-%d")
+    from datetime import datetime, timedelta
+    today = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")  # Use tomorrow to avoid collision
+    unique_title = f"Daily standup {datetime.now().strftime('%H%M%S')}"
     task_id = add_personal_task(
-        "Daily standup",
+        unique_title,
         due_date=today,
         recurrence="daily",
     )
     result = complete_personal_task(task_id)
-    print(f"DEBUG: result = {result}")
     assert result.get("status") == "completed"
     assert result.get("next_due") is not None, f"Expected next_due for recurring task, got {result.get('next_due')}"
     all_tasks = get_personal_tasks(filter="all")
     titles = [t["title"] for t in all_tasks]
-    assert "Daily standup" in titles, "Expected recurring task re-inserted"
+    assert unique_title in titles, "Expected recurring task re-inserted"
 
 
 @test("personal: snooze pushes due_datetime forward")
