@@ -29,6 +29,7 @@ TEST_FILES = [
     "tests/test_memory.py",
     "tests/test_core.py",
     "tests/test_model_usage.py",
+    "tests/test_resources.py",
     "tests/test_tools_youtube.py",
     "tests/test_tools_games.py",
     "tests/test_tools_search.py",
