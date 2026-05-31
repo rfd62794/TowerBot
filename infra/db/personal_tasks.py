@@ -209,10 +209,10 @@ def complete_personal_task(task_id: int) -> dict:
         base = task.get("due_date") or datetime.now().strftime("%Y-%m-%d")
         next_date = _calc_next_due(task["recurrence"], base)
         if next_date:
-            next_due_str = next_date
             new_datetime = _compute_due_datetime(next_date, task.get("due_time"))
+            next_due_str = new_datetime
             _exec(
-                "INSERT OR REPLACE INTO personal_tasks "
+                "INSERT INTO personal_tasks "
                 "(title, notes, due_date, due_time, due_datetime, recurrence, "
                 "reminder_minutes, next_due) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
