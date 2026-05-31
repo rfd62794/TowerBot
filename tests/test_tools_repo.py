@@ -167,6 +167,49 @@ def test_audit_constitutional_violations():
     assert isinstance(violations, list), "Expected constitutional_violations to be a list"
 
 
+@test("analysis: analyze_code_quality returns ok=True")
+def test_analyze_code_quality():
+    from tools.repo.analysis import analyze_code_quality
+    result = analyze_code_quality()
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert "complexity" in result, "Expected 'complexity' key"
+    assert "testing" in result, "Expected 'testing' key"
+
+
+@test("analysis: analyze_dependencies returns ok=True")
+def test_analyze_dependencies():
+    from tools.repo.analysis import analyze_dependencies
+    result = analyze_dependencies()
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert "load_bearing" in result, "Expected 'load_bearing' key"
+    assert "external_deps" in result, "Expected 'external_deps' key"
+
+
+@test("analysis: find_opportunities returns ok=True")
+def test_find_opportunities():
+    from tools.repo.analysis import find_opportunities
+    result = find_opportunities()
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert "opportunities" in result, "Expected 'opportunities' key"
+    assert isinstance(result["opportunities"], list), "Expected opportunities to be a list"
+
+
+@test("analysis: find_opportunities with focus filters results")
+def test_find_opportunities_with_focus():
+    from tools.repo.analysis import find_opportunities
+    result = find_opportunities(focus="Phase 11")
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert result.get("focus") == "Phase 11", "Expected focus to be 'Phase 11'"
+
+
+@test("analysis: analyze_documentation_alignment returns ok=True")
+def test_analyze_documentation_alignment():
+    from tools.repo.analysis import analyze_documentation_alignment
+    result = analyze_documentation_alignment()
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert "sdd_coverage" in result, "Expected 'sdd_coverage' key"
+
+
 def run_all():
     passed = 0
     failed = 0

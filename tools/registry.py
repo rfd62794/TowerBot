@@ -60,6 +60,7 @@ from .productivity.personal import (
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 from .repo.audit import audit_repo_compliance
+from .repo.analysis import analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -1012,6 +1013,76 @@ TOOL_REGISTRY = {
             "function": {
                 "name": "audit_repo_compliance",
                 "description": "Audit PrivyBot repository for compliance with ADR/SDD documentation. Returns test floor status, phase status, spec drift, doc currency, constitutional violations, and roadmap summary.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+    },
+    "analyze_code_quality": {
+        "fn": analyze_code_quality,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "analyze_code_quality",
+                "description": "Analyze code quality metrics and patterns. Returns complexity, testing, patterns, and maintainability metrics.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path to analyze (None = entire repo)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "analyze_dependencies": {
+        "fn": analyze_dependencies,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "analyze_dependencies",
+                "description": "Analyze dependencies and change impact. Returns load-bearing components, fragile chains, external dependencies, and change impact map.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+    },
+    "find_opportunities": {
+        "fn": find_opportunities,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "find_opportunities",
+                "description": "Identify ranked improvement opportunities (quick wins). Returns list of opportunities with impact, effort, and success criteria.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "focus": {
+                            "type": "string",
+                            "description": "Optional focus area (e.g., 'Phase 15', 'autonomous tasks')"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "analyze_documentation_alignment": {
+        "fn": analyze_documentation_alignment,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "analyze_documentation_alignment",
+                "description": "Analyze documentation alignment with code. Returns SDD coverage, spec drift, doc currency, and missing documentation.",
                 "parameters": {
                     "type": "object",
                     "properties": {},
