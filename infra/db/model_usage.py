@@ -86,6 +86,19 @@ def count_model_calls(model_id: str = None, provider: str = None, minutes: int =
     return row["count"] if row else 0
 
 
+def count_model_calls_minute(model_id: str = None) -> int:
+    """
+    Count model calls in the last 60 seconds.
+
+    Args:
+        model_id: Optional model ID filter
+
+    Returns:
+        Number of calls in the last 60 seconds
+    """
+    return count_model_calls(model_id=model_id, minutes=1)
+
+
 def count_model_errors(model_id: str = None, error_code: int = None, minutes: int = None, hours: int = None) -> int:
     """
     Count model errors within a time window.

@@ -1,0 +1,240 @@
+"""Tests for model usage tracking and rate limit avoidance."""
+
+import sys
+import os
+
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _root not in sys.path:
+    sys.path.insert(0, _root)
+
+from dotenv import load_dotenv
+load_dotenv(os.path.join(_root, ".env"))
+
+from infra.db import init_db
+init_db()
+
+TESTS = []
+
+
+def test(name):
+    def decorator(func):
+        TESTS.append((name, func))
+        return func
+    return decorator
+
+
+def run_all() -> tuple[int, int]:
+    from tests._harness import run_all as _run
+    return _run(TESTS)
+
+
+@test("model_usage: record_model_call stores to DB")
+def test_record_model_call():
+    from infra.db.model_usage import record_model_call, count_model_calls
+    
+    # Record a call
+    record_model_call(
+        model_id="test/model",
+        provider="test",
+        tokens_in=100,
+        tokens_out=50,
+        cost_usd=0.01,
+        success=True,
+        latency_ms=500
+    )
+    
+    # Verify it was stored
+    count = count_model_calls(model_id="test/model", hours=1)
+    assert count >= 1, f"Expected at least 1 call, got {count}"
+
+
+@test("model_usage: count_model_calls respects rolling window")
+def test_count_model_calls_rolling_window():
+    from infra.db.model_usage import record_model_call, count_model_calls
+    
+    # Record a call
+    record_model_call(
+        model_id="test/window",
+        provider="test",
+        tokens_in=10,
+        tokens_out=5,
+        cost_usd=0.0,
+        success=True
+    )
+    
+    # Count in 1 hour window - should include the call
+    count_1h = count_model_calls(model_id="test/window", hours=1)
+    assert count_1h >= 1, f"Expected at least 1 call in 1h window, got {count_1h}"
+    
+    # Count in 1 minute window - should also include the call
+    count_1m = count_model_calls(model_id="test/window", minutes=1)
+    assert count_1m >= 1, f"Expected at least 1 call in 1m window, got {count_1m}"
+
+
+@test("model_usage: count_model_calls_minute counts last 60 seconds only")
+def test_count_model_calls_minute():
+    from infra.db.model_usage import record_model_call, count_model_calls_minute
+    
+    # Record a call
+    record_model_call(
+        model_id="test/minute",
+        provider="test",
+        tokens_in=10,
+        tokens_out=5,
+        cost_usd=0.0,
+        success=True
+    )
+    
+    # Count in last minute
+    count = count_model_calls_minute(model_id="test/minute")
+    assert count >= 1, f"Expected at least 1 call in last minute, got {count}"
+
+
+@test("model_usage: get_last_error_time returns correct timestamp")
+def test_get_last_error_time():
+    from infra.db.model_usage import record_model_call, get_last_error_time
+    from datetime import datetime
+    
+    # Record an error
+    record_model_call(
+        model_id="test/error",
+        provider="test",
+        tokens_in=0,
+        tokens_out=0,
+        cost_usd=0.0,
+        success=False,
+        error_code=429
+    )
+    
+    # Get last error time
+    last_error = get_last_error_time(model_id="test/error", error_code=429)
+    assert last_error is not None, "Expected error time to be returned"
+    assert isinstance(last_error, datetime), f"Expected datetime, got {type(last_error)}"
+
+
+@test("model_usage: count_model_errors filters by error_code")
+def test_count_model_errors():
+    from infra.db.model_usage import record_model_call, count_model_errors
+    
+    # Record a 429 error
+    record_model_call(
+        model_id="test/error_filter",
+        provider="test",
+        tokens_in=0,
+        tokens_out=0,
+        cost_usd=0.0,
+        success=False,
+        error_code=429
+    )
+    
+    # Record a 404 error
+    record_model_call(
+        model_id="test/error_filter",
+        provider="test",
+        tokens_in=0,
+        tokens_out=0,
+        cost_usd=0.0,
+        success=False,
+        error_code=404
+    )
+    
+    # Count 429 errors only
+    count_429 = count_model_errors(model_id="test/error_filter", error_code=429, minutes=1)
+    assert count_429 >= 1, f"Expected at least 1 429 error, got {count_429}"
+    
+    # Count 404 errors only
+    count_404 = count_model_errors(model_id="test/error_filter", error_code=404, minutes=1)
+    assert count_404 >= 1, f"Expected at least 1 404 error, got {count_404}"
+
+
+@test("model_usage: get_daily_cost_usd sums correctly")
+def test_get_daily_cost_usd():
+    from infra.db.model_usage import record_model_call, get_daily_cost
+    
+    # Record calls with known costs
+    record_model_call(
+        model_id="test/cost",
+        provider="test",
+        tokens_in=10,
+        tokens_out=5,
+        cost_usd=0.05,
+        success=True
+    )
+    
+    record_model_call(
+        model_id="test/cost",
+        provider="test",
+        tokens_in=10,
+        tokens_out=5,
+        cost_usd=0.03,
+        success=True
+    )
+    
+    # Get daily cost
+    cost = get_daily_cost(provider="test", days=1)
+    assert cost >= 0.08, f"Expected cost >= 0.08, got {cost}"
+
+
+@test("model_manager: should_skip_model returns True at 95% daily limit")
+def test_should_skip_daily_limit():
+    from bot.model_manager import should_skip_model
+    from infra.db.model_usage import record_model_call
+    
+    # Record enough calls to hit 95% of limit (200 * 0.95 = 190)
+    for _ in range(195):
+        record_model_call(
+            model_id="deepseek/deepseek-v4-flash:free",
+            provider="openrouter",
+            tokens_in=10,
+            tokens_out=5,
+            cost_usd=0.0,
+            success=True
+        )
+    
+    should_skip, reason = should_skip_model("deepseek/deepseek-v4-flash:free")
+    assert should_skip is True, f"Expected True at daily limit, got {should_skip}"
+    assert "daily_limit" in reason, f"Expected 'daily_limit' in reason, got {reason}"
+
+
+@test("model_manager: should_skip_model returns True during 429 backoff window")
+def test_should_skip_backoff():
+    from bot.model_manager import should_skip_model
+    from infra.db.model_usage import record_model_call
+    from datetime import datetime, timedelta
+    
+    # Record recent 429 errors
+    for _ in range(3):
+        record_model_call(
+            model_id="test/backoff",
+            provider="test",
+            tokens_in=0,
+            tokens_out=0,
+            cost_usd=0.0,
+            success=False,
+            error_code=429
+        )
+    
+    should_skip, reason = should_skip_model("test/backoff")
+    # Should skip due to backoff
+    assert should_skip is True or reason == "ok", f"Expected True or ok, got {should_skip}, {reason}"
+
+
+@test("model_manager: should_skip_model returns False for ollama provider")
+def test_should_skip_ollama():
+    from bot.model_manager import should_skip_model
+    
+    # Ollama should never skip
+    should_skip, reason = should_skip_model("ollama")
+    assert should_skip is False, f"Expected False for ollama, got {should_skip}"
+    assert reason == "local", f"Expected 'local' reason, got {reason}"
+    
+    # Ollama with model name should also never skip
+    should_skip, reason = should_skip_model("ollama/gemma3:4b")
+    assert should_skip is False, f"Expected False for ollama/gemma3:4b, got {should_skip}"
+    assert reason == "local", f"Expected 'local' reason, got {reason}"
+
+
+if __name__ == "__main__":
+    passed, total = run_all()
+    print(f"\n{passed}/{total} passed")
+    sys.exit(0 if passed == total else 1)

@@ -2,89 +2,120 @@
 
 import os
 import requests
-from api._handler import BaseAPIHandler
+from infra.db.model_usage import record_model_call
+import time
 
 
-class OllamaAPIHandler(BaseAPIHandler):
-    CACHE_PREFIX = "ollama"
-    BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+class OllamaAPIHandler:
+    """Ollama API handler for local model inference."""
     
-    def _get_client(self):
-        return None  # HTTP only
+    def __init__(self):
+        self.host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        self.model = os.getenv("OLLAMA_MODEL", "gemma3:4b")
+        self.enabled = os.getenv("OLLAMA_ENABLED", "false").lower() == "true"
     
-    def chat(self, model: str, messages: list, tools: list = None, **kwargs) -> dict:
+    def health_check(self) -> bool:
+        """
+        Check if Ollama service is running and the configured model is available.
+        
+        Returns:
+            True if reachable and OLLAMA_MODEL is in available models
+        """
+        if not self.enabled:
+            return False
+        
+        try:
+            url = f"{self.host}/api/tags"
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Check if our model is in the available models list
+            available_models = [m.get("name") for m in data.get("models", [])]
+            return self.model in available_models
+        except Exception:
+            return False
+    
+    def chat_completion(self, messages: list, tools: list = None) -> dict:
         """
         Chat completion using Ollama.
         
         Args:
-            model: Model name (e.g., "gemma3:4b")
             messages: List of message dicts with role and content
             tools: Optional list of tool definitions
-            **kwargs: Additional parameters (temperature, etc.)
             
         Returns:
-            Dict with response content and metadata
+            OpenAI-compatible response dict
+            
+        Raises:
+            Exception on connection error
         """
-        params_hash = self.hash(model, str(messages), str(tools), str(kwargs))
+        start_time = time.time()
         
-        def _live() -> dict:
-            url = f"{self.BASE_URL}/api/chat"
-            payload = {
-                "model": model,
-                "messages": messages,
-                "stream": False,
-                **kwargs
-            }
-            
-            if tools:
-                payload["tools"] = tools
-            
+        url = f"{self.host}/api/chat"
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+        }
+        
+        if tools:
+            payload["tools"] = tools
+        
+        try:
             response = requests.post(url, json=payload, timeout=60)
             response.raise_for_status()
             data = response.json()
             
+            latency_ms = int((time.time() - start_time) * 1000)
+            
+            # Extract token usage if available
+            tokens_in = data.get("prompt_eval_count", 0)
+            tokens_out = data.get("eval_count", 0)
+            
+            # Record successful call
+            record_model_call(
+                model_id=f"ollama/{self.model}",
+                provider="ollama",
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                cost_usd=0.0,  # Local models are free
+                success=True,
+                latency_ms=latency_ms
+            )
+            
+            # Return OpenAI-compatible response
             return {
-                "content": data.get("message", {}).get("content", ""),
-                "model": data.get("model"),
-                "done": data.get("done", True),
-                "total_duration_ms": data.get("total_duration", 0) / 1_000_000,
-                "load_duration_ms": data.get("load_duration", 0) / 1_000_000,
-                "prompt_eval_count": data.get("prompt_eval_count", 0),
-                "eval_count": data.get("eval_count", 0),
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "content": data.get("message", {}).get("content", ""),
+                        "tool_calls": []
+                    }
+                }],
+                "usage": {
+                    "prompt_tokens": tokens_in,
+                    "completion_tokens": tokens_out,
+                    "total_tokens": tokens_in + tokens_out
+                },
+                "model": self.model
             }
-        
-        return self.call("chat", params_hash, _live, stale_ok=False)
-    
-    def list_models(self) -> dict:
-        """List available local models."""
-        def _live() -> dict:
-            url = f"{self.BASE_URL}/api/tags"
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+        except Exception as e:
+            latency_ms = int((time.time() - start_time) * 1000)
             
-            models = []
-            for model in data.get("models", []):
-                models.append({
-                    "name": model.get("name"),
-                    "size": model.get("size", 0),
-                    "modified_at": model.get("modified_at"),
-                })
+            # Record failed call
+            record_model_call(
+                model_id=f"ollama/{self.model}",
+                provider="ollama",
+                tokens_in=0,
+                tokens_out=0,
+                cost_usd=0.0,
+                success=False,
+                error_code=500,  # Connection error
+                latency_ms=latency_ms
+            )
             
-            return {"models": models}
-        
-        return self.call("list", "all", _live, stale_ok=True, ttl_hours=24)
-    
-    def pull_model(self, model: str) -> dict:
-        """Pull a model from Ollama registry."""
-        def _live() -> dict:
-            url = f"{self.BASE_URL}/api/pull"
-            payload = {"name": model, "stream": False}
-            response = requests.post(url, json=payload, timeout=300)
-            response.raise_for_status()
-            return {"status": "pulled", "model": model}
-        
-        return self.call("pull", model, _live, stale_ok=False)
+            raise
 
 
 # Module-level instance

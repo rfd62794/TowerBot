@@ -42,6 +42,7 @@ MODEL_LIMITS = {
     "moonshotai/kimi-k2.6:free": {"rpm": 20, "rpd": 200},
     "nex-agi/deepseek-v3.1-nex-n1:free": {"rpm": 20, "rpd": 200},
     "qwen/qwen3-coder:free": {"rpm": 20, "rpd": 200},
+    "openrouter/free": {"rpm": 20, "rpd": 200},
     
     # Groq free
     "groq/llama-3.3-70b-versatile": {"rpm": 30, "rpd": 14400},
@@ -50,7 +51,7 @@ MODEL_LIMITS = {
     "google/gemini-2.0-flash": {"rpm": 15, "rpd": 1500},
     
     # Ollama local — no limits
-    "ollama/gemma3:4b": {"rpm": None, "rpd": None},
+    "ollama": {"rpm": None, "rpd": None},
 }
 
 # Known tool-capable free models, used only if the API call fails.
@@ -177,7 +178,11 @@ def should_skip_model(model_id: str) -> tuple[bool, str]:
         Tuple of (should_skip, reason)
     """
     from datetime import datetime, timedelta
-    from infra.db.model_usage import count_model_calls, count_model_errors, get_last_error_time
+    from infra.db.model_usage import count_model_calls, count_model_errors, get_last_error_time, count_model_calls_minute
+    
+    # Ollama local models never skip
+    if model_id == "ollama" or model_id.startswith("ollama/"):
+        return False, "local"
     
     limits = MODEL_LIMITS.get(model_id, {})
     
@@ -202,7 +207,7 @@ def should_skip_model(model_id: str) -> tuple[bool, str]:
     
     # Check RPM — skip if >80% of limit used in last minute
     rpm = limits.get("rpm", 20)
-    used_minute = count_model_calls(model_id, minutes=1)
+    used_minute = count_model_calls_minute(model_id)
     if used_minute >= rpm * 0.8:
         return True, f"rpm_limit ({used_minute}/{rpm})"
     
@@ -210,11 +215,35 @@ def should_skip_model(model_id: str) -> tuple[bool, str]:
 
 
 def get_available_model() -> str | None:
-    """Best available free model, skipping those still in 429 cooldown or tool-incompatible."""
+    """
+    Best available model with provider priority:
+    1. Ollama (if enabled and healthy)
+    2. openrouter/free (auto-routes across all free models)
+    3. SEED_FREE_MODELS (individual free models)
+    4. None (all rate-limited)
+    """
+    from api.local.ollama_api import ollama_api
+    
+    # Priority 0: Ollama local
+    if ollama_api.health_check():
+        return f"ollama/{ollama_api.model}"
+    
+    # Priority 1: openrouter/free
     throttled = set(get_throttled_models())
-    for model_id in fetch_free_tool_models():
+    if "openrouter/free" not in throttled and "openrouter/free" not in TOOL_INCOMPATIBLE:
+        should_skip, skip_reason = should_skip_model("openrouter/free")
+        if not should_skip:
+            return "openrouter/free"
+    
+    # Priority 2: SEED_FREE_MODELS
+    for model_id in SEED_FREE_MODELS:
+        if model_id == "openrouter/free":
+            continue  # Already checked
         if model_id not in throttled and model_id not in TOOL_INCOMPATIBLE:
-            return model_id
+            should_skip, skip_reason = should_skip_model(model_id)
+            if not should_skip:
+                return model_id
+    
     return None
 
 
