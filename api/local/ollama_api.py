@@ -6,6 +6,7 @@ import asyncio
 import time
 import logging
 import psutil
+from datetime import datetime
 from infra.db.model_usage import record_model_call
 
 logger = logging.getLogger("privy.ollama")
@@ -19,6 +20,10 @@ MIN_RAM_GB = {
     "llama3.1:8b": 5.0,
     "default": 2.5,  # Fallback for unknown models
 }
+
+# Daytime hours (8 AM - 8 PM) - restrict to smaller models
+DAYTIME_START_HOUR = 8
+DAYTIME_END_HOUR = 20
 
 
 class OllamaSwapManager:
@@ -78,6 +83,18 @@ class OllamaSwapManager:
                 model_name = model_id.replace("ollama/", "")
             else:
                 model_name = model_id
+            
+            # Check if it's daytime and model is too large
+            current_hour = datetime.now().hour
+            is_daytime = DAYTIME_START_HOUR <= current_hour < DAYTIME_END_HOUR
+            
+            # Large models (7B, 8B) restricted to nighttime
+            large_models = ["qwen2.5:7b", "qwen2.5-coder:7b", "llama3.1:8b"]
+            if is_daytime and any(model_name.startswith(lm) for lm in large_models):
+                logger.warning(
+                    f"Skipping Ollama {model_name} during daytime (8AM-8PM) — too large"
+                )
+                raise Exception(f"Model {model_name} restricted to nighttime use (8PM-8AM)")
             
             # Check available RAM before loading
             min_ram = MIN_RAM_GB.get(model_name, MIN_RAM_GB["default"])
