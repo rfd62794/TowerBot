@@ -1,7 +1,14 @@
 """Tests for fetch_url, think, get_current_datetime, and calculate tools."""
 
+import sys
+import os
+
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _root not in sys.path:
+    sys.path.insert(0, _root)
+
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(os.path.join(_root, ".env"))
 
 from infra.db import init_db
 init_db()
