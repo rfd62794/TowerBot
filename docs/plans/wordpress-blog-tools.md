@@ -15,8 +15,9 @@ WordPress has a built-in REST API — no plugin needed. Uses Application Passwor
 2. Generate Application Password (2 minutes)
 3. Add to .env:
 ```bash
-WORDPRESS_URL=https://rfditservices.com
-WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
+WORDPRESS_URL=https://blog.rfditservices.com
+WORDPRESS_USER=<your-username>
+WORDPRESS_APP_PASSWORD=<generated-password>
 ```
 
 ### API Handler
