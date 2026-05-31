@@ -80,6 +80,9 @@ class SearchTools(BaseTool):
                 ),
             })
 
+        # Slice to requested number of days
+        forecast = forecast[:days]
+
         return self.success({"days": forecast, "count": len(forecast)},
                             stale_result=raw)
 
