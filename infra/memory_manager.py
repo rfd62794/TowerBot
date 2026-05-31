@@ -42,7 +42,7 @@ class MemoryManager:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def _collection(self):
+    def _get_collection(self):
         """Lazy init Chroma client and collection."""
         if self._collection is None:
             self._client = chromadb.PersistentClient(path=str(CHROMA_PATH))
@@ -60,7 +60,7 @@ class MemoryManager:
         """Save to SQLite and upsert to Chroma."""
         _sql_save(key, content, layer)
         try:
-            col = self._collection()
+            col = self._get_collection()
             col.upsert(
                 ids=[key],
                 documents=[content],
@@ -73,7 +73,7 @@ class MemoryManager:
         """Update SQLite and upsert to Chroma (upsert, not update — idempotent)."""
         _sql_update(key, content)
         try:
-            col = self._collection()
+            col = self._get_collection()
             # upsert (not update) — col.update() raises ValueError if ID absent
             # (any memory created before migration or after a Chroma reset)
             col.upsert(
@@ -88,7 +88,7 @@ class MemoryManager:
         """Retire in SQLite and hard-delete from Chroma."""
         _sql_retire(key)
         try:
-            col = self._collection()
+            col = self._get_collection()
             col.delete(ids=[key])
         except Exception as e:
             logger.warning("Chroma delete failed for key=%s: %s", key, e)
@@ -96,7 +96,7 @@ class MemoryManager:
     def search(self, query: str, limit: int = 5) -> list[dict]:
         """Semantic search via Chroma, fallback to SQLite LIKE on error."""
         try:
-            col = self._collection()
+            col = self._get_collection()
             results = col.query(query_texts=[query], n_results=limit)
             if not results["ids"] or not results["ids"][0]:
                 return []
