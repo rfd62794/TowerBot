@@ -30,6 +30,17 @@ WEATHER_CODE_MAP = {
     99: "Thunderstorm with heavy hail",
 }
 
+WMO_CODES = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy",
+    3: "Overcast", 45: "Foggy", 48: "Icy fog",
+    51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+    61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+    71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
+    80: "Slight showers", 81: "Moderate showers", 82: "Violent showers",
+    95: "Thunderstorm", 96: "Thunderstorm with hail",
+    99: "Thunderstorm with heavy hail",
+}
+
 
 class WeatherAPIHandler(BaseAPIHandler):
     CACHE_PREFIX = "weather"
@@ -72,6 +83,48 @@ class WeatherAPIHandler(BaseAPIHandler):
                 return {"error": str(e)}
 
         result = self.call("current", self.hash(), _live, stale_ok=True)
+
+        # Add stale_notice to result
+        from infra.cache import cache
+        notice = cache.stale_notice(result)
+        result["stale_notice"] = notice
+
+        return result
+
+    def get_forecast(self, days: int = 3) -> dict:
+        """
+        Get weather forecast for South Florida.
+
+        Args:
+            days: Number of forecast days (1-7, default 3)
+
+        Returns:
+            Dict with daily forecast data
+        """
+        days = max(1, min(days, 7))  # clamp 1–7
+
+        def _live() -> dict:
+            try:
+                url = "https://api.open-meteo.com/v1/forecast"
+                params = {
+                    "latitude": LATITUDE,
+                    "longitude": LONGITUDE,
+                    "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode",
+                    "temperature_unit": "fahrenheit",
+                    "timezone": "auto",
+                }
+
+                response = requests.get(url, params=params, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+
+                return {
+                    "daily": data.get("daily", {}),
+                }
+            except Exception as e:
+                return {"error": str(e)}
+
+        result = self.call("forecast", self.hash(days), _live, stale_ok=True)
 
         # Add stale_notice to result
         from infra.cache import cache
