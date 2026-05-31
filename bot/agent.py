@@ -8,6 +8,7 @@ or commands. No formatting (that is report.py), no direct SQLite (only db.py).
 import os
 import json
 import logging
+import time
 
 from openai import OpenAI
 
@@ -36,7 +37,7 @@ from bot.memory import (
     tool_get_memories,
 )
 from bot.report import report
-from bot.model_manager import get_available_model, handle_429, handle_success
+from bot.model_manager import get_available_model, handle_429, handle_success, should_skip_model
 from tools.registry import TOOL_REGISTRY
 
 # max_retries=0: we manage 429 rotation ourselves; the SDK's internal retries
@@ -156,11 +157,80 @@ def _handle_name_thread(thread_id: str, name: str) -> dict:
 
 
 def _call(model: str, messages: list, tools):
+    from infra.db.model_usage import record_model_call
+    import time
+    
+    start_time = time.time()
     kwargs = {"model": model, "messages": messages, "max_tokens": MAX_OUTPUT_TOKENS}
     if tools:
         kwargs["tools"] = tools
         kwargs["tool_choice"] = "auto"
-    return client.chat.completions.create(**kwargs)
+    
+    try:
+        resp = client.chat.completions.create(**kwargs)
+        latency_ms = int((time.time() - start_time) * 1000)
+        
+        # Extract token usage if available
+        tokens_in = resp.usage.prompt_tokens if resp.usage else 0
+        tokens_out = resp.usage.completion_tokens if resp.usage else 0
+        
+        # Determine provider from model ID
+        if model.startswith("ollama/"):
+            provider = "ollama"
+        elif model.startswith("groq/"):
+            provider = "groq"
+        elif model.startswith("google/"):
+            provider = "google"
+        else:
+            provider = "openrouter"
+        
+        # Record successful call
+        record_model_call(
+            model_id=model,
+            provider=provider,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            cost_usd=0.0,  # Free models for now
+            success=True,
+            latency_ms=latency_ms
+        )
+        
+        return resp
+    except Exception as e:
+        latency_ms = int((time.time() - start_time) * 1000)
+        
+        # Determine provider
+        if model.startswith("ollama/"):
+            provider = "ollama"
+        elif model.startswith("groq/"):
+            provider = "groq"
+        elif model.startswith("google/"):
+            provider = "google"
+        else:
+            provider = "openrouter"
+        
+        # Extract error code
+        error_code = None
+        if "429" in str(e):
+            error_code = 429
+        elif "404" in str(e):
+            error_code = 404
+        elif "403" in str(e):
+            error_code = 403
+        
+        # Record failed call
+        record_model_call(
+            model_id=model,
+            provider=provider,
+            tokens_in=0,
+            tokens_out=0,
+            cost_usd=0.0,
+            success=False,
+            error_code=error_code,
+            latency_ms=latency_ms
+        )
+        
+        raise
 
 
 def _extract_retry_after(error) -> float | None:
@@ -173,12 +243,20 @@ def _extract_retry_after(error) -> float | None:
 
 
 async def _rotate(messages: list, tools):
-    """Try dynamically-discovered free models, skipping those in cooldown."""
+    """Try dynamically-discovered free models, skipping those in cooldown or rate-limited."""
     global _last_model_used
     while True:
         fallback = get_available_model()
         if fallback is None:
             raise _AllRateLimited()
+        
+        # Check if model should be skipped based on rate limits
+        should_skip, skip_reason = should_skip_model(fallback)
+        if should_skip:
+            await report("model_routed", model=fallback, reason=f"skip: {skip_reason}")
+            handle_429(fallback, 60.0)  # Cooldown briefly
+            continue
+        
         try:
             resp = _call(fallback, messages, tools)
             handle_success(fallback)

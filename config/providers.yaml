@@ -1,0 +1,66 @@
+# Provider priority by task type
+# Defines which models to use for different types of work
+
+# Autonomous tasks (background, overnight, scheduled)
+autonomous:
+  priority:
+    - model: "ollama/gemma3:4b"
+      provider: "ollama"
+      reason: "Local, free, unlimited"
+    - model: "groq/llama-3.3-70b-versatile"
+      provider: "groq"
+      reason: "14,400/day, fast"
+    - model: "openrouter/free"
+      provider: "openrouter"
+      reason: "Pool of free models"
+    - model: "deepseek/deepseek-v4-flash:free"
+      provider: "openrouter"
+      reason: "Paid fallback, budget cap"
+
+# User conversations (real-time, interactive)
+conversation:
+  priority:
+    - model: "groq/llama-3.3-70b-versatile"
+      provider: "groq"
+      reason: "Fastest response"
+    - model: "google/gemini-2.0-flash"
+      provider: "google"
+      reason: "Best tool calling quality"
+    - model: "openrouter/free"
+      provider: "openrouter"
+      reason: "Pool of free models"
+    - model: "deepseek/deepseek-v4-flash:free"
+      provider: "openrouter"
+      reason: "Paid fallback, budget cap"
+
+# Quality tasks (complex reasoning, analysis)
+quality:
+  priority:
+    - model: "google/gemini-2.0-flash"
+      provider: "google"
+      reason: "Best tool calling quality"
+    - model: "groq/llama-3.3-70b-versatile"
+      provider: "groq"
+      reason: "Fast, high quality"
+    - model: "deepseek/deepseek-v4-flash:free"
+      provider: "openrouter"
+      reason: "1M context, excellent"
+    - model: "openrouter/free"
+      provider: "openrouter"
+      reason: "Pool of free models"
+
+# Coding tasks (code generation, debugging)
+coding:
+  priority:
+    - model: "qwen/qwen3-coder:free"
+      provider: "openrouter"
+      reason: "1M context, coding specialist"
+    - model: "ollama/gemma3:4b"
+      provider: "ollama"
+      reason: "Local, free, unlimited"
+    - model: "deepseek/deepseek-v4-flash:free"
+      provider: "openrouter"
+      reason: "1M context, excellent"
+    - model: "openrouter/free"
+      provider: "openrouter"
+      reason: "Pool of free models"
