@@ -30,6 +30,13 @@ tools/
   meta/                   ← Meta tools
     meta.py               ← think() scratchpad
 
+  repo/                   ← Repository analysis tools (self-expansion)
+    filesystem.py         ← read_local_file, list_local_dir, search_local_code
+    audit.py              ← audit_repo_compliance
+    analysis.py           ← analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
+    synthesis.py          ← inspect_repo, generate_strategic_analysis
+    directive.py          ← read_current_state, elaborate_task, generate_directive
+
   registry.py             ← TOOL_REGISTRY (single source of truth)
 
 api/
@@ -101,7 +108,14 @@ Agent → Tool Registry → Tool Function → API Handler → External Service
 **meta/** — Meta tools
 - `meta.py` — think() scratchpad
 
-**registry.py** — TOOL_REGISTRY (single source of truth for all 52 tools)
+**repo/** — Repository Analysis Tools (self-expansion)
+- `filesystem.py` — read_local_file, list_local_dir, search_local_code
+- `audit.py` — audit_repo_compliance
+- `analysis.py` — analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
+- `synthesis.py` — inspect_repo, generate_strategic_analysis
+- `directive.py` — read_current_state, elaborate_task, generate_directive
+
+**registry.py** — TOOL_REGISTRY (single source of truth for all 65 tools)
 
 ### API Layer (`api/`)
 
@@ -506,13 +520,14 @@ TOOL_REGISTRY = {
 - Consumed by MCP server (Phase 15) for Claude Desktop integration
 
 ### Tool Count
-- 52 tools total across 6 categories
+- 65 tools total across 7 categories
 - content: 9 tools
 - games: 5 tools
 - search: 9 tools
 - productivity: 16 tools
 - communication: 6 tools
 - meta: 3 tools
+- repo: 13 tools (filesystem: 3, audit: 1, analysis: 4, synthesis: 2, directive: 3)
 - memory: 4 tools (defined in bot/memory.py, imported in registry)
 
 ### Agent Integration
