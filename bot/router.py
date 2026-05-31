@@ -338,6 +338,35 @@ def handle_sync() -> str:
     )
 
 
+def handle_mcp_token(expiry: str = "1h") -> str:
+    """Handle /mcp_token command — generate JWT token for MCP SSE access."""
+    try:
+        from api.mcp.auth import generate_token
+
+        # Parse expiry
+        expiry_map = {
+            "15m": 15,
+            "1h": 60,
+            "24h": 1440,
+        }
+        minutes = expiry_map.get(expiry, 60)
+
+        token = generate_token(expiry_minutes=minutes)
+
+        lines = [
+            "🔑 MCP Token Generated",
+            f"Expiry: {expiry}",
+            f"\n{token}",
+            "\nUse this token with Authorization: Bearer <token> header",
+            "when connecting to the MCP SSE endpoint.",
+        ]
+        return "\n".join(lines)
+    except ImportError:
+        return "MCP auth not available — check MCP_JWT_SECRET in .env"
+    except Exception as e:
+        return f"Error generating token: {str(e)}"
+
+
 async def handle_deploy(chat_id: int) -> str:
     """Handle /deploy command — run deploy script as subprocess."""
     await report("tool_called", tool_name="deploy", result_summary="Starting deploy...")
@@ -450,6 +479,10 @@ async def route(chat_id: int, text: str) -> str:
         return handle_reject(milestone_id)
     if text == "/sync" or text.startswith("/sync"):
         return handle_sync()
+    if text.startswith("/mcp_token"):
+        parts = text[len("/mcp_token"):].strip().split()
+        expiry = parts[0] if parts else "1h"
+        return handle_mcp_token(expiry)
     if text == "/todo" or text.startswith("/todo"):
         parts = text[len("/todo"):].strip().split(None, 1)
         sub = parts[0].lower() if parts else ""

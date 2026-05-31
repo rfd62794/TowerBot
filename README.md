@@ -94,6 +94,48 @@ git push origin main
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Layered architecture and import rules
 - [docs/TOWER_DEPLOY.md](docs/TOWER_DEPLOY.md) — Windows tower deployment with NSSM
 - [docs/TOOLS.md](docs/TOOLS.md) — How to add new tools
+- [docs/adr/ADR-033.md](docs/adr/ADR-033.md) — MCP server architecture
+
+## MCP Server (Model Context Protocol)
+
+PrivyBot exposes tools via MCP for Claude (Desktop and claude.ai). This enables direct tool calls from Claude conversations without manual context switching.
+
+### Claude Desktop (stdio transport)
+
+Edit `~/.config/claude/claude_desktop_config.json` (Linux/macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "privybot": {
+      "command": "uv",
+      "args": ["run", "python", "infra/mcp/server.py", "--transport", "stdio"],
+      "cwd": "C:/Github/PrivyBot"
+    }
+  }
+}
+```
+
+Restart Claude Desktop. PrivyBot tools are now available in any Claude Desktop conversation.
+
+### Remote Access (SSE transport + Tailscale)
+
+```bash
+# Generate JWT token via Telegram
+/mcp_token 1h
+
+# Start MCP server with SSE transport
+uv run python infra/mcp/server.py --transport sse --port 8090
+
+# Expose via Tailscale Funnel
+tailscale funnel --bg 8090
+```
+
+Connect from claude.ai using the public HTTPS URL (`https://nitro.ts.net/mcp`) with `Authorization: Bearer <token>` header.
+
+### Exposed Tools
+
+A curated subset of tools is exposed via MCP (see `infra/mcp/config.py`). Includes memory, calendar, email, games, YouTube, blog, reddit, and search tools. Internal tools (think, name_thread, audit) are excluded.
 
 ## License
 
