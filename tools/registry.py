@@ -28,7 +28,7 @@ from .content.discovery import (
     get_traffic_sources,
 )
 from .games.recommendations import get_content_recommendations
-from .games.metrics import get_game_metrics, get_installed_games, get_sale_info
+from .games.metrics import get_game_metrics, get_installed_games, get_sale_info, get_itch_stats
 from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats
 from .productivity.goals import (
     save_commitment,
@@ -228,6 +228,21 @@ TOOL_REGISTRY = {
                 },
             },
         },
+    },
+    "get_itch_stats": {
+        "fn": get_itch_stats,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_itch_stats",
+                "description": "WHEN: user asks about itch.io game performance, 'how are my games doing', 'itch.io analytics', 'views/downloads on itch'.\n\nRETURNS: count, games array with title, url, views_count, downloads_count, purchases_count, published, published_at, earnings.\n\nDO NOT CALL: for Steam games (use get_game_metrics). Requires ITCH_IO_API_KEY in .env.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
     },
     "get_traffic_sources": {
         "fn": get_traffic_sources,

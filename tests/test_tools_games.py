@@ -90,6 +90,43 @@ def test_game_metrics_cache():
     assert "stale_notice" in result2, "Expected stale_notice key"
 
 
+@test("itch: get_itch_stats returns ok=True or error for missing key")
+def test_itch_ok():
+    from tools.games.metrics import get_itch_stats
+    result = get_itch_stats()
+    # May fail if ITCH_IO_API_KEY not set
+    if result.get("ok") == True:
+        assert "stale_notice" in result, "Expected stale_notice key"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("itch: returns count and games keys")
+def test_itch_keys():
+    from tools.games.metrics import get_itch_stats
+    result = get_itch_stats()
+    # Only check keys if successful
+    if result.get("ok") == True:
+        assert "count" in result, "Expected 'count' key"
+        assert "games" in result, "Expected 'games' key"
+
+
+@test("itch: each game has expected keys")
+def test_itch_structure():
+    from tools.games.metrics import get_itch_stats
+    result = get_itch_stats()
+    # Only check structure if successful and has games
+    if result.get("ok") == True and result.get("games"):
+        games = result.get("games", [])
+        if len(games) > 0:
+            for game in games:
+                assert "title" in game, "Expected 'title' in game"
+                assert "url" in game, "Expected 'url' in game"
+                assert "views_count" in game, "Expected 'views_count' in game"
+                assert "downloads_count" in game, "Expected 'downloads_count' in game"
+                assert "purchases_count" in game, "Expected 'purchases_count' in game"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
