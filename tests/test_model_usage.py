@@ -202,11 +202,14 @@ def test_should_skip_backoff():
     from infra.db.model_usage import record_model_call
     from datetime import datetime, timedelta
     
+    # Use a model that exists in MODEL_LIMITS
+    model_id = "deepseek/deepseek-v4-flash:free"
+    
     # Record recent 429 errors
     for _ in range(3):
         record_model_call(
-            model_id="test/backoff",
-            provider="test",
+            model_id=model_id,
+            provider="openrouter",
             tokens_in=0,
             tokens_out=0,
             cost_usd=0.0,
@@ -214,7 +217,7 @@ def test_should_skip_backoff():
             error_code=429
         )
     
-    should_skip, reason = should_skip_model("test/backoff")
+    should_skip, reason = should_skip_model(model_id)
     # Should skip due to backoff
     assert should_skip is True or reason == "ok", f"Expected True or ok, got {should_skip}, {reason}"
 
