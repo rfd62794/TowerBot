@@ -63,7 +63,8 @@ class OllamaSwapManager:
             # Check if our model is in the available models list
             available_models = [m.get("name") for m in data.get("models", [])]
             return self.model in available_models
-        except Exception:
+        except Exception as e:
+            logger.warning("[Ollama] health_check failed: %s: %s", type(e).__name__, e)
             return False
     
     async def _check_vram(self, model_id: str) -> bool:
