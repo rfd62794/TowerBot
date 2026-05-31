@@ -1,10 +1,12 @@
 """Reddit API client — raw API calls only."""
 
+import os
 import requests
+import base64
 from api._handler import BaseAPIHandler
 
 HEADERS = {
-    "User-Agent": "PrivyBot/1.0 by /u/rdug627"
+    "User-Agent": "PrivyBot/1.0 by /u/FamiliarAnxiety9"
 }
 
 
@@ -12,8 +14,49 @@ class RedditAPIHandler(BaseAPIHandler):
     CACHE_PREFIX = "reddit"
     BASE_URL = "https://www.reddit.com"
     HEADERS = {
-        "User-Agent": "PrivyBot/1.0 by /u/rdug627"
+        "User-Agent": "PrivyBot/1.0 by /u/FamiliarAnxiety9"
     }
+
+    def __init__(self):
+        self.client_id = os.getenv("REDDIT_CLIENT_ID")
+        self.client_secret = os.getenv("REDDIT_CLIENT_SECRET")
+        self._access_token = None
+
+    def _get_oauth_token(self) -> str | None:
+        """Get OAuth access token if credentials are configured."""
+        if not self.client_id or not self.client_secret:
+            return None
+
+        if self._access_token:
+            return self._access_token
+
+        try:
+            auth = base64.b64encode(
+                f"{self.client_id}:{self.client_secret}".encode()
+            ).decode()
+            
+            response = requests.post(
+                "https://www.reddit.com/api/v1/access_token",
+                headers={
+                    "Authorization": f"Basic {auth}",
+                    "User-Agent": self.HEADERS["User-Agent"]
+                },
+                data={"grant_type": "client_credentials"},
+                timeout=10
+            )
+            response.raise_for_status()
+            self._access_token = response.json().get("access_token")
+            return self._access_token
+        except Exception:
+            return None
+
+    def _get_headers(self) -> dict:
+        """Get headers with OAuth token if available."""
+        headers = self.HEADERS.copy()
+        token = self._get_oauth_token()
+        if token:
+            headers["Authorization"] = f"bearer {token}"
+        return headers
 
     def _get_client(self):
         return None  # HTTP only
@@ -46,7 +89,7 @@ class RedditAPIHandler(BaseAPIHandler):
                 "restrict_sr": bool(subreddit)
             }
 
-            response = requests.get(url, headers=self.HEADERS, params=params, timeout=10)
+            response = requests.get(url, headers=self._get_headers(), params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 
