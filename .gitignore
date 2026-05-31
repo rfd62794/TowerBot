@@ -12,3 +12,4 @@ config/client_secret.json
 config/youtube_token.json
 config/rfd_token.json
 config/steam_catalog.json
+privy_chroma_db/*

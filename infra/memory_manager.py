@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 import chromadb
-from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
+import httpx
 
 from infra.db.memory import (
     save_memory as _sql_save,
@@ -28,6 +28,35 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 EMBED_MODEL = "nomic-embed-text"
 COLLECTION_NAME = "privybot"
 CHROMA_PATH = Path(__file__).parent.parent / "privy_chroma_db"
+
+
+class OllamaEmbeddingFunction:
+    """Custom embedding function calling Ollama via httpx (no ollama package)."""
+
+    def __init__(self, url: str, model_name: str):
+        self.url = url
+        self.model_name = model_name
+        self._name = f"ollama_{model_name}"
+
+    def name(self) -> str:
+        return self._name
+
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        """Call Ollama /api/embeddings and return vectors."""
+        try:
+            response = httpx.post(
+                f"{self.url}",
+                json={"model": self.model_name, "input": input},
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+            # Ollama returns {"embeddings": [[...], ...]}
+            return data.get("embeddings", [])
+        except Exception as e:
+            logger.error("Ollama embedding failed: %s", e)
+            # Return zero vectors as fallback
+            return [[0.0] * 768 for _ in input]  # nomic-embed-text is 768-dim
 
 
 class MemoryManager:
