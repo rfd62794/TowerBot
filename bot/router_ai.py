@@ -56,7 +56,7 @@ def _keyword_fallback(message: str) -> list[str]:
 
 
 async def classify(message: str) -> list[str]:
-    """Classify message → route names via Ollama with keyword escalation fallback.
+    """Classify message to route names via Ollama with keyword escalation fallback.
 
     If Ollama is disabled: keyword-only classification.
     If Ollama returns 'chat': keyword check used as safety net.
@@ -68,7 +68,7 @@ async def classify(message: str) -> list[str]:
     if routes == ["chat"]:
         escalated = _keyword_fallback(message)
         if escalated != ["chat"]:
-            logger.info("[router_ai] keyword escalation: chat → %s", escalated)
+            logger.info("[router_ai] keyword escalation: chat -> %s", escalated)
             return escalated
     return routes
 
