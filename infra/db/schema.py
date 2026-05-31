@@ -338,6 +338,30 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
+    # Migration: add post_pipeline table
+    try:
+        _conn.execute("""
+            CREATE TABLE IF NOT EXISTS post_pipeline (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic TEXT NOT NULL UNIQUE,
+                stage INTEGER DEFAULT 0,
+                q1_prompt TEXT,
+                research TEXT,
+                skeleton TEXT,
+                wp_post_id INTEGER,
+                wp_edit_url TEXT,
+                created_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+                updated_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
+            )
+        """)
+        _conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_post_pipeline_stage
+            ON post_pipeline(stage DESC, updated_at DESC)
+        """)
+        _conn.commit()
+    except Exception:
+        pass
+
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
     with _lock:

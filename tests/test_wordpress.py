@@ -15,6 +15,7 @@ init_db()
 
 from api.web.wordpress_api import WordPressAPIHandler
 from tools.communication.blog import BlogTools
+from infra.db.pipeline import get_or_create_post, get_most_advanced_post, update_post_stage, delete_post
 
 
 TESTS = []
@@ -122,6 +123,99 @@ def test_blog_update_post():
         assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
         assert result["post_id"] == 789
         assert result["status"] == "publish"
+
+
+@test("blog tools: update_blog_post returns ok=True")
+def test_update_blog_post():
+    with mock.patch('requests.post') as mock_post, mock.patch('infra.cache.cache.invalidate'):
+        mock_post.return_value.json.return_value = {
+            "id": 123,
+            "status": "draft",
+            "link": "https://blog.rfditservices.com/?p=123"
+        }
+        tools = BlogTools()
+        result = tools.update_blog_post(123, content="Updated content")
+        assert result["ok"] is True
+        assert result["post_id"] == 123
+
+
+@test("pipeline: get_or_create_post creates new post")
+def test_get_or_create_post():
+    post = get_or_create_post("Test Topic")
+    assert post["topic"] == "Test Topic"
+    assert post["stage"] == 0
+    assert "id" in post
+    # Cleanup
+    delete_post(post["id"])
+
+
+@test("pipeline: get_or_create_post returns existing post")
+def test_get_or_create_post_existing():
+    post1 = get_or_create_post("Existing Topic")
+    post2 = get_or_create_post("Existing Topic")
+    assert post1["id"] == post2["id"]
+    # Cleanup
+    delete_post(post1["id"])
+
+
+@test("pipeline: get_most_advanced_post returns highest stage")
+def test_get_most_advanced_post():
+    post1 = get_or_create_post("Topic A")
+    post2 = get_or_create_post("Topic B")
+    update_post_stage(post1["id"], 2)
+    update_post_stage(post2["id"], 1)
+    
+    advanced = get_most_advanced_post()
+    assert advanced["stage"] == 2
+    assert advanced["topic"] == "Topic A"
+    
+    # Cleanup
+    delete_post(post1["id"])
+    delete_post(post2["id"])
+
+
+@test("pipeline: update_post_stage updates stage and fields")
+def test_update_post_stage():
+    post = get_or_create_post("Update Test")
+    update_post_stage(post["id"], 1, q1_prompt="Test Q1")
+    
+    updated = get_or_create_post("Update Test")
+    assert updated["stage"] == 1
+    assert updated["q1_prompt"] == "Test Q1"
+    
+    # Cleanup
+    delete_post(post["id"])
+
+
+@test("blog tools: advance_post_pipeline returns stage info")
+def test_advance_post_pipeline():
+    tools = BlogTools()
+    result = tools.advance_post_pipeline("Pipeline Test Topic")
+    assert result["ok"] is True
+    assert result["stage"] == 0
+    assert result["topic"] == "Pipeline Test Topic"
+    assert "action_taken" in result
+    assert "next_stage" in result
+    
+    # Cleanup
+    post = get_most_advanced_post()
+    if post and post["topic"] == "Pipeline Test Topic":
+        delete_post(post["id"])
+
+
+@test("blog tools: advance_post_pipeline with existing post")
+def test_advance_post_pipeline_existing():
+    post = get_or_create_post("Existing Pipeline Topic")
+    update_post_stage(post["id"], 2)
+    
+    tools = BlogTools()
+    result = tools.advance_post_pipeline()
+    assert result["ok"] is True
+    assert result["stage"] == 2
+    assert result["topic"] == "Existing Pipeline Topic"
+    
+    # Cleanup
+    delete_post(post["id"])
 
 
 def run_all():
