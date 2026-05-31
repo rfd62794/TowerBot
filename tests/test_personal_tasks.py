@@ -133,8 +133,9 @@ def test_complete_recurring():
         recurrence="daily",
     )
     result = complete_personal_task(task_id)
+    print(f"DEBUG: result = {result}")
     assert result.get("status") == "completed"
-    assert result.get("next_due") is not None, "Expected next_due for recurring task"
+    assert result.get("next_due") is not None, f"Expected next_due for recurring task, got {result.get('next_due')}"
     all_tasks = get_personal_tasks(filter="all")
     titles = [t["title"] for t in all_tasks]
     assert "Daily standup" in titles, "Expected recurring task re-inserted"
