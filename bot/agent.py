@@ -159,10 +159,53 @@ def _handle_name_thread(thread_id: str, name: str) -> dict:
     return {"status": "named", "name": name}
 
 
-def _call(model: str, messages: list, tools):
+def _wrap_ollama_response(data: dict):
+    """Convert Ollama dict response to attribute-accessible object matching OpenAI SDK shape."""
+    from types import SimpleNamespace
+    msg_data = (data.get("choices") or [{}])[0].get("message") or {}
+    tool_calls = []
+    for tc in msg_data.get("tool_calls") or []:
+        fn = tc.get("function") or {}
+        tool_calls.append(SimpleNamespace(
+            id=tc.get("id", ""),
+            type="function",
+            function=SimpleNamespace(
+                name=fn.get("name", ""),
+                arguments=fn.get("arguments", "{}"),
+            ),
+        ))
+    message = SimpleNamespace(
+        role=msg_data.get("role", "assistant"),
+        content=msg_data.get("content") or "",
+        tool_calls=tool_calls,
+    )
+    usage_data = data.get("usage") or {}
+    usage = SimpleNamespace(
+        prompt_tokens=usage_data.get("prompt_tokens", 0),
+        completion_tokens=usage_data.get("completion_tokens", 0),
+        total_tokens=usage_data.get("total_tokens", 0),
+    )
+    return SimpleNamespace(
+        choices=[SimpleNamespace(message=message)],
+        usage=usage,
+        model=data.get("model", ""),
+    )
+
+
+async def _call(model: str, messages: list, tools):
     from infra.db.model_usage import record_model_call
     import time
-    
+
+    # Route Ollama models to local inference
+    if model and model.startswith("ollama/"):
+        from api.local.ollama_api import ollama_api
+        ollama_model = model.split("/", 1)[1]
+        result = await ollama_api.chat(ollama_model, messages, tools)
+        if result is not None:
+            return _wrap_ollama_response(result)
+        # VRAM check failed — fall through to OpenRouter with default
+        model = MODELS["default"]
+
     start_time = time.time()
     kwargs = {"model": model, "messages": messages, "max_tokens": MAX_OUTPUT_TOKENS}
     if tools:
@@ -266,7 +309,7 @@ async def _rotate(messages: list, tools):
             continue
         
         try:
-            resp = _call(fallback, messages, tools)
+            resp = await _call(fallback, messages, tools)
             handle_success(fallback)
             _last_model_used = fallback
             await report("model_routed", model=fallback, reason="fallback on 429")
@@ -293,7 +336,7 @@ async def _rotate(messages: list, tools):
 async def _chat(model: str, messages: list, tools, allow_rotation: bool = True):
     global _last_model_used
     try:
-        resp = _call(model, messages, tools)
+        resp = await _call(model, messages, tools)
         handle_success(model)
         _last_model_used = model
         return resp, model
