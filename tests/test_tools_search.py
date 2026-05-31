@@ -205,6 +205,44 @@ def test_pypi_nonexistent():
     assert "error" in result, "Expected 'error' key for nonexistent package"
 
 
+@test("github: get_recent_commits returns ok=True or error for missing token")
+def test_github_ok():
+    from tools.search.search_tools import get_recent_commits
+    result = get_recent_commits()
+    # May fail if GITHUB_TOKEN not set
+    if result.get("ok") == True:
+        assert "stale_notice" in result, "Expected stale_notice key"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("github: returns count and commits keys")
+def test_github_keys():
+    from tools.search.search_tools import get_recent_commits
+    result = get_recent_commits()
+    # Only check keys if successful
+    if result.get("ok") == True:
+        assert "count" in result, "Expected 'count' key"
+        assert "commits" in result, "Expected 'commits' key"
+
+
+@test("github: each commit has expected keys")
+def test_github_structure():
+    from tools.search.search_tools import get_recent_commits
+    result = get_recent_commits()
+    # Only check structure if successful and has commits
+    if result.get("ok") == True and result.get("commits"):
+        commits = result.get("commits", [])
+        if len(commits) > 0:
+            for commit in commits:
+                assert "sha" in commit, "Expected 'sha' in commit"
+                assert "message" in commit, "Expected 'message' in commit"
+                assert "author" in commit, "Expected 'author' in commit"
+                assert "date" in commit, "Expected 'date' in commit"
+                assert "repo" in commit, "Expected 'repo' in commit"
+                assert "url" in commit, "Expected 'url' in commit"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

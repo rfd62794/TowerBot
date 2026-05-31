@@ -4,7 +4,7 @@ import os
 import httpx
 from api._handler import BaseAPIHandler
 
-ITCH_IO_API_KEY = os.getenv("ITCH_IO_API_KEY")
+ITCH_API_KEY = os.getenv("ITCH_API_KEY")
 
 
 class ItchIOAPIHandler(BaseAPIHandler):
@@ -22,12 +22,12 @@ class ItchIOAPIHandler(BaseAPIHandler):
             Dict with games array containing views, downloads, purchases, earnings
         """
         def _live() -> dict:
-            if not ITCH_IO_API_KEY:
-                return {"error": "ITCH_IO_API_KEY not set"}
+            if not ITCH_API_KEY:
+                return {"error": "ITCH_API_KEY not set"}
 
             try:
                 headers = {
-                    "Authorization": f"Bearer {ITCH_IO_API_KEY}",
+                    "Authorization": f"Bearer {ITCH_API_KEY}",
                 }
                 response = httpx.get(
                     "https://api.itch.io/profile/games",

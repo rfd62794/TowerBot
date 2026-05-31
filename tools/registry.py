@@ -29,7 +29,7 @@ from .content.discovery import (
 )
 from .games.recommendations import get_content_recommendations
 from .games.metrics import get_game_metrics, get_installed_games, get_sale_info, get_itch_stats
-from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats
+from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits
 from .productivity.goals import (
     save_commitment,
     get_goals_list,
@@ -523,6 +523,35 @@ TOOL_REGISTRY = {
                             "type": "string",
                             "description": "Package name (default: 'openagent-directive')",
                             "default": "openagent-directive"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "get_recent_commits": {
+        "fn": get_recent_commits,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_recent_commits",
+                "description": "WHEN: user asks about recent GitHub activity, 'what did I push today', 'recent commits', 'what's new in my repos', 'git history'.\n\nRETURNS: count, commits array with sha, message, author, date, repo, url. Defaults to authenticated user's repos.\n\nDO NOT CALL: for file contents or diffs (use web_search or fetch_url for that). Requires GITHUB_TOKEN in .env.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "description": "GitHub username (default: inferred from token)"
+                        },
+                        "repo": {
+                            "type": "string",
+                            "description": "Specific repository name (optional, e.g. 'PrivyBot')"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Number of commits to return (default: 10)",
+                            "default": 10
                         }
                     },
                     "required": []
