@@ -6,7 +6,10 @@ autonomous:
   priority:
     - model: "ollama/gemma3:4b"
       provider: "ollama"
-      reason: "Local, free, unlimited"
+      reason: "Local, free, unlimited, lightweight (2.5GB)"
+    - model: "ollama/qwen2.5:3b"
+      provider: "ollama"
+      reason: "Local, good tool calling, daytime backup (2GB)"
     - model: "groq/llama-3.3-70b-versatile"
       provider: "groq"
       reason: "14,400/day, fast"
@@ -20,6 +23,12 @@ autonomous:
 # User conversations (real-time, interactive)
 conversation:
   priority:
+    - model: "ollama/qwen2.5:7b"
+      provider: "ollama"
+      reason: "Local, better reasoning, overnight only (4.5GB)"
+    - model: "ollama/gemma3:4b"
+      provider: "ollama"
+      reason: "Local, lightweight, daytime (2.5GB)"
     - model: "groq/llama-3.3-70b-versatile"
       provider: "groq"
       reason: "Fastest response"
@@ -36,6 +45,9 @@ conversation:
 # Quality tasks (complex reasoning, analysis)
 quality:
   priority:
+    - model: "ollama/qwen2.5:7b"
+      provider: "ollama"
+      reason: "Local, high quality, overnight only (4.5GB)"
     - model: "google/gemini-2.0-flash"
       provider: "google"
       reason: "Best tool calling quality"
@@ -52,12 +64,34 @@ quality:
 # Coding tasks (code generation, debugging)
 coding:
   priority:
+    - model: "ollama/qwen2.5-coder:7b"
+      provider: "ollama"
+      reason: "Local, coding-specialized, overnight only (4.5GB)"
     - model: "qwen/qwen3-coder:free"
       provider: "openrouter"
       reason: "1M context, coding specialist"
     - model: "ollama/gemma3:4b"
       provider: "ollama"
-      reason: "Local, free, unlimited"
+      reason: "Local, free, unlimited, daytime (2.5GB)"
+    - model: "deepseek/deepseek-v4-flash:free"
+      provider: "openrouter"
+      reason: "1M context, excellent"
+    - model: "openrouter/free"
+      provider: "openrouter"
+      reason: "Pool of free models"
+
+# Content tasks (blog skeleton generation, needs quality)
+content:
+  priority:
+    - model: "ollama/llama3.1:8b"
+      provider: "ollama"
+      reason: "Local, high quality, overnight only (5GB)"
+    - model: "ollama/qwen2.5:7b"
+      provider: "ollama"
+      reason: "Local, high quality, overnight only (4.5GB)"
+    - model: "google/gemini-2.0-flash"
+      provider: "google"
+      reason: "Best tool calling quality"
     - model: "deepseek/deepseek-v4-flash:free"
       provider: "openrouter"
       reason: "1M context, excellent"
