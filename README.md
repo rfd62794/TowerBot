@@ -120,18 +120,43 @@ Restart Claude Desktop. PrivyBot tools are now available in any Claude Desktop c
 
 ### Remote Access (SSE transport + Tailscale)
 
-```bash
-# Generate JWT token via Telegram
-/mcp_token 1h
+**Prerequisites:**
+- Tailscale installed and logged in on the machine running PrivyBot
+- `MCP_JWT_SECRET` set in `.env`
 
-# Start MCP server with SSE transport
+**Setup:**
+
+```bash
+# 1. Generate JWT token via Telegram
+/mcp_token 1h  # Options: 15m, 1h, 24h
+
+# 2. Start MCP server with SSE transport
 uv run python infra/mcp/server.py --transport sse --port 8090
 
-# Expose via Tailscale Funnel
+# 3. Expose via Tailscale Funnel (runs in background)
 tailscale funnel --bg 8090
+
+# 4. Get your Tailscale Funnel URL
+tailscale funnel status
+# Returns: https://<tailnet-name>.ts.net
 ```
 
-Connect from claude.ai using the public HTTPS URL (`https://nitro.ts.net/mcp`) with `Authorization: Bearer <token>` header.
+**Connecting from claude.ai:**
+- URL: `https://<tailnet-name>.ts.net/sse`
+- Headers: `Authorization: Bearer <token>`
+
+**Stopping the server:**
+```bash
+# Stop Tailscale Funnel
+tailscale funnel --bg --reset 8090
+
+# Stop MCP server (Ctrl+C in the terminal)
+```
+
+**Notes:**
+- Tailscale Funnel requires a Tailscale account with Funnel enabled
+- The URL is persistent as long as Funnel is running
+- JWT tokens expire automatically — regenerate via `/mcp_token`
 
 ### Exposed Tools
 
