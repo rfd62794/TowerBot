@@ -51,6 +51,7 @@ TEST_FILES = [
     "tests/test_briefing.py",
     "tests/test_tools_repo.py",
     "tests/test_ollama_vram.py",
+    "tests/test_ollama_routing.py",
 ]
 
 
