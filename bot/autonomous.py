@@ -183,6 +183,14 @@ async def run_autonomous_task(task_name: str, send_fn):
         logger.debug(f"Task disabled: {task_name}")
         return
 
+    # Run pre_run function if defined (e.g., system snapshot)
+    pre_run_fn = task.get("pre_run")
+    if pre_run_fn:
+        try:
+            pre_run_fn()
+        except Exception as e:
+            logger.error(f"Pre-run function failed for {task_name}: {e}")
+
     prefix = (
         "[AUTONOMOUS MODE — Robert is not present. "
         "Take action directly. Do not ask clarifying questions. "
