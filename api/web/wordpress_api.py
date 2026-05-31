@@ -62,18 +62,39 @@ class WordPressAPIHandler(BaseAPIHandler):
         except Exception as e:
             return {"error": str(e), "_live_failed": True}
 
-    def update_post(self, post_id: int, content: str = None, status: str = None) -> dict:
+    def update_post(self, post_id: int, title: str = None, content: str = None, status: str = None) -> dict:
         """PUT /wp-json/wp/v2/posts/{id}"""
         # Write operation — bypass self.call() entirely
         try:
             url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/posts/{post_id}"
             data = {}
+            if title:
+                data["title"] = title
             if content:
                 data["content"] = content
             if status:
                 data["status"] = status
+            
             response = requests.put(url, auth=self._get_client(), json=data)
+            
+            # Log response for debugging
+            print(f"[WordPress API] PUT response status: {response.status_code}")
+            print(f"[WordPress API] PUT response body: {response.text[:500]}")
+            
+            # Check for error response
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    return {"error": error_data.get("message", f"HTTP {response.status_code}"), "_live_failed": True}
+                except:
+                    return {"error": f"HTTP {response.status_code}", "_live_failed": True}
+            
             result = response.json()
+            
+            # Validate that we got a proper post object back
+            if not isinstance(result, dict) or "id" not in result:
+                return {"error": f"Invalid response from WordPress: {result}", "_live_failed": True}
+            
             # Invalidate post cache so next read is fresh
             cache.invalidate(self.cache_key(f"post_{post_id}"))
             return result

@@ -63,10 +63,10 @@ class BlogTools(BaseTool):
             "status": result.get("status")
         })
 
-    def update_blog_post(self, post_id: int, content: str = None, status: str = None) -> dict:
-        """Update blog post content or status."""
+    def update_blog_post(self, post_id: int, title: str = None, content: str = None, status: str = None) -> dict:
+        """Update blog post title, content, or status."""
         handler = WordPressAPIHandler()
-        result = handler.update_post(post_id, content, status)
+        result = handler.update_post(post_id, title, content, status)
 
         if "error" in result:
             return self.error(result["error"])
