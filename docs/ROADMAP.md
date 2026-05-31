@@ -11,7 +11,7 @@ PrivyBot is built in 15 phases — from core infrastructure to intelligent perso
 - 46 tools across YouTube, Gmail, Calendar, Tasks, Steam, weather, web search, memory, personal tasks
 - Layer 7 cluster operational: CacheManager, RateLimitManager, PollingManager
 - Self-healing deployment with Telegram-triggered rollback
-- 204/204 tests passing on dev branch
+- 288/288 tests passing on dev branch
 - 5 SDDs, 33 ADRs documenting all architecture decisions
 
 **The gap that remains:** PrivyBot is Stable and Useful. The distance between current state and true Assistant is the intelligence layer — 27 manually seeded facts vs the corpus of hundreds of hours of Claude and Gemini conversation history that contains every architectural decision, project context, and personal detail Robert has shared. Phase 15 closes that gap.
@@ -259,7 +259,7 @@ PrivyBot is built in 15 phases — from core infrastructure to intelligent perso
 - BaseTool return shape ✅ — ok/stale_notice/error_code on all tool returns
 - Caller audit ✅ — all callers updated during Phase 10 migration
 - Error contracts ✅ — standardized via BaseAPIHandler/BaseTool
-- Test assertions ✅ — 204/204 passing with new return shapes
+- Test assertions ✅ — 288/288 passing with new return shapes
 
 **Remaining:**
 - Formal Python type hints (return type annotations, parameter types) on API and tool functions
