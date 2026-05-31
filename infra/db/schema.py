@@ -412,6 +412,32 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
+    # Migration: add budget_tracking table
+    try:
+        _conn.execute("""
+            CREATE TABLE IF NOT EXISTS budget_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recorded_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+                provider TEXT NOT NULL,
+                model_id TEXT NOT NULL,
+                daily_cap_usd REAL,
+                daily_spent_usd REAL DEFAULT 0.0,
+                daily_remaining_usd REAL,
+                reset_at TEXT
+            )
+        """)
+        _conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_budget_tracking_provider_model
+            ON budget_tracking(provider, model_id)
+        """)
+        _conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_budget_tracking_recorded_at
+            ON budget_tracking(recorded_at DESC)
+        """)
+        _conn.commit()
+    except Exception:
+        pass
+
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
     with _lock:
