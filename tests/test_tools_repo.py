@@ -78,7 +78,7 @@ def test_search_pattern():
 @test("filesystem: search_local_code returns empty for non-existent pattern")
 def test_search_no_matches():
     from tools.repo.filesystem import search_local_code
-    result = search_local_code("XYZ_NOT_IN_CODE_12345")
+    result = search_local_code("ZZZXYZZZ_NOT_IN_CODE_999999")
     assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
     assert result.get("total_matches") == 0, "Expected 0 matches for non-existent pattern"
 
