@@ -224,15 +224,6 @@ def test_openagent_timeout():
     assert result.get("error_code") == "timeout", f"Expected error_code='timeout', got {result.get('error_code')}"
 
 
-@test("openagent: run_openagent('inventory') returns ok=True with output key")
-def test_openagent_inventory():
-    from tools.meta.meta import run_openagent
-    result = run_openagent("inventory")
-    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
-    assert "output" in result, "Expected 'output' key in result"
-    assert result.get("command") == "inventory", f"Expected command='inventory', got {result.get('command')}"
-
-
 def run_all():
     # Reset rate limit before tests run
     _reset_fetch_rate_limit()

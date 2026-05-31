@@ -130,6 +130,25 @@ This is not a task for tonight. But it's worth naming — the convergence point 
 
 - 4 autonomous tasks running overnight
 - Tomorrow's 7AM briefing will show first overnight actions
-- Plan docs saved: autonomous-expansion.md, budget-tracking-mcp-expansion.md
-- OpenAgent already installed on machine
+- Plan docs saved: autonomous-expansion.md, budget-tracking-mcp-expansion.md, self-expansion-loop.md
+- openagent-directive added to PrivyBot dependencies
 - GitHub PAT already configured
+- run_openagent tool implemented
+
+## 6. OpenAgent Integration Blocker
+
+**Bug discovered:** openagent-directive 0.2.2 has a NameError in elaborator_agent.py:
+```
+NameError: name 'List' is not defined. Did you mean: 'list'?
+```
+
+The package uses `List` without importing it from typing. This prevents `openagent init` from running.
+
+**Auth requirement:** OpenAgent uses OPENROUTER_API_KEY (from adk.json), not GOOGLE_API_KEY. PrivyBot already has this configured.
+
+**Resolution options:**
+1. Fix the bug in C:\Github\OpenAgent and republish
+2. Wait for upstream fix
+3. Fork and fix locally
+
+**Status:** Blocked until package is fixed. The run_openagent tool implementation is complete but cannot be tested until the package works.

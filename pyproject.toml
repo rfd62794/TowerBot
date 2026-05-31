@@ -20,6 +20,8 @@ dependencies = [
     "google-api-python-client>=2.0.0",
     "ddgs>=6.0.0",
     "apscheduler>=3.10.4,<4.0",
+    "beautifulsoup4>=4.9.0",
+    "pytz>=2024.0",
     "openagent-directive>=0.2.2",
 ]
 
@@ -28,3 +30,6 @@ privybot = "privybot:main"
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+openagent-directive = { path = "../OpenAgent", editable = true }

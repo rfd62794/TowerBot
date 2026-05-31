@@ -133,6 +133,19 @@ wheels = [
 ]
 
 [[package]]
+name = "beautifulsoup4"
+version = "4.14.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "soupsieve" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c3/b0/1c6a16426d389813b48d95e26898aff79abbde42ad353958ad95cc8c9b21/beautifulsoup4-4.14.3.tar.gz", hash = "sha256:6292b1c5186d356bba669ef9f7f051757099565ad9ada5dd630bd9de5fa7fb86", size = 627737, upload-time = "2025-11-30T15:08:26.084Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/39/47f9197bdd44df24d67ac8893641e16f386c984a0619ef2ee4c51fbbc019/beautifulsoup4-4.14.3-py3-none-any.whl", hash = "sha256:0918bfe44902e6ad8d57732ba310582e98da931428d231a5ecb9e7c703a735bb", size = 107721, upload-time = "2025-11-30T15:08:24.087Z" },
+]
+
+[[package]]
 name = "brotli"
 version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -824,7 +837,7 @@ wheels = [
 [[package]]
 name = "openagent-directive"
 version = "0.2.2"
-source = { registry = "https://pypi.org/simple" }
+source = { editable = "../OpenAgent" }
 dependencies = [
     { name = "click" },
     { name = "gitpython" },
@@ -837,9 +850,19 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0f/e2/fb20641fec57daa245d9da49b26c606e340aeeae153ec7427505ff65d5a9/openagent_directive-0.2.2.tar.gz", hash = "sha256:b59aa28120dcd5543d697dc46879b95aa233ffb9f213fe2977bde9bad202c75d", size = 364104, upload-time = "2026-04-30T02:51:59.422Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/32/02f677d27b19d12fc2081217935693b0f5542769680222e090ef056223bf/openagent_directive-0.2.2-py3-none-any.whl", hash = "sha256:f2af2c6d1f525fdc88548243719867019e730268df1bdd070a8dc67d2b1a1aff", size = 129764, upload-time = "2026-04-30T02:51:57.722Z" },
+
+[package.metadata]
+requires-dist = [
+    { name = "click", specifier = ">=8.1.7" },
+    { name = "gitpython", specifier = ">=3.1.46" },
+    { name = "google-adk", specifier = ">=1.27.0" },
+    { name = "loguru", specifier = ">=0.7.3" },
+    { name = "openai", specifier = ">=2.26.0" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
+    { name = "requests", specifier = ">=2.32.5" },
+    { name = "rich", specifier = ">=14.3.3" },
 ]
 
 [[package]]
@@ -949,6 +972,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "apscheduler" },
+    { name = "beautifulsoup4" },
     { name = "ddgs" },
     { name = "google-api-python-client" },
     { name = "google-auth" },
@@ -959,6 +983,7 @@ dependencies = [
     { name = "openai" },
     { name = "python-dotenv" },
     { name = "python-telegram-bot" },
+    { name = "pytz" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "rich" },
@@ -968,16 +993,18 @@ dependencies = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9.0" },
     { name = "apscheduler", specifier = ">=3.10.4,<4.0" },
+    { name = "beautifulsoup4", specifier = ">=4.9.0" },
     { name = "ddgs", specifier = ">=6.0.0" },
     { name = "google-api-python-client", specifier = ">=2.0.0" },
     { name = "google-auth", specifier = ">=2.0.0" },
     { name = "google-auth-httplib2", specifier = ">=0.1.0" },
     { name = "google-auth-oauthlib", specifier = ">=1.0.0" },
     { name = "loguru", specifier = ">=0.7.0" },
-    { name = "openagent-directive", specifier = ">=0.2.2" },
+    { name = "openagent-directive", editable = "../OpenAgent" },
     { name = "openai", specifier = ">=1.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-telegram-bot", specifier = ">=21.0" },
+    { name = "pytz", specifier = ">=2024.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.31.0" },
     { name = "rich", specifier = ">=13.0.0" },
@@ -1189,6 +1216,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pytz"
+version = "2026.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/46/dd499ec9038423421951e4fad73051febaa13d2df82b4064f87af8b8c0c3/pytz-2026.2.tar.gz", hash = "sha256:0e60b47b29f21574376f218fe21abc009894a2321ea16c6754f3cad6eb7cdd6a", size = 320861, upload-time = "2026-05-04T01:35:29.667Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/dd/96da98f892250475bdf2328112d7468abdd4acc7b902b6af23f4ed958ea0/pytz-2026.2-py2.py3-none-any.whl", hash = "sha256:04156e608bee23d3792fd45c94ae47fae1036688e75032eea2e3bf0323d1f126", size = 510141, upload-time = "2026-05-04T01:35:27.408Z" },
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1309,6 +1345,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f8/5c/48a7d9495be3d1c651198fd99dbb6ce190e2274d0f28b9051307bdec6b85/socksio-1.0.0.tar.gz", hash = "sha256:f88beb3da5b5c38b9890469de67d0cb0f9d494b78b106ca1845f96c10b91c4ac", size = 19055, upload-time = "2020-04-17T15:50:34.664Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/37/c3/6eeb6034408dac0fa653d126c9204ade96b819c936e136c5e8a6897eee9c/socksio-1.0.0-py3-none-any.whl", hash = "sha256:95dc1f15f9b34e8d7b16f06d74b8ccf48f609af32ab33c608d08761c5dcbb1f3", size = 12763, upload-time = "2020-04-17T15:50:31.878Z" },
+]
+
+[[package]]
+name = "soupsieve"
+version = "2.8.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/2c/0a5f6f8ee0d5589e48c7640213ed5175d52cf540a06725b628cc1a45d6ce/soupsieve-2.8.4.tar.gz", hash = "sha256:e121fd02e975c695e4e9e8774a5ee35d74714b59307868dcc5319ad2d9e3328e", size = 121110, upload-time = "2026-05-24T13:55:57.154Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/f5/0c41cb68dcae6b7de4fac4188a3a9589e21fb31df21ea3a2e888db95e6c9/soupsieve-2.8.4-py3-none-any.whl", hash = "sha256:e7e6b0769c8f51ed59acab6e994b00621096cfb1c640a7509295987388fbaf65", size = 37304, upload-time = "2026-05-24T13:55:55.406Z" },
 ]
 
 [[package]]
