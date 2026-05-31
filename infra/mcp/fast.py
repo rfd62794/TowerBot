@@ -23,15 +23,6 @@ init_db()
 
 def get_state_summary() -> dict:
     """Lightweight version of read_current_state — DB + git log, no file reads."""
-    # Test count from DB (approximate via agent_actions table)
-    try:
-        from infra.db.autonomous import get_overnight_actions
-        actions = get_overnight_actions(hours=24)
-        test_count = 330  # Known from verify.py
-    except Exception:
-        test_count = 0
-        actions = []
-
     # Last commit from git
     try:
         result = subprocess.run(
@@ -45,14 +36,18 @@ def get_state_summary() -> dict:
     except Exception:
         last_commit = "unknown"
 
-    # Overnight actions
-    overnight = [{"task_name": a.get("task_name", "unknown"), "ran_at": a.get("ran_at", "")} for a in actions]
+    # Overnight actions from DB
+    try:
+        overnight = get_overnight_actions(hours=12)
+        overnight_summary = [{"task_name": a.get("task_name", "unknown"), "ran_at": a.get("ran_at", "")} for a in overnight]
+    except Exception:
+        overnight_summary = []
 
     return {
         "ok": True,
-        "tests": test_count,
         "last_commit": last_commit,
-        "overnight_actions": overnight,
+        "overnight_actions": len(overnight_summary),
+        "overnight_summary": overnight_summary,
     }
 
 
@@ -65,18 +60,18 @@ def get_quick_opportunities() -> dict:
         # Find most recent self_expansion_planner result
         for action in actions:
             if action.get("task_name") == "self_expansion_planner":
-                result = action.get("result", "")
-                if result and "opportunities" in result.lower():
-                    return {
-                        "ok": True,
-                        "opportunities": [result[:500]],  # Truncated summary
-                        "source": "cached from agent_actions",
-                    }
+                return {
+                    "ok": True,
+                    "source": "last_self_expansion_planner_run",
+                    "result": action.get("result", "No result recorded"),
+                    "ran_at": action.get("ran_at"),
+                }
         
         return {
             "ok": True,
-            "opportunities": [],
-            "source": "no cached opportunities found",
+            "source": "last_self_expansion_planner_run",
+            "result": "No run recorded yet",
+            "ran_at": None,
         }
     except Exception as e:
         return {
