@@ -12,8 +12,12 @@ def record_agent_action(task_name: str, result: str, duration_ms: int, urgent: i
         task_name: Name of the task (e.g., "email_triage")
         result: Task output or error message
         duration_ms: Execution time in milliseconds
-        urgent: 1 if result starts with "URGENT:", 0 otherwise
+        urgent: 1 if result starts with "URGENT:", 0 otherwise (auto-detected if not provided)
     """
+    # Auto-detect urgent flag if not explicitly provided
+    if urgent == 0 and result.upper().startswith("URGENT:"):
+        urgent = 1
+
     ran_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     _exec(
         "INSERT INTO agent_actions (task_name, ran_at, result, duration_ms, urgent) VALUES (?, ?, ?, ?, ?)",
