@@ -190,6 +190,42 @@ def test_calculate_invalid():
     assert "error" in result, "Expected 'error' key"
 
 
+@test("openagent: run_openagent is in TOOL_REGISTRY")
+def test_openagent_in_registry():
+    from tools.registry import TOOL_REGISTRY
+    assert "run_openagent" in TOOL_REGISTRY, "run_openagent not in TOOL_REGISTRY"
+
+
+@test("openagent: run_openagent returns ok=False with error_code='not_installed' when command not found")
+def test_openagent_not_installed():
+    from tools.meta.meta import run_openagent
+    import unittest.mock as mock
+    with mock.patch("subprocess.run", side_effect=FileNotFoundError):
+        result = run_openagent("analyze")
+    assert result.get("ok") == False, "Expected ok=False when command not found"
+    assert result.get("error_code") == "not_installed", f"Expected error_code='not_installed', got {result.get('error_code')}"
+
+
+@test("openagent: run_openagent returns ok=False with error_code='timeout' on TimeoutExpired")
+def test_openagent_timeout():
+    from tools.meta.meta import run_openagent
+    import subprocess
+    import unittest.mock as mock
+    with mock.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("openagent", 120)):
+        result = run_openagent("analyze")
+    assert result.get("ok") == False, "Expected ok=False on timeout"
+    assert result.get("error_code") == "timeout", f"Expected error_code='timeout', got {result.get('error_code')}"
+
+
+@test("openagent: run_openagent('inventory') returns ok=True with output key")
+def test_openagent_inventory():
+    from tools.meta.meta import run_openagent
+    result = run_openagent("inventory")
+    assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
+    assert "output" in result, "Expected 'output' key in result"
+    assert result.get("command") == "inventory", f"Expected command='inventory', got {result.get('command')}"
+
+
 def run_all():
     # Reset rate limit before tests run
     _reset_fetch_rate_limit()
