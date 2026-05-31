@@ -412,7 +412,7 @@ async def respond(message: str, thread_id: str, model_key: str = "default") -> s
         messages.extend(get_context(thread_id, 10))
 
         allow_rotation = (model_key == "default")
-        model = MODELS.get(model_key) or MODELS["default"]
+        model = get_available_model() or MODELS.get(model_key) or MODELS["default"]
         resp, model = await _chat(model, messages, ALL_TOOLS, allow_rotation)
         msg = resp.choices[0].message
 
