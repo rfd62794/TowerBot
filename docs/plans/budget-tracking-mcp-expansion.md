@@ -51,7 +51,16 @@ Token expires → access revoked
 - ADR-033 update: stdio → HTTP/SSE transport
 - Add token auth layer
 - Add `/mcp_token [minutes]` Telegram command
-- Requires internet-reachable endpoint (ngrok dev, port forwarding prod)
+- **Tailscale Funnel for public URL:**
+  ```powershell
+  tailscale funnel --bg 8090
+  ```
+  - Public URL: `https://[device].[tailnet].ts.net`
+  - No router config, no static IP, no dynamic DNS
+  - Automatic HTTPS certificate
+  - Free tier includes Funnel
+  - Stable URL as long as device name doesn't change
+  - Tower deployment: move Funnel there for always-on prod URL
 
 **Capability:** Query live data, add memories, check autonomous status from any Claude conversation — not just Desktop.
 
