@@ -137,18 +137,23 @@ This is not a task for tonight. But it's worth naming — the convergence point 
 
 ## 6. OpenAgent Integration Blocker
 
-**Bug discovered:** openagent-directive 0.2.2 has a NameError in elaborator_agent.py:
+**Bug 1 discovered:** openagent-directive 0.2.2 has a NameError in elaborator_agent.py:
 ```
 NameError: name 'List' is not defined. Did you mean: 'list'?
 ```
+**Status:** Fixed locally by adding `List` to imports.
 
-The package uses `List` without importing it from typing. This prevents `openagent init` from running.
+**Bug 2 discovered:** DocumentationAgent is abstract and can't be instantiated:
+```
+TypeError: Can't instantiate abstract class DocumentationAgent without an implementation for abstract method 'execute'
+```
+**Status:** Not fixed. OpenAgent has multiple bugs preventing `openagent analyze` from running.
 
 **Auth requirement:** OpenAgent uses OPENROUTER_API_KEY (from adk.json), not GOOGLE_API_KEY. PrivyBot already has this configured.
 
 **Resolution options:**
-1. Fix the bug in C:\Github\OpenAgent and republish
-2. Wait for upstream fix
-3. Fork and fix locally
+1. Fix all bugs in C:\Github\OpenAgent and republish
+2. Wait for upstream fixes
+3. Defer OpenAgent integration until package is stable
 
-**Status:** Blocked until package is fixed. The run_openagent tool implementation is complete but cannot be tested until the package works.
+**Status:** Blocked until OpenAgent package is fixed. The run_openagent tool implementation is complete but cannot be tested until the package works.
