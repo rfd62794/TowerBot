@@ -55,6 +55,21 @@ TASKS = {
             "Report: last_week count, change from prior week, trend direction."
         ),
     },
+    "self_expansion_planner": {
+        "schedule_type": "cron",
+        "hour": 7,
+        "minute": 0,
+        "enabled": True,
+        "prompt": (
+            "Call read_current_state() to get current system state. "
+            "Call find_opportunities(focus='next phase') to identify top priority. "
+            "Call elaborate_task() on the top opportunity description. "
+            "Call generate_directive() to create the RFD directive template. "
+            "Fill in the directive template with specific implementation details. "
+            "Save completed directive as memory 'Proposed directive: [name]'. "
+            "Mark URGENT so Robert sees it in morning briefing."
+        ),
+    },
 }
 
 
