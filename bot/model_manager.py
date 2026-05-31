@@ -45,6 +45,8 @@ TOOL_INCOMPATIBLE = {
     "z-ai/glm-4.5-air:free",  # Known incompatibility
     "poolside/laguna-xs.2:free",  # Leaks raw XML tool calls
     "poolside/laguna-m.1:free",  # Leaks raw XML tool calls
+    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",  # Leaks raw XML tool calls
+    "nvidia/nemotron-3-super-120b-a12b:free",  # Leaks raw XML tool calls
 }
 
 
