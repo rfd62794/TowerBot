@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 import anyio
+import mcp.types as types
 from mcp.server.lowlevel import Server
 from mcp.server.sse import SseServerTransport
 from mcp.server.stdio import stdio_server
@@ -46,7 +47,7 @@ server = Server("privybot")
 
 
 @server.list_tools()
-async def list_tools() -> list[dict]:
+async def list_tools() -> list[types.Tool]:
     """List all exposed MCP tools."""
     tools = []
     for name in MCP_EXPOSED_TOOLS:
@@ -55,17 +56,17 @@ async def list_tools() -> list[dict]:
             continue
 
         definition = TOOL_REGISTRY[name]["definition"]
-        tools.append({
-            "name": name,
-            "description": definition["function"]["description"],
-            "inputSchema": definition["function"]["parameters"],
-        })
+        tools.append(types.Tool(
+            name=name,
+            description=definition["function"]["description"],
+            inputSchema=definition["function"]["parameters"],
+        ))
 
     return tools
 
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[dict]:
+async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Execute a tool call."""
     if name not in MCP_EXPOSED_TOOLS:
         raise ValueError(f"Tool {name} is not exposed via MCP")
@@ -80,10 +81,10 @@ async def call_tool(name: str, arguments: dict) -> list[dict]:
     if inspect.iscoroutine(result):
         result = await result
 
-    return [{
-        "type": "text",
-        "text": json.dumps(result, default=str),
-    }]
+    return [types.TextContent(
+        type="text",
+        text=json.dumps(result, default=str),
+    )]
 
 
 async def run_stdio():
