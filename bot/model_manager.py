@@ -55,15 +55,16 @@ MODEL_LIMITS = {
     "ollama": {"rpm": None, "rpd": None},
 }
 
-# Known tool-capable free models — fallback only if live discovery fails.
-# deepseek/deepseek-v4-flash:free removed — 404 on OpenRouter (model gone)
+# Known tool-capable free models in priority order.
+# Specific known-good models come first; openrouter/free is last because its
+# auto-router may select tool-incompatible models unpredictably.
 SEED_FREE_MODELS = [
-    "openrouter/free",  # primary — auto-routes across all free models with tool calling
-    "openai/gpt-oss-120b:free",  # OpenAI open-weight, 117B
-    "moonshotai/kimi-k2.6:free",  # solid tool calling
-    "google/gemma-4-31b-it:free",  # 256K context, function calling
+    "google/gemma-4-31b-it:free",       # known-good tool calling, 256K context
+    "moonshotai/kimi-k2.6:free",        # known-good tool calling
+    "openai/gpt-oss-120b:free",         # OpenAI open-weight, 117B
     "nex-agi/deepseek-v3.1-nex-n1:free",  # agent tasks, tool use
-    "qwen/qwen3-coder:free",  # 1M context, coding
+    "qwen/qwen3-coder:free",            # 1M context, coding
+    "openrouter/free",                  # last — auto-router, model selection unpredictable
 ]
 
 # Models with tool-calling format incompatibilities (leak raw tool-call text)
@@ -236,17 +237,9 @@ def get_available_model() -> str | None:
         except RuntimeError:
             pass  # no running loop (test context) — do not create the coroutine
     
-    # Priority 1: openrouter/free
+    # Priority 1: SEED_FREE_MODELS in order (known-good first, openrouter/free last)
     throttled = set(get_throttled_models())
-    if "openrouter/free" not in throttled and "openrouter/free" not in TOOL_INCOMPATIBLE:
-        should_skip, skip_reason = should_skip_model("openrouter/free")
-        if not should_skip:
-            return "openrouter/free"
-    
-    # Priority 2: SEED_FREE_MODELS
     for model_id in SEED_FREE_MODELS:
-        if model_id == "openrouter/free":
-            continue  # Already checked
         if model_id not in throttled and model_id not in TOOL_INCOMPATIBLE:
             should_skip, skip_reason = should_skip_model(model_id)
             if not should_skip:
