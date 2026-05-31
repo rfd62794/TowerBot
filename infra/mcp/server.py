@@ -4,6 +4,7 @@ Exposes curated PrivyBot tools via MCP for Claude (Desktop and claude.ai).
 """
 
 import argparse
+import asyncio
 import inspect
 import json
 import logging
@@ -29,7 +30,7 @@ if str(_root) not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(_root / ".env")
 
-from infra.mcp.config import MCP_EXPOSED_TOOLS
+from infra.mcp.config import MCP_EXPOSED_TOOLS, MCP_FAST_VARIANTS
 from tools.registry import TOOL_REGISTRY
 from infra.db.schema import init_db
 
@@ -71,19 +72,49 @@ async def list_tools() -> list[types.Tool]:
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-    """Execute a tool call."""
+    """Execute a tool call with fast-first routing and timeout protection."""
     if name not in MCP_EXPOSED_TOOLS:
         raise ValueError(f"Tool {name} is not exposed via MCP")
 
     if name not in TOOL_REGISTRY:
         raise ValueError(f"Tool {name} not found in TOOL_REGISTRY")
 
-    fn = TOOL_REGISTRY[name]["fn"]
-    result = fn(**arguments)
+    # Fast-first routing: try fast variant if available
+    fast_fn = MCP_FAST_VARIANTS.get(name)
+    if fast_fn:
+        try:
+            result = fast_fn(**arguments)
+            if result and isinstance(result, dict) and result.get("ok"):
+                return [types.TextContent(
+                    type="text",
+                    text=json.dumps(result, default=str),
+                )]
+        except Exception as e:
+            logger.warning(f"Fast variant failed for {name}: {e}, falling back to full tool")
 
-    # Handle async tools
-    if inspect.iscoroutine(result):
-        result = await result
+    # Full tool execution with timeout
+    fn = TOOL_REGISTRY[name]["fn"]
+    
+    def run_tool():
+        result = fn(**arguments)
+        if inspect.iscoroutine(result):
+            loop = asyncio.get_event_loop()
+            result = loop.run_until_complete(result)
+        return result
+
+    try:
+        result = await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(None, run_tool),
+            timeout=30.0
+        )
+    except asyncio.TimeoutError:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "ok": False,
+                "error": f"{name} timed out after 30s — try a more specific query"
+            })
+        )]
 
     return [types.TextContent(
         type="text",

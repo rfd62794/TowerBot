@@ -112,5 +112,9 @@ class MemoryManager:
             logger.warning("Chroma search failed, falling back to SQLite LIKE: %s", e)
             return _sql_get_memories(query, limit)
 
+    def search_simple(self, query: str, limit: int = 10) -> list[dict]:
+        """Fast SQLite LIKE only — no Chroma, no Ollama. For timeout-sensitive MCP calls."""
+        return _sql_get_memories(query, limit)
+
 
 memory_manager = MemoryManager()
