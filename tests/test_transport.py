@@ -9,6 +9,13 @@ _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
+# Skip tests if OpenAI credentials not available (bot.agent initializes client at module level)
+if not os.getenv("OPENAI_API_KEY") and not os.getenv("OPENAI_ADMIN_KEY"):
+    print("  ⚠ transport: skipped (OPENAI_API_KEY not set)")
+    def run_all() -> tuple[int, int]:
+        return 0, 0
+    sys.exit(0)
+
 from bot.transport import _chunk_message, _thinking_thread
 
 
