@@ -318,6 +318,26 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
+    # Migration: add agent_actions table
+    try:
+        _conn.execute("""
+            CREATE TABLE IF NOT EXISTS agent_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_name TEXT NOT NULL,
+                ran_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+                result TEXT,
+                duration_ms INTEGER,
+                urgent INTEGER DEFAULT 0
+            )
+        """)
+        _conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_agent_actions_ran
+            ON agent_actions(task_name, ran_at DESC)
+        """)
+        _conn.commit()
+    except Exception:
+        pass
+
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
     with _lock:

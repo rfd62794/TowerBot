@@ -27,9 +27,11 @@ from infra.db import init_db
 from bot.report import init_report
 from bot.transport import handle_message
 from bot.scheduler import run_scheduler, check_missed_briefing
+from bot.autonomous import setup_autonomous_scheduler
 from infra.polling import polling_manager
 from telegram.ext import ApplicationBuilder, MessageHandler, filters
 from telegram.request import HTTPXRequest
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Track startup time for /status command
 STARTUP_TIME = time.time()
@@ -135,6 +137,15 @@ if __name__ == "__main__":
         asyncio.create_task(check_missed_briefing(send_to_telegram))
         asyncio.create_task(_start_polling())
 
+        # Start APScheduler for autonomous tasks
+        ap_scheduler = AsyncIOScheduler(timezone="America/New_York")
+        setup_autonomous_scheduler(ap_scheduler, send_to_telegram)
+        ap_scheduler.start()
+        logging.info("[startup] APScheduler started with autonomous tasks")
+
+        # Store scheduler for cleanup
+        application._ap_scheduler = ap_scheduler
+
     # HTTPXRequest with extended timeouts for Windows TLS handshake reliability
     request = HTTPXRequest(
         connection_pool_size=8,
@@ -163,6 +174,14 @@ if __name__ == "__main__":
 
     init_report(send_to_telegram)
     app.add_error_handler(on_error)
+
+    # Add shutdown handler for APScheduler
+    async def on_shutdown(application):
+        if hasattr(application, "_ap_scheduler"):
+            application._ap_scheduler.shutdown(wait=False)
+            logging.info("[shutdown] APScheduler stopped")
+
+    app.add_post_shutdown_handler(on_shutdown)
 
     # Run with retry wrapper for TLS errors
     start_with_retry(app)

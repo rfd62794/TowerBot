@@ -144,6 +144,11 @@ from infra.db.polling_db import (
     get_all_last_polls,
 )
 
+from infra.db.autonomous import (
+    record_agent_action,
+    get_overnight_actions,
+)
+
 __all__ = [
     "DB_PATH", "init_db",
     "create_thread", "update_thread_name", "update_thread_active", "list_threads",
@@ -172,4 +177,5 @@ __all__ = [
     "get_last_stable_commit", "get_last_deploy", "get_deploy_history",
     "get_api_state", "upsert_api_state", "log_api_call", "get_call_log", "get_all_api_states",
     "record_poll", "get_last_poll", "get_all_last_polls",
+    "record_agent_action", "get_overnight_actions",
 ]

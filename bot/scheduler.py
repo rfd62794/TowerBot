@@ -19,6 +19,7 @@ from infra.db import (
     get_channel_history, get_tasks,
     get_last_stable_commit, get_last_deploy, record_deploy, mark_verify_passed, mark_stable,
     get_personal_tasks, get_tasks_due_soon, mark_reminded, already_reminded,
+    get_overnight_actions,
 )
 
 logger = logging.getLogger("privy.scheduler")
@@ -86,6 +87,18 @@ async def morning_briefing(send_fn) -> None:
             msg += "\n"
         else:
             msg = f"📺 Good morning Robert.\n\n"
+
+        # Add overnight autonomous actions
+        try:
+            overnight = get_overnight_actions()
+            if overnight:
+                msg += f"🤖 Overnight ({len(overnight)} tasks ran):\n"
+                for action in overnight[:5]:
+                    prefix = "🚨" if action["urgent"] else "•"
+                    summary = (action["result"] or "")[:120]
+                    msg += f"{prefix} {action['task_name']}: {summary}\n"
+        except Exception as e:
+            logger.debug(f"Overnight actions check failed: {e}")
 
         # Current week
         current = get_channel_summary(days=7)
