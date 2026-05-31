@@ -96,7 +96,10 @@ def test_search_file_pattern():
 @test("audit: audit_repo_compliance returns ok=True")
 def test_audit_repo_compliance():
     from tools.repo.audit import audit_repo_compliance
-    result = audit_repo_compliance()
+    import unittest.mock as mock
+    # Mock _get_test_floor_status to avoid verify.py subprocess loop
+    with mock.patch("tools.repo.audit._get_test_floor_status", return_value={"passing": 239, "required": 239, "status": "ok"}):
+        result = audit_repo_compliance()
     assert result.get("ok") == True, f"Expected ok=True, got {result.get('ok')}"
     assert "test_floor" in result, "Expected 'test_floor' key"
     assert "phase_status" in result, "Expected 'phase_status' key"
@@ -110,7 +113,9 @@ def test_audit_repo_compliance():
 @test("audit: test_floor has passing and required counts")
 def test_audit_test_floor():
     from tools.repo.audit import audit_repo_compliance
-    result = audit_repo_compliance()
+    import unittest.mock as mock
+    with mock.patch("tools.repo.audit._get_test_floor_status", return_value={"passing": 239, "required": 239, "status": "ok"}):
+        result = audit_repo_compliance()
     test_floor = result.get("test_floor", {})
     assert "passing" in test_floor, "Expected 'passing' in test_floor"
     assert "required" in test_floor, "Expected 'required' in test_floor"
@@ -122,7 +127,9 @@ def test_audit_test_floor():
 @test("audit: phase_status has current and completion")
 def test_audit_phase_status():
     from tools.repo.audit import audit_repo_compliance
-    result = audit_repo_compliance()
+    import unittest.mock as mock
+    with mock.patch("tools.repo.audit._get_test_floor_status", return_value={"passing": 239, "required": 239, "status": "ok"}):
+        result = audit_repo_compliance()
     phase_status = result.get("phase_status", {})
     assert "current" in phase_status, "Expected 'current' in phase_status"
     assert "completion" in phase_status, "Expected 'completion' in phase_status"
@@ -133,7 +140,9 @@ def test_audit_phase_status():
 @test("audit: spec_drift is a list")
 def test_audit_spec_drift():
     from tools.repo.audit import audit_repo_compliance
-    result = audit_repo_compliance()
+    import unittest.mock as mock
+    with mock.patch("tools.repo.audit._get_test_floor_status", return_value={"passing": 239, "required": 239, "status": "ok"}):
+        result = audit_repo_compliance()
     spec_drift = result.get("spec_drift", [])
     assert isinstance(spec_drift, list), "Expected spec_drift to be a list"
 
@@ -141,7 +150,9 @@ def test_audit_spec_drift():
 @test("audit: doc_currency is a list")
 def test_audit_doc_currency():
     from tools.repo.audit import audit_repo_compliance
-    result = audit_repo_compliance()
+    import unittest.mock as mock
+    with mock.patch("tools.repo.audit._get_test_floor_status", return_value={"passing": 239, "required": 239, "status": "ok"}):
+        result = audit_repo_compliance()
     doc_currency = result.get("doc_currency", [])
     assert isinstance(doc_currency, list), "Expected doc_currency to be a list"
 
@@ -149,7 +160,9 @@ def test_audit_doc_currency():
 @test("audit: constitutional_violations is a list")
 def test_audit_constitutional_violations():
     from tools.repo.audit import audit_repo_compliance
-    result = audit_repo_compliance()
+    import unittest.mock as mock
+    with mock.patch("tools.repo.audit._get_test_floor_status", return_value={"passing": 239, "required": 239, "status": "ok"}):
+        result = audit_repo_compliance()
     violations = result.get("constitutional_violations", [])
     assert isinstance(violations, list), "Expected constitutional_violations to be a list"
 
