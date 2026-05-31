@@ -24,6 +24,9 @@ projects:
   - key: privybot_status
     content: Built May 29 2026. Running on laptop. Tower deploy this weekend.
     layer: project
+  - key: privybot_system_state
+    content: "PrivyBot state May 31 2026: 69 tools, 261 tests passing, 6 autonomous tasks running overnight, self-expansion loop closed via tools/repo/ (13 tools). WordPress blog pipeline live. Phase 16 complete. Budget tracking and MCP HTTP auth are next session priorities."
+    layer: project
   - key: reactreel_status
     content: Planned YouTube Shorts SaaS. OAuth hardening this weekend. Robert is User 1.
     layer: project
@@ -97,4 +100,19 @@ content:
     layer: content
   - key: eic_game
     content: Everything is Crab — Steam roguelite evolution game by a solo dev. Roberts best performing YouTube series. Top Short 595 views. Not Roblox. Not Electronic Intelligence Community.
+    layer: content
+  - key: content_pipeline_inventory
+    content: "70+ post topics inventoried across Developer Identity, AI/Directive Writing, Shipping, Content/Brand, Business, Game Design, Technical Craft, Personal. Gumroad target: 'How I Write Directives That Coding Agents Actually Follow' — $19-29 PDF. Five posts become the guide."
+    layer: content
+  - key: blog_humanization_status
+    content: "PhantomArbiter post rewritten May 29 using RFD Content Frame. 3 remaining posts need humanization before new posts created. Fix existing before adding new."
+    layer: content
+  - key: content_extraction_process
+    content: "Five-question extraction: 1) One scene stream of consciousness — where were you, what happened 2) What surprised you, one sentence 3) What was the friction, honest 4) What you know now, distilled lesson 5) What changed next, forward motion. Agent asks, Robert answers raw, agent shapes the frame."
+    layer: content
+  - key: content_distribution_chain
+    content: "Distribution chain: rfditservices.com primary → LinkedIn same day (420 followers, developer audience) → Reddit same week (r/ClaudeAI, r/ChatGPTPromptEngineering, r/LocalLLaMA) → Dev.to → Gumroad after 5 posts."
+    layer: content
+  - key: openagent_pypi_baseline
+    content: "openagent-directive PyPI baseline May 2026: ~3 real downloads/week, ~60/month total (mostly automated bots/mirrors). ~10-20 actual users. Python Null version dominates = bots. Launched April 29 2026. No second promotion wave yet. Bug fixed locally, 0.2.3 not yet published."
     layer: content
