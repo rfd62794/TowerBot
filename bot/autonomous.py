@@ -12,38 +12,58 @@ logger = logging.getLogger("privy.autonomous")
 
 # Fallback micro-tasks for when primary tasks find nothing
 FALLBACK_TASKS = [
+    # Post builder — runs as primary fallback, advances one stage
     (
-        "Pick one unstarted post topic from the content pipeline inventory "
-        "(memory: 'content_pipeline_inventory'). Write Question 1 of the "
-        "five-question extraction — the specific scene prompt Robert would "
-        "need to answer. Save as memory 'Q1 ready: [topic]'."
+        "Check memories for post pipeline state: look for any memory starting "
+        "with 'Q1 ready:', 'Research:', 'Skeleton:', or 'Draft:'. "
+        "Find the most advanced post in progress. "
+        "\n\n"
+        "If NO post in progress: "
+        "Pick the highest-resonance topic from content_pipeline_inventory memory. "
+        "Generate the Q1 prompt — the specific scene question Robert needs to answer. "
+        "Save as memory 'Q1 ready: [topic]'. Stop here. "
+        "\n\n"
+        "If Q1 ready but NO research: "
+        "Search for context about the topic: use get_recent_commits, get_itch_stats, "
+        "search_local_code for related code patterns, web_search if relevant. "
+        "Gather 3-5 concrete facts that would help Robert answer the questions. "
+        "Save as memory 'Research: [topic] — [key findings in 2-3 sentences]'. Stop. "
+        "\n\n"
+        "If research done but NO skeleton: "
+        "Build a WordPress post skeleton with 5 labeled sections "
+        "(MOMENT, SURPRISE, STRUGGLE, LESSON, NEXT). "
+        "For each section: write the specific prompt question Robert needs to answer "
+        "AND include the relevant research context beneath it. "
+        "Save as memory 'Skeleton: [topic]'. Stop. "
+        "\n\n"
+        "If skeleton done but NO WordPress draft: "
+        "Read the skeleton from memory. Call create_blog_draft() with the full "
+        "skeleton content as a formatted WordPress post. "
+        "Save as memory 'Draft: [topic] — post_id: [N] — edit: [URL]'. "
+        "Mark this result URGENT. Stop. "
+        "\n\n"
+        "RULE: Advance exactly ONE stage per run. Never skip stages. "
+        "Always stop after completing the current stage."
+    ),
+    # Variety fallbacks for when post is at stage 4 (waiting for Robert)
+    (
+        "Update one stale metric in memory (anything with a date older than 3 days "
+        "that can be refreshed with available tools). Update with fresh value + date."
     ),
     (
-        "Find one stale metric in memory (anything with a date older than 3 days "
-        "that can be refreshed). Use available tools to get fresh data. "
-        "Update the memory with the new value and today's date."
+        "Find one correlation between this week's commits and itch.io or YouTube data. "
+        "One specific finding. Save as memory 'Weekly insight: [date] — [finding]'."
     ),
     (
-        "Look at this week's commit log (get_recent_commits) and itch.io stats "
-        "(get_itch_stats). Find one specific correlation or pattern. "
-        "Save as memory 'Weekly insight: [date] — [one sentence finding]'."
+        "Read ROADMAP next steps. Pick the smallest incomplete item. Write two sentences: "
+        "what it is and what specifically blocks it. "
+        "Save as memory 'Build context: [item]'."
     ),
     (
-        "Read the ROADMAP next steps (read_local_file docs/ROADMAP.md). "
-        "Pick the smallest incomplete item. Write two sentences: what it is "
-        "and what specifically blocks it. Save as memory 'Build context: [item]'."
-    ),
-    (
-        "Check get_blog_posts(status='draft') for any waiting drafts. "
-        "If one exists: read it with get_blog_post(), add one concrete scene "
-        "suggestion that would strengthen Question 1. Update the draft. "
-        "If none: generate a hook sentence for the next post topic in the queue."
-    ),
-    (
-        "Check openagent-directive PyPI stats (get_pypi_stats). Compare to "
-        "the baseline in memory (openagent_pypi_baseline). Note any change. "
-        "If downloads increased >50% day-over-day: mark URGENT. "
-        "Save as memory 'OpenAgent check: [date]'."
+        "Check get_pypi_stats for openagent-directive. Compare to baseline "
+        "(openagent_pypi_baseline memory). Note any change. "
+        "Save as memory 'OpenAgent check: [date] — [finding]'. "
+        "If >50% day-over-day increase: mark URGENT."
     ),
 ]
 
@@ -187,7 +207,11 @@ async def run_autonomous_task(task_name: str, send_fn):
             # Count recent empty runs for this task (last 8 hours)
             recent_empty = _count_recent_empty_runs(task_name, hours=8)
             if recent_empty >= 2:
-                fallback = random.choice(FALLBACK_TASKS)
+                # 60% chance of post builder, 40% chance of variety task
+                if random.random() < 0.6:
+                    fallback = FALLBACK_TASKS[0]  # post builder
+                else:
+                    fallback = random.choice(FALLBACK_TASKS[1:])  # variety
                 fallback_result = await respond(
                     f"[MICRO-TASK triggered by {task_name} finding nothing]\n\n"
                     f"{fallback}",
