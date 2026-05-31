@@ -57,12 +57,14 @@ routes:
 
   calendar:
     model: openrouter/free
-    tools: [get_today_schedule, get_upcoming_events, check_availability, save_commitment]
-    description: "Schedule, events, availability, commitments"
+    tools: [get_today_schedule, get_upcoming_events, check_availability, save_commitment,
+            add_personal_task, list_personal_tasks, complete_personal_task,
+            snooze_personal_task, delete_personal_task]
+    description: "Schedule, events, availability, commitments, personal task management"
 
   email:
     model: openrouter/free
-    tools: [get_inbox_summary, search_email, check_sender, read_email]
+    tools: [get_inbox_summary, search_email, check_sender, check_sender_all, read_email]
     description: "Inbox, messages, email search"
 
   voidrift:
@@ -73,13 +75,14 @@ routes:
   youtube:
     model: openrouter/free
     tools: [get_youtube_stats, get_top_videos, get_video_analytics,
-            get_retention_curve, get_daily_views, get_audience_demographics]
+            get_retention_curve, get_daily_views, get_audience_demographics,
+            get_traffic_sources, get_device_breakdown, get_geographic_breakdown]
     description: "YouTube channel stats, video performance, analytics"
 
   goals:
     model: openrouter/free
-    tools: [get_goals_list, get_goal_detail, get_current_plan, get_tasks_today,
-            add_new_task, update_task, get_upcoming_tasks]
+    tools: [get_goals, get_goal, get_current_plan, get_tasks_today,
+            add_task, update_task, get_upcoming_tasks, suggest_goal_progress]
     description: "Goals, tasks, milestones, weekly planning"
 
   memory:
@@ -90,8 +93,9 @@ routes:
   code:
     model: ollama/qwen2.5-coder:7b
     tools: [read_local_file, list_local_dir, search_local_code,
-            audit_repo_compliance, analyze_code_quality, find_opportunities,
-            read_current_state, generate_directive]
+            audit_repo_compliance, analyze_code_quality, analyze_dependencies,
+            analyze_documentation_alignment, inspect_repo, generate_strategic_analysis,
+            find_opportunities, elaborate_task, read_current_state, generate_directive]
     description: "Code analysis, repo inspection, directive generation"
 
   search:
@@ -114,11 +118,25 @@ routes:
     tools: []
     description: "Complex reasoning, architecture planning, multi-step analysis"
 
+  weather:
+    model: openrouter/free
+    tools: [get_weather, get_weather_forecast]
+    description: "Current conditions and forecast"
+
+  blog:
+    model: openrouter/free
+    tools: [get_blog_posts, get_blog_post, create_blog_draft, update_blog_post]
+    description: "Blog posts, drafts, publishing"
+
+  utility:
+    model: openrouter/free
+    tools: [think, get_current_datetime, calculate]
+    description: "Cross-cutting utilities available to any intent (math, time, deep thinking)"
+
   system:
     model: openrouter/free
-    tools: [get_system_resources, get_ollama_loaded, get_ollama_model_sizes,
-            check_ollama_health, get_daily_cost]
-    description: "System resources, Ollama status, budget tracking"
+    tools: []  # planned: get_system_resources, get_ollama_loaded, get_ollama_model_sizes, check_ollama_health, get_daily_cost
+    description: "System resources, Ollama status, budget tracking (tools not yet implemented)"
 ```
 
 ### Classification Prompt
@@ -131,7 +149,7 @@ Classify the user message into one or more routes.
 Return ONLY valid JSON matching: {"routes": ["route1", "route2"]}
 
 Valid routes: chat, calendar, email, voidrift, youtube, goals, memory,
-              code, search, steam, openagent, think, system
+              code, search, steam, openagent, think, weather, blog, system
 
 Rules:
 - Use "chat" only when no external data is needed
