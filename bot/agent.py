@@ -418,8 +418,12 @@ def _assistant_tool_msg(msg):
     }
 
 
-async def respond(message: str, thread_id: str, model_key: str | None = None) -> str:
+async def respond(message: str, thread_id: str, model_key: str | None = None, max_iter: int | None = None) -> str:
     try:
+        # Fallback to env var if max_iter not provided
+        if max_iter is None:
+            max_iter = int(os.getenv("MAX_ITERATIONS_AUTONOMOUS", "10"))
+
         # ── Intent routing gate — plain user messages only ─────────────────
         # NOTE: if the previous route was "code" (qwen2.5-coder:7b in VRAM),
         # classify() will request gemma3:4b → Ollama swaps (~10-20s).
@@ -457,28 +461,32 @@ async def respond(message: str, thread_id: str, model_key: str | None = None) ->
         messages = [{"role": "system", "content": _system_prompt()}]
         messages.extend(get_context(thread_id, 10))
 
-        resp, model = await _chat(model, messages, tools, allow_rotation)
-        msg = resp.choices[0].message
-
-        if msg.tool_calls:
-            messages.append(_assistant_tool_msg(msg))
-            for tc in msg.tool_calls:
-                try:
-                    args = json.loads(tc.function.arguments or "{}")
-                except json.JSONDecodeError:
-                    args = {}
-                logger.info("TOOL CALL [%s]: %s %s", model, tc.function.name, args)
-                result = await _execute(thread_id, tc.function.name, args)
-                logger.info("TOOL RESULT: %s", result)
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc.id,
-                    "content": json.dumps(result),
-                })
-            resp, model = await _chat(model, messages, None, allow_rotation)
+        iteration = 0
+        while iteration < max_iter:
+            iteration += 1
+            resp, model = await _chat(model, messages, tools, allow_rotation)
             msg = resp.choices[0].message
-        else:
-            logger.info("NO TOOL CALLS in response from [%s]", model)
+
+            if msg.tool_calls:
+                messages.append(_assistant_tool_msg(msg))
+                for tc in msg.tool_calls:
+                    try:
+                        args = json.loads(tc.function.arguments or "{}")
+                    except json.JSONDecodeError:
+                        args = {}
+                    logger.info("TOOL CALL [%s]: %s %s", model, tc.function.name, args)
+                    result = await _execute(thread_id, tc.function.name, args)
+                    logger.info("TOOL RESULT: %s", result)
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": json.dumps(result),
+                    })
+                # Continue loop for next iteration
+                continue
+            else:
+                logger.info("NO TOOL CALLS in response from [%s]", model)
+                break
 
         text = msg.content or ""
         if any(tok in text for tok in ("<tool_call>", "<arg_key>", "<function", "```tool")):

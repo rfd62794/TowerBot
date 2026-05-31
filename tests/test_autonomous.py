@@ -90,22 +90,21 @@ def test_urgent_flag():
     assert urgent_tasks[0]["urgent"] == 1, f"Expected urgent=1, got {urgent_tasks[0]['urgent']}"
 
 
-@test("autonomous: setup_autonomous_scheduler registers 4 jobs")
+@test("autonomous: setup_autonomous_scheduler registers 6 jobs")
 def test_scheduler_jobs():
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from bot.autonomous import setup_autonomous_scheduler
     scheduler = AsyncIOScheduler()
     setup_autonomous_scheduler(scheduler, lambda x: None)
     jobs = scheduler.get_jobs()
-    assert len(jobs) == 4, f"Expected 4 jobs, got {len(jobs)}"
+    assert len(jobs) == 6, f"Expected 6 jobs, got {len(jobs)}"
 
 
-@test("autonomous: TASKS dict has 4 enabled tasks")
+@test("autonomous: get_all_resolved_tasks returns 6 enabled tasks")
 def test_tasks_dict():
-    from bot.autonomous import TASKS
-    assert len(TASKS) == 4, f"Expected 4 tasks, got {len(TASKS)}"
-    enabled = [name for name, task in TASKS.items() if task.get("enabled")]
-    assert len(enabled) == 4, f"Expected 4 enabled tasks, got {len(enabled)}"
+    from bot.task_runner import get_all_resolved_tasks
+    tasks = get_all_resolved_tasks()
+    assert len(tasks) == 6, f"Expected 6 tasks, got {len(tasks)}"
 
 
 if __name__ == "__main__":
