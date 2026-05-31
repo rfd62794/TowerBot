@@ -79,6 +79,9 @@ class OllamaSwapManager:
             async with httpx.AsyncClient(timeout=3.0) as client:
                 resp = await client.get(f"{self.host}/api/ps")
                 models = resp.json().get("models", [])
+                # If target is already in VRAM, no allocation needed
+                if any(m.get("name") == model_id for m in models):
+                    return True
                 # Exclude current loaded model — it will be unloaded before swap
                 others = [m for m in models if m.get("name") != self._loaded_model]
                 used_gb = sum(m.get("size_vram", 0) for m in others) / 1024 ** 3
@@ -149,6 +152,7 @@ class OllamaSwapManager:
                 None,
                 0,
             )
+            self._loaded_model = self.model
             logger.info(f"[Ollama] {self.model} warmed")
         except Exception:
             pass
