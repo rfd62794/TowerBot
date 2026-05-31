@@ -175,13 +175,5 @@ if __name__ == "__main__":
     init_report(send_to_telegram)
     app.add_error_handler(on_error)
 
-    # Add shutdown handler for APScheduler
-    async def on_shutdown(application):
-        if hasattr(application, "_ap_scheduler"):
-            application._ap_scheduler.shutdown(wait=False)
-            logging.info("[shutdown] APScheduler stopped")
-
-    app.add_post_shutdown_handler(on_shutdown)
-
     # Run with retry wrapper for TLS errors
     start_with_retry(app)
