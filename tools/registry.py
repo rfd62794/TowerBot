@@ -59,6 +59,7 @@ from .productivity.personal import (
 )
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .repo.filesystem import read_local_file, list_local_dir, search_local_code
+from .repo.audit import audit_repo_compliance
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -1000,6 +1001,21 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["pattern"]
+                }
+            }
+        }
+    },
+    "audit_repo_compliance": {
+        "fn": audit_repo_compliance,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "audit_repo_compliance",
+                "description": "Audit PrivyBot repository for compliance with ADR/SDD documentation. Returns test floor status, phase status, spec drift, doc currency, constitutional violations, and roadmap summary.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
                 }
             }
         }
