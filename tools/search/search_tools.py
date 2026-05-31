@@ -6,6 +6,7 @@ from api.web.ddg_api import ddg_api
 from api.web.wikipedia_api import wikipedia_api
 from api.web.reddit_api import reddit_api
 from api.weather.weather_api import get_current_weather, weather_api
+from api.github.github_api import github_api
 from infra.db import record_weather_day
 from tools._tool import BaseTool
 import httpx
@@ -163,6 +164,44 @@ class SearchTools(BaseTool):
             return self.error(f"PyPI API error: {e}")
         except Exception as e:
             return self.error(f"Failed to fetch PyPI stats: {e}")
+
+    def get_recent_commits(self, username: str = None, repo: str = None, limit: int = 10) -> dict:
+        """
+        Get recent commits for GitHub repositories.
+
+        Args:
+            username: GitHub username (default: inferred from token)
+            repo: Specific repository name (optional, e.g. "PrivyBot")
+            limit: Number of commits to return (default: 10)
+
+        Returns:
+            Dict with commits array containing commit metadata
+        """
+        raw = github_api.get_recent_commits(username, repo, limit)
+
+        if raw.get("_live_failed") or "error" in raw:
+            return self.error("GitHub API unavailable", code="api_failed")
+
+        commits = raw.get("commits", [])
+
+        # Extract key metadata for each commit
+        result_commits = []
+        for commit in commits:
+            commit_data = commit.get("commit", {})
+            author = commit_data.get("author", {})
+            result_commits.append({
+                "sha": commit.get("sha", "")[:7],  # Short SHA
+                "message": commit_data.get("message", ""),
+                "author": author.get("name", ""),
+                "date": author.get("date", ""),
+                "repo": commit.get("_repo", ""),
+                "url": commit.get("html_url", ""),
+            })
+
+        return self.success({
+            "count": len(result_commits),
+            "commits": result_commits
+        }, stale_result=raw)
 
     def web_search(self, query: str, max_results: int = 5) -> dict:
         """
@@ -369,6 +408,21 @@ def get_pypi_stats(package: str = "openagent-directive") -> dict:
         Dict with last_day, last_week, last_month, total downloads
     """
     return _search.get_pypi_stats(package)
+
+
+def get_recent_commits(username: str = None, repo: str = None, limit: int = 10) -> dict:
+    """
+    Get recent commits for GitHub repositories.
+
+    Args:
+        username: GitHub username (default: inferred from token)
+        repo: Specific repository name (optional, e.g. "PrivyBot")
+        limit: Number of commits to return (default: 10)
+
+    Returns:
+        Dict with commits array containing commit metadata
+    """
+    return _search.get_recent_commits(username, repo, limit)
 
 
 def fetch_url(url: str, max_chars: int = 3000) -> dict:
