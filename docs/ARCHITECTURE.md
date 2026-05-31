@@ -22,7 +22,13 @@ This document is supplemented by ADRs that capture key architectural decisions:
 - [ADR-024: fetch_url Browser Tool](adr/ADR-024.md) — Browser tool for reading full web page content
 - [ADR-025: think Scratchpad Tool](adr/ADR-025.md) — Scratchpad tool for context continuity
 - [ADR-026: RateLimitManager Layer](adr/ADR-026.md) — API rate limit tracking and quota awareness
-- [ADR-027: PollingManager Layer](adr/ADR-027.md) — Single owner of polling behavior (planned)
+- [ADR-027: PollingManager Layer](adr/ADR-027.md) — Single owner of polling behavior (Accepted, built May 2026)
+- [ADR-028: Tool and API Auto-Discovery](adr/ADR-028.md) — Decorator-based tool registration (planned)
+- [ADR-029: Three-Tier Tool Architecture](adr/ADR-029.md) — System/user/agent tool tiers (vision)
+- [ADR-030: Deduplication Strategy](adr/ADR-030.md) — DB and application-level dedup across tables
+- [ADR-031: Missed Task Push-Forward](adr/ADR-031.md) — Recurrence recovery and nightly nudges
+- [ADR-032: mem0 Integration](adr/ADR-032.md) — Semantic memory via local Ollama + Chroma (Phase 15)
+- [ADR-033: MCP Compatibility](adr/ADR-033.md) — Expose 46 tools to Claude via MCP server (Phase 15)
 
 ## Layer Overview
 
@@ -81,6 +87,11 @@ This document is supplemented by ADRs that capture key architectural decisions:
 ┌─────────────────────────────────────────────────────────────┐
 │ Layer 7c: PollingManager (infra/polling.py)                 │
 │ Single owner of polling behavior, per-key intervals         │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 7d: MemoryManager (infra/memory_manager.py)           │
+│ Semantic search (mem0+Ollama) + structured memory (SQLite)  │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -430,9 +441,44 @@ This document is supplemented by ADRs that capture key architectural decisions:
 **Never imports:**
 - API layers, tool layers
 
+### Layer 7d: MemoryManager (`infra/memory_manager.py`) — Phase 15
+
+**Responsibility:** Unified semantic + structured memory access
+
+- Wraps mem0 (local) for semantic search via embeddings
+- Wraps SQLite memory table (existing) for structured queries
+- Combines both result sets for system prompt injection
+- Fully local: nomic-embed-text (embedding) + gemma3:4b (extraction) via Ollama
+- Chroma vector store (local SQLite backend, no Docker)
+- MEM0_TELEMETRY=false — no data reaches mem0 servers
+- Zero external API calls for all memory operations
+
+**Key Methods:**
+- `memory_manager.search(query, limit)` — Semantic search via mem0 + Ollama embeddings
+- `memory_manager.add(messages, metadata)` — Ingest conversation into mem0
+- Combined results injected into _system_prompt() alongside list_memories()
+
+**Configuration:**
+```
+OLLAMA_BASE_URL=http://localhost:11434
+MEM0_TELEMETRY=false
+MEM0_EMBEDDING_MODEL=nomic-embed-text
+MEM0_EXTRACTION_MODEL=gemma3:4b
+```
+
+**Status:** Planned — Phase 15
+
+**Imports:**
+- `mem0` (external library, routes to local Ollama)
+- `chromadb` (local vector store)
+- `infra.db.memory` (Layer 5) — existing structured memory
+
+**Never imports:**
+- API layers, tool layers, bot layers
+
 ### Infrastructure Services — Layer 7 Cluster
 
-The three infrastructure managers form a coherent group:
+The four infrastructure managers form a coherent group:
 
 **CacheManager** (Layer 7) answers: "what data do we have?"
 - TTL policy, stale fallback, cache invalidation
@@ -447,7 +493,15 @@ The three infrastructure managers form a coherent group:
 - Coordinates with Cache + RateLimit
 - Own async loop for data freshness
 
-All three are singletons, consulted by BaseAPIHandler, have DB backing, and visible in `/status`.
+**MemoryManager** (Layer 7d) answers: "what do we know about you?"
+- Semantic search via mem0 + Ollama (nomic-embed-text + gemma3:4b)
+- Structured queries via existing SQLite memory table
+- Combined results surface into agent system prompt
+- Organic growth via MCP memory pipeline during Claude sessions
+
+Cache, RateLimit, and Polling are singletons consulted by BaseAPIHandler.
+MemoryManager is a singleton consulted by agent._system_prompt().
+All four have DB backing.
 
 ### Layer 8: API Clients (`api/*.py`)
 
@@ -514,6 +568,50 @@ class WeatherAPIHandler(BaseAPIHandler):
 
 **Never imports:**
 - Any other layers
+
+## Standalone Services
+
+Processes that run independently alongside the bot. Not part of the layer stack — no layer number, no import boundaries with bot layers.
+
+### MCP Server (`infra/mcp_server.py`) — Phase 15
+
+**Responsibility:** Expose PrivyBot tools to Claude via Model Context Protocol
+
+- Standalone process — not embedded in bot
+- stdio transport for Claude Desktop (local only, no network exposure)
+- All 46 tools from TOOL_REGISTRY exposed as MCP tools
+- Single converter: OpenAI JSON Schema → MCP inputSchema
+- TOOL_REGISTRY remains single source of truth — no duplicate definitions
+
+**Claude Desktop Configuration:**
+```json
+{
+  "mcpServers": {
+    "privybot": {
+      "command": "uv",
+      "args": ["run", "python", "infra/mcp_server.py"],
+      "cwd": "C:/Github/PrivyBot"
+    }
+  }
+}
+```
+
+**Claude memory pipeline:**
+Claude calls save_memory and update_memory via MCP during architecture
+sessions — organic, continuous memory ingestion without batch exports.
+Pre-dump script handles historical exports. MCP handles ongoing growth.
+
+**Why standalone:**
+MCP server lifecycle belongs to Claude Desktop, not the Telegram bot.
+Bot crash does not kill Claude's tool access. Each restarts independently.
+
+**Status:** Planned — Phase 15
+
+**Imports:**
+- `tools.registry.TOOL_REGISTRY` — tool definitions only
+- `mcp` (Anthropic MCP Python SDK)
+
+**Related ADRs:** ADR-033
 
 ### Model Manager (`model_manager.py`)
 
