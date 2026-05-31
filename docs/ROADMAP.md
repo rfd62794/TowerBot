@@ -276,6 +276,7 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 - Model: gemma4:4b (Q4 quantized, ~5GB RAM)
 - Estimated: 2-5 tokens/second on CPU-only i5
 - Environment flag: LOCAL_MODEL_MODE=background
+- Ollama installation prerequisite for Phase 15 (mem0) — already satisfied on Nitro laptop as of May 2026. Tower receives Ollama during Phase 7 deployment.
 
 **Use Cases**:
 - Nightly summary (midnight) — no urgency
@@ -573,7 +574,8 @@ httpx                          ← async HTTP for mem0 API calls
 MCP compatibility              ← closes the loop back to Claude
     ↑ independent of above
 APScheduler                    ← scheduler cleanup, lower priority
-Ollama                         ← Tower-dependent, Phase 7 first
+Ollama                         ← Ollama on Nitro: already available
+                               Ollama on Tower: part of Phase 7 deployment
 ```
 
 **Unlocked**:
@@ -584,8 +586,8 @@ Ollama                         ← Tower-dependent, Phase 7 first
 - Better async HTTP handling
 
 **Related ADRs**:
-- ADR-032: mem0 Integration (to be written)
-- ADR-033: MCP Compatibility (to be written)
+- ADR-032: mem0 Integration
+- ADR-033: MCP Compatibility
 
 ---
 
