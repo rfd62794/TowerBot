@@ -13,39 +13,36 @@ Tools follow the OpenAI function calling format:
 
 ## Tool Definition Format
 
-Tools are defined in `memory.py` in the `TOOL_DEFINITIONS` list:
+Tools are defined in `tools/registry.py` in the `TOOL_REGISTRY` dict. This is the **single source of truth** for all tool JSON schemas and their Python implementations.
 
 ```python
-TOOL_DEFINITIONS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "save_memory",
-            "description": "Save a fact about Robert to long-term memory.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "key": {
-                        "type": "string",
-                        "description": "Short identifier for the memory (e.g., 'daughter')",
+TOOL_REGISTRY = {
+    "save_memory": {
+        "fn": tool_save_memory,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "save_memory",
+                "description": "Save a fact about Robert to long-term memory.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "key": {
+                            "type": "string",
+                            "description": "Short identifier for the memory (e.g., 'daughter')",
+                        },
+                        # ... more properties
                     },
-                    "content": {
-                        "type": "string",
-                        "description": "The fact to remember",
-                    },
-                    "layer": {
-                        "type": "string",
-                        "description": "Category: personal, business, technical, project, content",
-                        "enum": ["personal", "business", "technical", "project", "content"],
-                    },
+                    "required": ["key", "content", "layer"],
                 },
-                "required": ["key", "content", "layer"],
             },
         },
     },
     # ... more tools
-]
+}
 ```
+
+`ALL_TOOLS` in `agent.py` is computed from `TOOL_REGISTRY` at import time — do not edit it directly.
 
 **Key fields:**
 - `name`: Function name (must match implementation)
@@ -55,12 +52,11 @@ TOOL_DEFINITIONS = [
 
 ## Tool Implementation
 
-Tool implementations are also in `memory.py`:
+Tool implementations live in `tools/` submodules (e.g. `tools/productivity/goals.py`, `tools/content/channel.py`). Memory tool implementations are in `bot/memory.py`. All implementations are imported into `tools/registry.py` and wired to their schemas there.
 
 ```python
 def tool_save_memory(key: str, content: str, layer: str) -> dict:
     """Save a memory to the database."""
-    from db import save_memory
     save_memory(key, content, layer)
     return {"status": "saved", "key": key}
 ```
@@ -79,22 +75,13 @@ The return value is fed back to the model as a tool result message. The model us
 
 ## Agent Integration
 
-The agent (`agent.py`) handles tool execution in the `_execute()` function:
-
-```python
-async def _execute(thread_id: str, name: str, args: dict) -> dict:
-    if name == "save_memory":
-        r = tool_save_memory(args["key"], args["content"], args["layer"])
-        await report("memory_saved", key=args["key"], layer=args["layer"], content=args["content"])
-        return r
-    # ... more tools
-```
+The agent (`agent.py`) dispatches all tools via `_execute()`, which checks `if name in TOOL_REGISTRY` first. No manual handler needed for new tools.
 
 When you add a new tool, you must:
-1. Add the definition to `TOOL_DEFINITIONS` in `memory.py`
-2. Implement the function in `memory.py`
-3. Add a handler in `_execute()` in `agent.py`
-4. (Optional) Add a report event in `report.py` for logging
+1. Implement the function in the appropriate `tools/` submodule
+2. Add the entry to `TOOL_REGISTRY` in `tools/registry.py` — `fn` + `definition`
+3. `_execute()` in `agent.py` handles it automatically via `if name in TOOL_REGISTRY`
+4. (Optional) Add a named report event in `report.py` for rich Telegram surfacing
 
 ## Example: Adding a YouTube Stats Tool
 
@@ -102,7 +89,7 @@ Let's add a tool that fetches YouTube channel statistics.
 
 ### Step 1: Add Tool Definition
 
-In `memory.py`, add to `TOOL_DEFINITIONS`:
+In `tools/registry.py`, add to `TOOL_REGISTRY`:
 
 ```python
 {
@@ -126,7 +113,7 @@ In `memory.py`, add to `TOOL_DEFINITIONS`:
 
 ### Step 2: Implement Tool Function
 
-In `memory.py`, add the implementation:
+In the appropriate `tools/` submodule (e.g. `tools/content/channel.py`), add the implementation:
 
 ```python
 def tool_youtube_stats(channel_id: str) -> dict:
@@ -166,29 +153,13 @@ def tool_youtube_stats(channel_id: str) -> dict:
         return {"status": "error", "error": str(e)}
 ```
 
-### Step 3: Add Agent Handler
+### Step 3: Agent Handler
 
-In `agent.py`, add to `_execute()`:
-
-```python
-async def _execute(thread_id: str, name: str, args: dict) -> dict:
-    # ... existing tools
-    if name == "youtube_stats":
-        r = tool_youtube_stats(args["channel_id"])
-        await report("youtube_stats_fetched", channel_id=args["channel_id"])
-        return r
-```
+No change needed — `_execute()` in `agent.py` dispatches automatically via `TOOL_REGISTRY`. If you want rich Telegram reporting (not just `🔧 Tool: name`), add a named `elif` in the reporting block inside `_execute()`.
 
 ### Step 4: Add Report Event (Optional)
 
-In `report.py`, add to the event mapping:
-
-```python
-EVENTS = {
-    # ... existing events
-    "youtube_stats_fetched": "📊 YouTube stats fetched for {channel_id}",
-}
-```
+In `report.py`, add a new `if event_type == "youtube_stats_fetched":` branch in `_format()` returning the formatted string.
 
 ### Step 5: Add API Key to .env
 
