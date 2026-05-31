@@ -4,7 +4,7 @@ import requests
 from api._handler import BaseAPIHandler
 
 HEADERS = {
-    "User-Agent": "PrivyBot/1.0 (personal tool)"
+    "User-Agent": "PrivyBot/1.0 by /u/rdug627"
 }
 
 
@@ -12,7 +12,7 @@ class RedditAPIHandler(BaseAPIHandler):
     CACHE_PREFIX = "reddit"
     BASE_URL = "https://www.reddit.com"
     HEADERS = {
-        "User-Agent": "PrivyBot/1.0 (personal tool)"
+        "User-Agent": "PrivyBot/1.0 by /u/rdug627"
     }
 
     def _get_client(self):
