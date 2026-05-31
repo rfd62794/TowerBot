@@ -27,7 +27,7 @@ OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 # Daily paid API caps by mode
 DAILY_PAID_CAPS = {
     "dev": 1.00,      # testing — relaxed
-    "production": 0.10,  # overnight steady state
+    "production": 0.25,  # overnight steady state
 }
 
 # Current mode from env, defaults to production
@@ -250,7 +250,13 @@ def get_available_model() -> str | None:
             should_skip, skip_reason = should_skip_model(model_id)
             if not should_skip:
                 return model_id
-    
+
+    # Priority 3: cheapest paid model (only when free pool exhausted and under daily cap)
+    paid_model = os.getenv("OPENROUTER_PAID_MODEL")
+    if paid_model and can_use_paid_model():
+        logger.info("[model] All free models exhausted — falling back to paid: %s", paid_model)
+        return paid_model
+
     return None
 
 
