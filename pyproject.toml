@@ -19,6 +19,7 @@ dependencies = [
     "google-auth-httplib2>=0.1.0",
     "google-api-python-client>=2.0.0",
     "ddgs>=6.0.0",
+    "apscheduler>=3.10.4,<4.0",
 ]
 
 [project.scripts]
