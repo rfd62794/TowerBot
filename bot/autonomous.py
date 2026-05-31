@@ -42,6 +42,19 @@ TASKS = {
             "Report what you found."
         ),
     },
+    "openagent_momentum_tracker": {
+        "schedule_type": "cron",
+        "hour": 8,
+        "minute": 0,
+        "enabled": True,
+        "prompt": (
+            "Check download stats for openagent-directive on PyPI using get_pypi_stats. "
+            "Compare to the last saved count in memory (key: 'OpenAgent stats'). "
+            "If week-over-week downloads increased >20%: save to memory, mark URGENT. "
+            "Save current stats as memory 'OpenAgent stats YYYY-MM-DD'. "
+            "Report: last_week count, change from prior week, trend direction."
+        ),
+    },
 }
 
 
