@@ -45,6 +45,7 @@ TEST_FILES = [
     "tests/test_rate_limits.py",
     "tests/test_polling.py",
     "tests/test_briefing.py",
+    "tests/test_tools_repo.py",
 ]
 
 
