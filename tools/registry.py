@@ -29,7 +29,7 @@ from .content.discovery import (
 )
 from .games.recommendations import get_content_recommendations
 from .games.metrics import get_game_metrics, get_installed_games, get_sale_info
-from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast
+from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats
 from .productivity.goals import (
     save_commitment,
     get_goals_list,
@@ -487,6 +487,27 @@ TOOL_REGISTRY = {
                             "type": "integer",
                             "description": "Number of forecast days (1-7, default 3)",
                             "default": 3
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "get_pypi_stats": {
+        "fn": get_pypi_stats,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_pypi_stats",
+                "description": "WHEN: user asks about PyPI package downloads, 'how many downloads does openagent-directive have', 'package stats', 'pypi downloads'.\n\nRETURNS: package, last_day, last_week, last_month, total (without_mirrors).\n\nDO NOT CALL: for non-PyPI packages or package metadata (use web_search for that).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "package": {
+                            "type": "string",
+                            "description": "Package name (default: 'openagent-directive')",
+                            "default": "openagent-directive"
                         }
                     },
                     "required": []

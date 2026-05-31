@@ -8,6 +8,7 @@ from api.web.reddit_api import reddit_api
 from api.weather.weather_api import get_current_weather, weather_api
 from infra.db import record_weather_day
 from tools._tool import BaseTool
+import httpx
 
 
 class SearchTools(BaseTool):
@@ -85,6 +86,83 @@ class SearchTools(BaseTool):
 
         return self.success({"days": forecast, "count": len(forecast)},
                             stale_result=raw)
+
+    def get_pypi_stats(self, package: str = "openagent-directive") -> dict:
+        """
+        Get PyPI download statistics for a package.
+
+        Args:
+            package: Package name (default: "openagent-directive")
+
+        Returns:
+            Dict with last_day, last_week, last_month, total downloads
+        """
+        from infra.cache import cache
+
+        cache_key = f"pypi_stats_{package}"
+        params_hash = cache.hash(package)
+
+        # Check cache
+        cached = cache.get(cache_key, params_hash)
+        if cached is not None:
+            notice = cache.stale_notice(cached)
+            cached["_stale_notice"] = notice
+            return cached
+
+        try:
+            # Fetch recent downloads
+            recent_url = f"https://pypistats.org/api/packages/{package}/recent"
+            recent_resp = httpx.get(recent_url, timeout=10)
+            recent_resp.raise_for_status()
+            recent_data = recent_resp.json()
+
+            # Fetch overall downloads
+            overall_url = f"https://pypistats.org/api/packages/{package}/overall"
+            overall_resp = httpx.get(overall_url, timeout=10)
+            overall_resp.raise_for_status()
+            overall_data = overall_resp.json()
+
+            # Extract data
+            recent = recent_data.get("data", {})
+            overall_list = overall_data.get("data", [])
+
+            # Find without_mirrors total
+            total = 0
+            for item in overall_list:
+                if item.get("category") == "without_mirrors":
+                    total = item.get("downloads", 0)
+                    break
+
+            result = {
+                "ok": True,
+                "stale_notice": None,
+                "package": package,
+                "last_day": recent.get("last_day", 0),
+                "last_week": recent.get("last_week", 0),
+                "last_month": recent.get("last_month", 0),
+                "total": total,
+            }
+
+            # Cache for 1 hour using direct cache_tool_result
+            from infra.db.cache import cache_tool_result
+            cache_tool_result(cache_key, params_hash, result, ttl_hours=1)
+
+            return result
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return self.error(f"Package '{package}' not found on PyPI")
+            if e.response.status_code == 429:
+                # Rate limited - try stale fallback
+                stale = cache.get_or_stale(cache_key, params_hash)
+                if stale is not None:
+                    notice = cache.stale_notice(stale)
+                    stale["_stale_notice"] = notice
+                    return stale
+                return self.error(f"PyPI API rate limited. Try again later.")
+            return self.error(f"PyPI API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch PyPI stats: {e}")
 
     def web_search(self, query: str, max_results: int = 5) -> dict:
         """
@@ -278,6 +356,19 @@ def get_weather_forecast(days: int = 3) -> dict:
         Dict with daily forecast data
     """
     return _search.get_weather_forecast(days)
+
+
+def get_pypi_stats(package: str = "openagent-directive") -> dict:
+    """
+    Get PyPI download statistics for a package.
+
+    Args:
+        package: Package name (default: "openagent-directive")
+
+    Returns:
+        Dict with last_day, last_week, last_month, total downloads
+    """
+    return _search.get_pypi_stats(package)
 
 
 def fetch_url(url: str, max_chars: int = 3000) -> dict:

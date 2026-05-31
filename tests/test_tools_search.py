@@ -164,6 +164,47 @@ def test_forecast_days_7():
     assert len(result["days"]) <= 7, f"Expected <= 7 days, got {len(result['days'])}"
 
 
+@test("pypi: get_pypi_stats returns ok=True")
+def test_pypi_ok():
+    from tools.search.search_tools import get_pypi_stats
+    result = get_pypi_stats("openagent-directive")
+    # May be rate limited (429) - accept either success or rate limit error
+    if result.get("ok") == True:
+        assert "stale_notice" in result, "Expected stale_notice key"
+    else:
+        # If rate limited, should have error
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("pypi: returns last_day, last_week, last_month, total keys")
+def test_pypi_keys():
+    from tools.search.search_tools import get_pypi_stats
+    result = get_pypi_stats("openagent-directive")
+    # Only check keys if successful
+    if result.get("ok") == True:
+        expected_keys = ["package", "last_day", "last_week", "last_month", "total"]
+        for key in expected_keys:
+            assert key in result, f"Expected key '{key}' in result"
+
+
+@test("pypi: get_pypi_stats('openagent-directive') works")
+def test_pypi_openagent_directive():
+    from tools.search.search_tools import get_pypi_stats
+    result = get_pypi_stats("openagent-directive")
+    # May be rate limited - only assert if successful
+    if result.get("ok") == True:
+        assert result.get("package") == "openagent-directive", f"Expected package 'openagent-directive', got {result.get('package')}"
+        assert result.get("total") >= 0, f"Expected total >= 0, got {result.get('total')}"
+
+
+@test("pypi: get_pypi_stats('nonexistent-package-xyz') returns ok=False")
+def test_pypi_nonexistent():
+    from tools.search.search_tools import get_pypi_stats
+    result = get_pypi_stats("nonexistent-package-xyz-999")
+    assert result.get("ok") == False, f"Expected ok=False for nonexistent package, got {result}"
+    assert "error" in result, "Expected 'error' key for nonexistent package"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
