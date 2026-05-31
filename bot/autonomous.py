@@ -3,12 +3,51 @@
 import time
 import logging
 import random
+import psutil
+import requests
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.agent import respond
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
+from infra.db.system_metrics import record_system_snapshot
 
 logger = logging.getLogger("privy.autonomous")
+
+
+def record_system_snapshot_task():
+    """Record current system resources to database."""
+    try:
+        ram = psutil.virtual_memory()
+        disk = psutil.disk_usage('C:\\')
+        cpu = psutil.cpu_percent(interval=0.1)
+        
+        # Get Ollama info if available
+        ollama_model = None
+        ollama_ram_gb = None
+        try:
+            import os
+            host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+            response = requests.get(f"{host}/api/ps", timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                ollama_model = data.get("model")
+                ollama_ram_gb = round(data.get("vm_rss", 0) / (1024**3), 2)
+        except Exception:
+            pass  # Ollama not available
+        
+        record_system_snapshot(
+            ram_used_gb=round(ram.used / (1024**3), 2),
+            ram_free_gb=round(ram.available / (1024**3), 2),
+            disk_free_gb=round(disk.free / (1024**3), 2),
+            cpu_percent=cpu,
+            ollama_model=ollama_model,
+            ollama_ram_gb=ollama_ram_gb
+        )
+        
+        logger.info(f"System snapshot recorded: {ram.available / (1024**3):.2f}GB RAM free")
+    except Exception as e:
+        logger.error(f"Failed to record system snapshot: {e}")
+
 
 # Fallback micro-tasks for when primary tasks find nothing
 FALLBACK_TASKS = [
@@ -63,6 +102,7 @@ TASKS = {
             "Save a memory entry: 'Daily metrics YYYY-MM-DD' with key numbers. "
             "Note any significant change from yesterday."
         ),
+        "pre_run": record_system_snapshot_task,  # Record system metrics before running
     },
     "itch_reddit_check": {
         "schedule_type": "interval",

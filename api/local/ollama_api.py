@@ -5,9 +5,20 @@ import requests
 import asyncio
 import time
 import logging
+import psutil
 from infra.db.model_usage import record_model_call
 
 logger = logging.getLogger("privy.ollama")
+
+# Minimum RAM requirements per model size
+MIN_RAM_GB = {
+    "gemma3:4b": 2.5,
+    "qwen2.5:3b": 2.0,
+    "qwen2.5:7b": 4.0,
+    "qwen2.5-coder:7b": 4.0,
+    "llama3.1:8b": 5.0,
+    "default": 2.5,  # Fallback for unknown models
+}
 
 
 class OllamaSwapManager:
@@ -67,6 +78,18 @@ class OllamaSwapManager:
                 model_name = model_id.replace("ollama/", "")
             else:
                 model_name = model_id
+            
+            # Check available RAM before loading
+            min_ram = MIN_RAM_GB.get(model_name, MIN_RAM_GB["default"])
+            ram = psutil.virtual_memory()
+            ram_available_gb = ram.available / (1024**3)
+            
+            if ram_available_gb < min_ram:
+                logger.warning(
+                    f"Skipping Ollama {model_name} — only {ram_available_gb:.2f}GB free, "
+                    f"need {min_ram}GB"
+                )
+                raise Exception(f"Insufficient RAM: {ram_available_gb:.2f}GB available, need {min_ram}GB")
             
             # Swap if needed
             swap_start = time.time()
