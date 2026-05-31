@@ -62,7 +62,10 @@ class OllamaSwapManager:
             
             # Check if our model is in the available models list
             available_models = [m.get("name") for m in data.get("models", [])]
-            return self.model in available_models
+            if self.model not in available_models:
+                logger.warning("[Ollama] Model %s not found. Available: %s", self.model, available_models)
+                return False
+            return True
         except Exception as e:
             logger.warning("[Ollama] health_check failed: %s: %s", type(e).__name__, e)
             return False
