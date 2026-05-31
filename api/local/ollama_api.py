@@ -1,6 +1,7 @@
 """Ollama API client — local model inference with model swap management."""
 
 import os
+import subprocess
 import requests
 import asyncio
 import time
@@ -33,6 +34,8 @@ class OllamaSwapManager:
         self.host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
         self.model = os.getenv("OLLAMA_MODEL", "gemma3:4b")
         self.enabled = os.getenv("OLLAMA_ENABLED", "false").lower() == "true"
+        self._starting: bool = False
+        self._process = None
     
     def current_model(self) -> str | None:
         """Return the currently loaded model."""
@@ -60,6 +63,55 @@ class OllamaSwapManager:
         except Exception:
             return False
     
+    async def ensure_running(self) -> bool:
+        """
+        Ensure Ollama service is running. If down, attempt to start it.
+        Polls up to 30 seconds for the service to become healthy.
+        """
+        if self.health_check():
+            return True
+        if self._starting:
+            return False
+
+        self._starting = True
+        logger.info("[Ollama] Down — attempting to start...")
+
+        try:
+            self._process = subprocess.Popen(
+                ["ollama", "serve"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+        except (FileNotFoundError, OSError) as e:
+            logger.error(f"[Ollama] Cannot start: {e}")
+            self._starting = False
+            return False
+
+        for i in range(30):
+            await asyncio.sleep(1)
+            if self.health_check():
+                logger.info(f"[Ollama] Ready in {i + 1}s")
+                self._starting = False
+                return True
+
+        logger.error("[Ollama] Did not come up within 30s — staying on OpenRouter")
+        self._starting = False
+        return False
+
+    async def warmup(self) -> None:
+        """Pre-load model into VRAM to reduce first-request latency."""
+        try:
+            await self._inference(
+                self.model,
+                [{"role": "user", "content": "ready"}],
+                None,
+                0,
+            )
+            logger.info(f"[Ollama] {self.model} warmed")
+        except Exception:
+            pass
+
     async def chat(self, model_id: str, messages: list, tools: list = None) -> dict:
         """
         Chat completion with automatic model swapping.

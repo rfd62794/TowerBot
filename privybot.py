@@ -137,6 +137,13 @@ if __name__ == "__main__":
         asyncio.create_task(check_missed_briefing(send_to_telegram))
         asyncio.create_task(_start_polling())
 
+        from api.local.ollama_api import ollama_api
+        if ollama_api.enabled:
+            async def _start_ollama():
+                if await ollama_api.ensure_running():
+                    await ollama_api.warmup()
+            asyncio.create_task(_start_ollama())
+
         # Start APScheduler for autonomous tasks
         ap_scheduler = AsyncIOScheduler(timezone="America/New_York")
         setup_autonomous_scheduler(ap_scheduler, send_to_telegram)
