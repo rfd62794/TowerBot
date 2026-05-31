@@ -6,239 +6,129 @@ PrivyBot's tools system is organized into two distinct layers with clear separat
 
 ```
 tools/
-  api/                    ← API Layer
-    _base.py             ← Shared cached_api_call pattern
+  content/                ← Content tools (YouTube channel, videos, discovery)
+    channel.py            ← Channel metrics tools
+    discovery.py          ← Traffic sources, search terms
+    videos.py             ← Video analytics, retention
+
+  games/                  ← Game tools
+    metrics.py            ← Game metrics, installed games, sale info
+    recommendations.py    ← Content recommendations
+
+  search/                 ← Search tools
+    search_tools.py       ← Web, news, wiki, reddit, weather, fetch_url
+
+  productivity/           ← Productivity tools
+    calendar.py           ← Google Calendar tools
+    goals.py              ← Goals, plans, tasks, commitments
+    personal.py           ← Personal tasks (reminders, to-dos)
+    sync.py               ← Google Tasks sync
+
+  communication/          ← Communication tools
+    gmail.py              ← Gmail tools (dual account)
+
+  meta/                   ← Meta tools
+    meta.py               ← think() scratchpad
+
+  registry.py             ← TOOL_REGISTRY (single source of truth)
+
+api/
+  google/                 ← Google APIs
     youtube_api.py        ← YouTube Analytics + Data API
+    gmail_api.py          ← Gmail API (dual account)
+    calendar_api.py       ← Google Calendar API
+    tasks_api.py          ← Google Tasks API
+
+  steam/                  ← Steam APIs
     steam_api.py          ← Steam Web API
     steamspy_api.py       ← SteamSpy API
     itad_api.py           ← IsThereAnyDeal API
-    gmail_api.py          ← Gmail API (dual account)
-    google_calendar_api.py ← Google Calendar API
-    google_tasks_api.py   ← Google Tasks API
-    weather_api.py        ← Open-Meteo Weather API
+    catalog_api.py        ← Steam catalog resolution
+
+  web/                    ← Web APIs
     ddg_api.py            ← DuckDuckGo Search API
     wikipedia_api.py      ← Wikipedia API
     reddit_api.py         ← Reddit API
+    fetch_api.py          ← Browser tool (requests + BeautifulSoup)
 
-  calendar.py             ← Calendar tools
-  gmail.py                ← Gmail tools
-  personal.py             ← Personal task tools
-  sync_tasks.py           ← Google Tasks sync
-  goals.py                ← Goals and plans tools
-  youtube/
-    channel.py            ← Channel metrics tools
-    discovery.py          ← Content discovery tools
-    videos.py             ← Video analytics tools
-  games.py                ← Game metrics tools
-  search.py               ← Search tools
+  weather/                ← Weather API
+    weather_api.py        ← Open-Meteo Weather API
 
-  __init__.py             ← Tool Registry (TOOL_REGISTRY)
+  _handler.py             ← BaseAPIHandler, BaseTool base classes
 ```
 
 **Key Principles:**
 - API Layer: Knows how to talk to external services
 - Tool Layer: Knows what to do with the data
 - Registry: Single source of truth for tool discovery
+- BaseAPIHandler: Enforces cache + rate limit patterns
+- BaseTool: Enforces return shape contract
 
 **Data Flow:**
 ```
-Agent → Tool Registry → Tool Function → API Client → External Service
-         (definition)    (business logic)   (raw API call)
+Agent → Tool Registry → Tool Function → API Handler → External Service
+         (definition)    (business logic)   (BaseAPIHandler)
+                           ↓
+                    CacheManager
+                    RateLimitManager
 ```
 
-## 2. API Layer
+## 2. Directory Structure
 
-### Responsibilities
-- HTTP communication with external APIs
-- Authentication and credential management
-- Request/response parsing and normalization
-- API-specific error handling and retry logic
-- Rate limit awareness
+### Tool Layer (`tools/`)
 
-### What It Does NOT Do
-- Tool-specific business logic
-- Scoring, ranking, or verdict generation
-- Fuzzy matching or search algorithms
-- Data transformation for tool output
-- Caching (handled at tool layer per ADR-003)
+**content/** — YouTube content tools
+- `channel.py` — Channel metrics, daily views, demographics, device breakdown, geographic breakdown
+- `videos.py` — Top videos, video analytics, retention curve
+- `discovery.py` — Traffic sources, search terms
 
-### Function Contract
-```python
-def api_function(params: dict) -> dict:
-    """
-    Raw API call.
-    
-    Args:
-        params: API-specific parameters
-        
-    Returns:
-        dict: Raw API response or error dict
-        
-    Contract:
-        - Never raises exceptions
-        - Returns {"error": str} on failure
-        - Returns {"raw": response} on success
-        - Handles auth internally
-        - Handles retries internally
-    """
-```
+**games/** — Game tools
+- `metrics.py` — Game metrics, installed games, sale info
+- `recommendations.py` — Content recommendations (playtime + YouTube demand)
 
-### File Structure
+**search/** — Search tools
+- `search_tools.py` — Web search, news search, wiki lookup, reddit search, weather, fetch_url
 
-**api/_base.py**
-```python
-# Shared API call pattern
-def cached_api_call(tool_name: str, params_hash: str, live_fn: Callable,
-                    ttl_seconds: int, stale_ok: bool = True) -> dict
-def stale_notice(result: dict) -> str | None
-def make_params_hash(*args, **kwargs) -> str
-```
+**productivity/** — Productivity tools
+- `calendar.py` — Google Calendar tools (today schedule, upcoming events, availability)
+- `goals.py` — Goals, plans, tasks, commitments
+- `personal.py` — Personal tasks (reminders, to-dos)
+- `sync.py` — Google Tasks sync
 
-**api/youtube_api.py**
-```python
-# YouTube Analytics API
-def get_channel_data(days: int) -> dict
-def get_top_videos_data(days: int, limit: int) -> dict
-def get_video_data(video_id: str, days: int) -> dict
+**communication/** — Communication tools
+- `gmail.py` — Gmail tools (dual account: personal + RFD IT Services)
 
-# YouTube Data API
-def search_videos(query: str, days: int) -> dict
-def get_video_statistics(video_ids: list[str]) -> dict
+**meta/** — Meta tools
+- `meta.py` — think() scratchpad
 
-# Internal
-def _get_credentials() -> Credentials
-def _build_analytics_client() -> Resource
-def _build_data_client() -> Resource
-```
+**registry.py** — TOOL_REGISTRY (single source of truth for all 46 tools)
 
-**api/steam_api.py**
-```python
-# Steam Web API
-def get_owned_games() -> dict
-def get_app_list() -> dict
-def get_app_details(appid: int) -> dict
+### API Layer (`api/`)
 
-# Internal
-def _get_steam_api() -> str
-```
+**google/** — Google APIs
+- `youtube_api.py` — YouTube Analytics + Data API
+- `gmail_api.py` — Gmail API (dual account)
+- `calendar_api.py` — Google Calendar API
+- `tasks_api.py` — Google Tasks API
 
-**api/steamspy_api.py**
-```python
-# SteamSpy API
-def get_app_details(appid: int) -> dict
-def get_owners(appid: int) -> dict
-def get_players(appid: int) -> dict
+**steam/** — Steam APIs
+- `steam_api.py` — Steam Web API
+- `steamspy_api.py` — SteamSpy API
+- `itad_api.py` — IsThereAnyDeal API
+- `catalog_api.py` — Steam catalog resolution
 
-# Internal
-def _get_steamspy_api() -> str
-```
+**web/** — Web APIs
+- `ddg_api.py` — DuckDuckGo Search API
+- `wikipedia_api.py` — Wikipedia API
+- `reddit_api.py` — Reddit API
+- `fetch_api.py` — Browser tool (requests + BeautifulSoup)
 
-**api/itad_api.py**
-```python
-# IsThereAnyDeal API
-def search_games(title: str) -> dict
-def get_prices(game_ids: list[str]) -> dict
-def get_historical_low(game_id: str) -> dict
+**weather/** — Weather API
+- `weather_api.py` — Open-Meteo Weather API
 
-# Internal
-def _get_itad_api() -> str
-def _get_api_key() -> str
-```
+**_handler.py** — BaseAPIHandler, BaseTool base classes
 
-**api/gmail_api.py**
-```python
-# Gmail API (dual account support)
-def get_personal_inbox_summary() -> dict
-def get_rfd_inbox_summary() -> dict
-def search_personal_email(query: str) -> dict
-def search_rfd_email(query: str) -> dict
-def get_personal_unread_count() -> dict
-def get_rfd_unread_count() -> dict
-
-# Internal
-def _get_credentials(token_file: str) -> Credentials | None
-def _build_service(credentials: Credentials) -> Resource
-```
-
-**api/google_calendar_api.py**
-```python
-# Google Calendar API
-def get_events(days: int = 7) -> dict
-def get_events_today() -> dict
-def get_upcoming_events(limit: int = 10) -> dict
-
-# Internal
-def _get_credentials(token_file: str) -> Credentials | None
-def _build_service(credentials: Credentials) -> Resource
-```
-
-**api/google_tasks_api.py**
-```python
-# Google Tasks API
-def get_default_tasklist_id() -> dict
-def pull_tasks() -> dict
-def push_task(task: dict) -> dict
-def delete_task(task_id: str) -> dict
-
-# Internal
-def _get_credentials(token_file: str) -> Credentials | None
-def _build_service(credentials: Credentials) -> Resource
-```
-
-**api/weather_api.py**
-```python
-# Open-Meteo Weather API
-def get_current_weather(location: str) -> dict
-
-# Internal
-def _get_api_base() -> str
-```
-
-**api/ddg_api.py**
-```python
-# DuckDuckGo Search API
-def search_web(query: str) -> dict
-def search_news(query: str) -> dict
-
-# Internal
-def _get_api_base() -> str
-```
-
-**api/wikipedia_api.py**
-```python
-# Wikipedia API
-def get_summary(title: str) -> dict
-
-# Internal
-def _get_api_base() -> str
-```
-
-**api/reddit_api.py**
-```python
-# Reddit API
-def search_reddit(query: str) -> dict
-
-# Internal
-def _get_api_base() -> str
-```
-
-### Error Handling
-```python
-# Standard error response
-{
-    "error": "Human-readable error message",
-    "error_type": "api_error|auth_error|rate_limit|timeout",
-    "retryable": True|False
-}
-
-# Success response
-{
-    "raw": <API response data>,
-    "cached": False  # Future: indicate if API returned cached data
-}
-```
-
-## 3. Tool Layer
+## 3. What the Tool Layer Does and Does NOT Do
 
 ### Responsibilities
 - Business logic and domain-specific processing
@@ -246,507 +136,338 @@ def _get_api_base() -> str
 - Fuzzy matching and search logic
 - Data transformation for tool output
 - Combining data from multiple API calls
-- Caching (per ADR-003)
+- Result shaping via BaseTool pattern (success(), error(), stale_notice())
+- Tool registration in TOOL_REGISTRY
 
 ### What It Does NOT Do
-- Direct HTTP requests to external APIs
-- API authentication
+- Direct HTTP requests to external APIs (delegated to API layer)
+- API authentication (delegated to API layer)
 - Raw response parsing (delegated to API layer)
+- Cache management (delegated to CacheManager via BaseAPIHandler)
+- Rate limit tracking (delegated to RateLimitManager via BaseAPIHandler)
 
-### Function Contract
+## 4. What the API Layer Does and Does NOT Do
+
+### Responsibilities
+- HTTP communication with external APIs
+- Authentication and credential management
+- Request/response parsing and normalization
+- API-specific error handling and retry logic
+- Rate limit awareness via RateLimitManager
+- Cache coordination via CacheManager
+- 429 detection and retry_after extraction
+
+### What It Does NOT Do
+- Tool-specific business logic (delegated to tool layer)
+- Scoring, ranking, or verdict generation (delegated to tool layer)
+- Fuzzy matching or search algorithms (delegated to tool layer)
+- Data transformation for tool output (delegated to tool layer)
+- Direct cache operations (delegated to CacheManager)
+- Direct rate limit operations (delegated to RateLimitManager)
+
+## 5. BaseAPIHandler Pattern
+
+### Purpose
+Enforce consistent cache + rate limit behavior across all API clients. Subclasses set CACHE_PREFIX and call self.call() instead of cache directly.
+
+### Class Definition (`api/_handler.py`)
 ```python
-def tool_function(params: dict) -> dict:
-    """
-    Tool with business logic.
-    
-    Args:
-        params: Tool parameters from agent
-        
-    Returns:
-        dict: Shaped tool response or error dict
-        
-    Contract:
-        - Imports from tools.api/ only
-        - Never raises exceptions
-        - Returns {"error": str} on failure
-        - Applies caching per ADR-003
-        - Returns shaped response for agent
-    """
+class BaseAPIHandler:
+    CACHE_PREFIX: str = ""  # Must be set by subclass
+
+    def _get_client(self):
+        """Override to return authenticated client."""
+        raise NotImplementedError
+
+    def cache_key(self, suffix: str) -> str:
+        """Namespaced cache key for this handler."""
+        if not self.CACHE_PREFIX:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} must set CACHE_PREFIX"
+            )
+        return f"{self.CACHE_PREFIX}_{suffix}"
+
+    def call(self, suffix: str, params_hash: str, live_fn: Callable, stale_ok: bool = True) -> dict:
+        """
+        All API calls go through here.
+        Delegates to CacheManager and RateLimitManager.
+        """
+        # Step 1 — fresh cache hit
+        cached = cache.get(key, params_hash)
+        if cached is not None:
+            return cached
+
+        # Step 2 — rate limit check
+        if not rate_limits.can_call(self.CACHE_PREFIX):
+            wait = rate_limits.time_until_available(self.CACHE_PREFIX)
+            stale = cache.get_or_stale(key, params_hash)
+            if stale is not None:
+                return stale
+            return {"error": f"{self.CACHE_PREFIX} rate limited", "_rate_limited": True, "_retry_after": wait}
+
+        # Step 3 — live call
+        try:
+            result = live_fn()
+            rate_limits.record_call(self.CACHE_PREFIX)
+            cache.set(key, params_hash, result)
+            return result
+        except Exception as e:
+            # Detect 429 and extract retry_after
+            if "429" in str(e):
+                rate_limits.record_limit(self.CACHE_PREFIX, retry_after)
+            if stale_ok:
+                stale = cache.get_or_stale(key, params_hash)
+                if stale is not None:
+                    return stale
+            return {"error": str(e), "_live_failed": True}
+
+    def hash(self, *args, **kwargs) -> str:
+        """Convenience — delegates to cache.hash()."""
+        return cache.hash(*args, **kwargs)
 ```
 
-### File Structure
-
-**tools/__init__.py**
+### Subclass Example
 ```python
-# Tool Registry (single source of truth)
-TOOL_REGISTRY = {
-    "tool_name": {
-        "fn": function_reference,
-        "definition": {...}
-    }
-}
+class WeatherAPIHandler(BaseAPIHandler):
+    CACHE_PREFIX = "weather"
+
+    def _get_client(self):
+        return None  # Open-Meteo needs no auth
+
+    def get_current_weather(self) -> dict:
+        def _live():
+            # HTTP call
+            return {"temp_f": ..., ...}
+        return self.call("current", self.hash(), _live)
 ```
 
-**tools/productivity/calendar.py**
+### The call() Flow
+1. **Fresh cache hit** — return immediately from CacheManager
+2. **Rate limit check** — RateLimitManager.can_call()
+   - If rate limited: return stale data if available, else error with retry_after
+3. **Live call** — execute live_fn()
+   - On success: record_call(), cache.set(), return result
+   - On 429: record_limit() with retry_after, fall through to stale fallback
+   - On other error: fall through to stale fallback if stale_ok=True
+4. **Stale fallback** — cache.get_or_stale() if stale_ok=True
+
+### stale_ok=True vs stale_ok=False
+- **stale_ok=True** (default): Return stale data on API failure. Used for most tools where some data is better than no data (weather, channel stats, game metrics).
+- **stale_ok=False**: Never return stale data. Used for time-sensitive calls where freshness is critical (calendar get_events_soon, real-time queries).
+
+### Write Operations Bypass Cache
+Google Tasks push/complete/delete operations bypass cache entirely:
+- No cache key generated
+- No cache.set() call
+- Direct API call only
+- Ensures write operations always execute live
+
+## 6. BaseTool Pattern
+
+### Purpose
+Enforce consistent return shape across all tool functions. Provides success() and error() helpers.
+
+### Class Definition (`api/_handler.py`)
 ```python
-from tools.api.google_calendar_api import get_events, get_events_today, get_upcoming_events
+class BaseTool:
+    def success(self, data: dict, stale_result: dict = None) -> dict:
+        """Return a successful result with optional stale notice."""
+        result = {"ok": True, **data}
+        if stale_result is not None:
+            notice = cache.stale_notice(stale_result)
+            if notice:
+                result["_stale_notice"] = notice
+        return result
 
-def get_today_schedule() -> dict
-def get_upcoming_events(limit: int = 10) -> dict
-def check_availability(start: str, end: str) -> dict
+    def error(self, message: str, code: int = None) -> dict:
+        """Return an error result."""
+        result = {"ok": False, "error": message}
+        if code is not None:
+            result["code"] = code
+        return result
 
-# Internal
-def _format_event(event: dict) -> dict
+    def stale_notice(self, result: dict) -> str | None:
+        """Extract stale notice from a result dict."""
+        return cache.stale_notice(result)
 ```
 
-**tools/communication/gmail.py**
+### Return Shape Contract
 ```python
-from tools.api.gmail_api import (
-    get_personal_inbox_summary, get_rfd_inbox_summary,
-    search_personal_email, search_rfd_email
-)
-
-def get_inbox_summary() -> dict
-def get_all_inbox_summary() -> dict
-def search_email(query: str, account: str = "personal") -> dict
-def check_sender(sender: str, account: str = "personal") -> dict
-def check_sender_all(sender: str) -> dict
-
-# Internal
-def _format_message(msg: dict) -> dict
-```
-
-**tools/productivity/personal.py**
-```python
-from core.db import (
-    add_personal_task, list_personal_tasks, complete_personal_task,
-    snooze_personal_task, get_tasks_due_soon
-)
-
-def add_personal_task(title: str, notes: str = None, due_date: str = None,
-                     due_time: str = None, recurrence: str = None) -> dict
-def list_personal_tasks(filter: str = "all") -> dict
-def complete_personal_task(task_id: int) -> dict
-def snooze_personal_task(task_id: int, minutes: int = 30) -> dict
-
-# Internal
-def parse_natural_deadline(text: str) -> dict
-def parse_recurrence(text: str) -> str
-```
-
-**tools/productivity/sync.py**
-```python
-from tools.api.google_tasks_api import get_default_tasklist_id, pull_tasks, push_task, delete_task
-from core.db import get_tasks, upsert_task, update_task_status
-
-def run_sync() -> dict
-def pull_from_google() -> dict
-def push_new_tasks() -> dict
-
-# Internal
-def _sync_task(google_task: dict) -> dict
-```
-
-**tools/productivity/goals.py**
-```python
-from core.db import (
-    get_goals, get_goal, upsert_goal,
-    get_tasks, get_task, upsert_task, update_task_status,
-    get_current_weekly_plan, upsert_weekly_plan
-)
-
-def get_goals_list() -> dict
-def get_current_plan() -> dict
-def get_tasks_today() -> dict
-def get_upcoming_tasks(days: int = 7) -> dict
-def add_new_task(title: str, milestone_id: str = None, due_date: str = None) -> dict
-def update_task(task_id: str, status: str = None) -> dict
-def save_commitment(description: str, deadline: str = None) -> dict
-def list_commitments() -> dict
-```
-
-**tools/content/channel.py**
-```python
-from tools.api.youtube_api import get_channel_data, get_top_videos_data, get_video_data
-
-def get_channel_summary(days: int = 7) -> dict
-def get_top_videos(days: int = 7, limit: int = 10) -> dict
-def get_video_analytics(video_id: str, days: int = 28) -> dict
-
-# Internal
-def _hash_params(params: dict) -> str
-```
-
-**tools/content/discovery.py**
-```python
-from tools.api.youtube_api import search_videos, get_video_statistics
-
-def get_content_recommendations(limit: int = 5, min_playtime: float = 1.0) -> dict
-
-# Internal
-def score_game(game: dict, steam_data: dict, yt_data: dict) -> float
-```
-
-**tools/content/videos.py**
-```python
-from tools.api.youtube_api import get_video_data
-
-def get_video_details(video_id: str) -> dict
-```
-
-**tools/games/metrics.py**
-```python
-from tools.api.steam_api import get_owned_games, get_app_list
-from tools.api.steamspy_api import get_app_details
-from tools.api.itad_api import search_games, get_prices
-
-def get_game_metrics(game_name: str) -> dict
-def get_installed_games() -> dict
-def get_sale_info(game_names: list[str]) -> dict
-
-# Internal
-def resolve_appid(game_name: str) -> dict | None
-def _hash_params(params: dict) -> str
-```
-
-**tools/search.py**
-```python
-from tools.api.ddg_api import search_web, search_news
-from tools.api.wikipedia_api import get_summary
-from tools.api.reddit_api import search_reddit
-from tools.api.weather_api import get_current_weather
-from tools.api.fetch_api import fetch_api
-
-def web_search(query: str) -> dict
-def news_search(query: str) -> dict
-def wiki_lookup(topic: str) -> dict
-def reddit_search(query: str) -> dict
-def get_weather(location: str) -> dict
-def fetch_url(url: str, max_chars: int = 3000) -> dict
-```
-
-**tools/meta/meta.py**
-```python
-# Meta tools — scratchpad for agent reasoning
-def think(thought: str) -> dict
-```
-
-### fetch_url — Browser Tool
-
-**Purpose:** Fetch and read the full text content of a web page from a URL.
-
-**Pattern:** FetchAPIHandler(BaseAPIHandler)
-
-**Implementation:**
-- Uses `requests` (not httpx) for consistency with weather_api.py
-- Uses `beautifulsoup4` for HTML parsing
-- Cache key: hash(url, max_chars) — includes max_chars to distinguish different truncation levels
-- TTL: 3600 seconds (1 hour per URL)
-- Removes noise elements: script, style, nav, header, footer, aside, form tags
-- Extracts title from page title tag
-- Extracts text content with BeautifulSoup.get_text()
-- Normalizes whitespace with regex: `re.sub(r'\s+', ' ', text).strip()`
-
-**Return Shape:**
-```python
+# Success
 {
     "ok": True,
-    "stale_notice": None | str,
-    "url": str,
-    "title": str,
-    "content": str,  # First max_chars characters
-    "char_count": int,
-    "truncated": bool  # True if content exceeds max_chars
+    "_stale_notice": None,  # or string if stale
+    "temp_f": 83.6,        # tool-specific data
+    ...
 }
-```
 
-**Cache Strategy:**
-- Cached per unique URL+max_chars combination
-- Stale page content served on API failure (stale_ok=True)
-- 1-hour TTL reduces repeated fetches of same page
-
-**Truncation Policy:**
-- Default max_chars: 3000
-- User can override up to 5000 characters
-- Truncated flag indicates more content exists
-
-**When to Use:**
-- After web_search or wiki_lookup returns a URL
-- User asks "what does that article say" or "read that page"
-- Search snippet is clearly incomplete
-- Never fetch without a URL from a prior search result
-- Never fetch login-required pages
-
-### think — Scratchpad Tool
-
-**Purpose:** Record a reasoning step before acting. Creates visible context that persists across model switches.
-
-**Pattern:** Simple function (not BaseTool)
-
-**Why Not BaseTool:**
-- BaseTool exists for API-calling tools with caching
-- think has no network, no cache, no stale data
-- Forcing BaseTool adds noise without benefit
-
-**Implementation:**
-- Pure function with no side effects
-- No database writes
-- No caching
-- Returns immediately
-
-**Return Shape:**
-```python
+# Error
 {
-    "ok": True,
-    "thought": str,
-    "stale_notice": None
+    "ok": False,
+    "error": "Service unavailable",
+    "code": 500,           # optional error code
+    "_stale_notice": None
 }
 ```
 
-**Context Continuity Benefit:**
-- think() creates conversation history record
-- Model-agnostic — any model sees past thoughts
-- When DeepSeek throttles and Llama picks up, the new model reads thoughts and continues the plan
-- Throttled model switches preserve context
+### Internal Key Stripping
+BaseTool.success() strips internal keys from returned data:
+- `_stale`, `_cached_at` removed before returning to agent
+- Only `_stale_notice` surfaced to user
+- Keeps agent response clean
 
-**When to Use:**
-- Before complex tool chains requiring multiple steps
-- When the question requires planning before executing
-- When switching between topics or resuming after tool failure
-- For genuinely complex multi-step reasoning only
-- NOT for every single message
+## 7. Tool Categories
 
-**Example:**
-```
-think("I need to find the top video first, then check its retention curve to see where viewers drop.")
-→ call get_top_videos()
-→ call get_retention_curve()
-```
+### content/ — YouTube Content Tools
 
-### Response Format
-```python
-# Standard tool response
-{
-    "data": <tool-specific data>,
-    "_cached": True|False,  # Indicates if from cache
-    "_fetched_at": "ISO 8601 timestamp",  # When data was fetched
-    "_expires_at": "ISO 8601 timestamp"  # When cache expires
-}
+**channel.py**
+- `get_channel_summary()` — Channel metrics (views, watch time, subscribers)
+- `get_daily_views()` — Daily view trends over time
+- `get_audience_demographics()` — Age and gender breakdown
+- `get_device_breakdown()` — Mobile vs desktop vs TV vs tablet
+- `get_geographic_breakdown()` — Top 25 countries by views
 
-# Error response
-{
-    "error": "Human-readable error message",
-    "error_type": "api_error|validation_error|not_found"
-}
-```
+**videos.py**
+- `get_top_videos()` — Top videos by views
+- `get_video_analytics()` — Per-video analytics (views, retention, avg view duration)
+- `get_retention_curve()` — Retention curve showing where viewers drop off
 
-## 4. Adding a New API Integration
+**discovery.py**
+- `get_traffic_sources()` — Top search terms driving traffic
 
-### Step 1: Create API Client
-```python
-# api/new_api.py
-import os
-import requests
+### games/ — Game Tools
 
-API_KEY = os.getenv("NEW_API_KEY")
-API_BASE = "https://api.example.com"
+**metrics.py**
+- `get_game_metrics()` — Game performance (players, owners, content gap, verdict)
+- `get_installed_games()` — Installed games on this machine
+- `get_sale_info()` — Current prices and historical lows
 
-def get_data(params: dict) -> dict:
-    """Raw API call."""
-    try:
-        response = requests.get(
-            f"{API_BASE}/endpoint",
-            params=params,
-            headers={"Authorization": f"Bearer {API_KEY}"},
-            timeout=10
-        )
-        response.raise_for_status()
-        return {"raw": response.json()}
-    except Exception as e:
-        return {"error": str(e)}
-```
+**recommendations.py**
+- `get_content_recommendations()` — Ranked content recommendations (playtime + YouTube demand)
 
-### Step 2: Add Credentials to .env
-```bash
-# .env
-NEW_API_KEY=your_api_key_here
-```
+### search/ — Search Tools
 
-### Step 3: Update .env.example
-```bash
-# config/.env.example
-NEW_API_KEY=
-```
+**search_tools.py**
+- `web_search()` — DuckDuckGo web search
+- `news_search()` — DuckDuckGo news search
+- `wiki_lookup()` — Wikipedia topic lookup
+- `reddit_search()` — Reddit search (with optional subreddit filter)
+- `get_weather()` — Open-Meteo weather (South Florida)
+- `fetch_url()` — Browser tool (fetch full page content via requests + BeautifulSoup)
 
-### Step 4: Test API Client
-```python
-# test_new_api.py
-from tools.api.new_api import get_data
+### productivity/ — Productivity Tools
 
-result = get_data({"param": "value"})
-print(result)
-```
+**calendar.py**
+- `get_today_schedule()` — Today's calendar events
+- `get_upcoming_events()` — Upcoming events (default 7 days)
+- `check_availability()` — Check if busy on a specific date
 
-### Step 5: Document API Contract
-Add function documentation to ADR-001 or API-specific doc.
+**goals.py**
+- `save_commitment()` — Save a commitment
+- `get_goals_list()` — List all goals
+- `get_goal_detail()` — Get goal details
+- `get_current_plan()` — Get current weekly plan
+- `get_tasks_today()` — Get tasks due today
+- `get_upcoming_tasks()` — Get upcoming tasks
+- `update_task()` — Update task status
+- `add_new_task()` — Add new task to goal
+- `suggest_goal_progress()` — Suggest goal progress (agent never updates autonomously)
 
-## 5. Adding a New Tool
+**personal.py**
+- `add_personal_task()` — Add personal task (reminder/to-do)
+- `list_personal_tasks()` — List personal tasks (filter: all/today/overdue)
+- `complete_personal_task()` — Complete personal task
+- `snooze_personal_task()` — Snooze personal task
+- `delete_personal_task()` — Delete personal task
 
-### Step 1: Implement Tool Function
-```python
-# tools/tools/new_tools.py
-from tools.api.new_api import get_data
-from core.db import cache_tool_result, get_cached_tool_result
-import hashlib
-import json
+**sync.py**
+- `run_sync()` — Run Google Tasks sync
+- `pull_from_google()` — Pull tasks from Google
+- `push_new_tasks()` — Push new tasks to Google
 
-def _hash_params(params: dict) -> str:
-    return hashlib.md5(json.dumps(params, sort_keys=True).encode()).hexdigest()
+### communication/ — Communication Tools
 
-def new_tool(param: str) -> dict:
-    """Tool description."""
-    # Check cache
-    params_hash = _hash_params({"param": param})
-    cached = get_cached_tool_result("new_tool", params_hash)
-    if cached:
-        return cached
-    
-    # Fetch data
-    api_response = get_data({"param": param})
-    if "error" in api_response:
-        return {"error": api_response["error"]}
-    
-    # Process data
-    result = {
-        "data": api_response["raw"],
-        "processed": True
-    }
-    
-    # Cache result
-    cache_tool_result("new_tool", params_hash, result, ttl_hours=6)
-    
-    return result
-```
+**gmail.py**
+- `get_inbox_summary()` — Get inbox summary (personal only)
+- `get_all_inbox_summary()` — Get inbox summary (personal + RFD IT Services)
+- `search_email()` — Search emails by query
+- `check_sender()` — Check if specific sender emailed (single account)
+- `check_sender_all()` — Check if specific sender emailed (both accounts)
+- `read_email()` — Read specific email content
 
-### Step 2: Register in TOOL_REGISTRY
-```python
-# tools/__init__.py
-from tools.tools.new_tools import new_tool
+### meta/ — Meta Tools
 
-TOOL_REGISTRY = {
-    "new_tool": {
-        "fn": new_tool,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "new_tool",
-                "description": "Tool description",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "param": {
-                            "type": "string",
-                            "description": "Parameter description"
-                        }
-                    },
-                    "required": ["param"]
-                }
-            }
-        }
-    }
-}
-```
+**meta.py**
+- `think()` — Scratchpad for agent reasoning (not BaseTool — no network, no cache)
 
-### Step 3: Test Tool
-```python
-# test_new_tool.py
-from tools.tools.new_tools import new_tool
+## 8. API Sources
 
-result = new_tool("test_value")
-print(result)
-```
+### google/ — Google APIs
 
-### Step 4: Update Documentation
-- Add tool to TOOLS.md
-- Update ADR-003 if new TTL needed
-- Add examples to relevant docs
+**youtube_api.py**
+- YouTube Analytics API (channel data, video data, daily views, demographics, device breakdown, geographic breakdown, traffic sources)
+- YouTube Data API (search videos, video statistics)
+- Uses OAuth token from config/youtube_token.json
 
-## 6. Caching Policy
+**gmail_api.py**
+- Gmail API (inbox summary, search emails, check sender, read email)
+- Dual account support: personal (cheater2478@gmail.com) + RFD IT Services
+- Uses OAuth tokens from config/youtube_token.json and config/rfd_token.json
 
-### Cache Storage
-- Table: `tool_cache` in SQLite (core/db.py)
-- Key: `(tool_name, params_hash)`
-- Value: JSON-encoded result
-- Expiration: ISO 8601 timestamp
+**calendar_api.py**
+- Google Calendar API (get events, get events today, get upcoming events)
+- Uses OAuth token from config/youtube_token.json
 
-### TTL Values (per ADR-003)
-- YouTube Analytics: 6 hours
-- Steam/SteamSpy: 24 hours
-- IsThereAnyDeal: 1 hour
-- Content Recommendations: 12 hours
-- Installed Games: 1 hour
+**tasks_api.py**
+- Google Tasks API (get default tasklist, pull tasks, push task, delete task)
+- Uses OAuth token from config/youtube_token.json
+- Write operations bypass cache
 
-### Cache Pattern
-```python
-def tool_function(params: dict) -> dict:
-    # 1. Compute cache key
-    params_hash = _hash_params(params)
-    
-    # 2. Check cache
-    cached = get_cached_tool_result("tool_function", params_hash)
-    if cached:
-        return cached
-    
-    # 3. Fetch fresh data
-    result = api_call(params)
-    
-    # 4. Cache result
-    cache_tool_result("tool_function", params_hash, result, ttl_hours=TTL)
-    
-    return result
-```
+### steam/ — Steam APIs
 
-### Cache Invalidation
-- Automatic: Expired entries ignored on read
-- Manual: Delete by tool_name or params_hash
-- Scheduled: Daily cleanup of expired entries
+**steam_api.py**
+- Steam Web API (get owned games, get app list, get app details)
+- Uses STEAM_API_KEY from environment
 
-## 7. Error Handling Contract
+**steamspy_api.py**
+- SteamSpy API (get app details, get owners, get players)
+- No API key required
 
-### API Layer Errors
-```python
-{
-    "error": "Human-readable message",
-    "error_type": "api_error|auth_error|rate_limit|timeout",
-    "retryable": True|False,
-    "status_code": int  # HTTP status if applicable
-}
-```
+**itad_api.py**
+- IsThereAnyDeal API (search games, get prices, get historical low)
+- Uses ITAD_API_KEY from environment
 
-### Tool Layer Errors
-```python
-{
-    "error": "Human-readable message",
-    "error_type": "api_error|validation_error|not_found|cache_error"
-}
-```
+**catalog_api.py**
+- Steam catalog resolution (resolve game name to AppID)
+- Uses Steam catalog API
 
-### Error Propagation
-- API errors propagate to tool layer
-- Tool layer adds context and returns to agent
-- Agent presents error to user
-- Never raise exceptions — always return error dict
+### web/ — Web APIs
 
-### Validation Errors
-```python
-{
-    "error": "Invalid parameter: days must be positive integer",
-    "error_type": "validation_error",
-    "invalid_params": ["days"]
-}
-```
+**ddg_api.py**
+- DuckDuckGo Search API (web search, news search)
+- No API key required
 
-## 8. Tool Registry Format
+**wikipedia_api.py**
+- Wikipedia API (get summary)
+- No API key required
+
+**reddit_api.py**
+- Reddit API (search)
+- No API key required
+
+**fetch_api.py**
+- Browser tool (fetch URL content via requests + BeautifulSoup)
+- No API key required
+- Removes noise elements (script, style, nav, header, footer, aside, form)
+
+### weather/ — Weather API
+
+**weather_api.py**
+- Open-Meteo Weather API (get current weather)
+- No API key required
+- South Florida location hardcoded
+
+## 9. Tool Registry Format
 
 ### Registry Structure
 ```python
@@ -779,8 +500,20 @@ TOOL_REGISTRY = {
 - Single source of truth for tool discovery
 - OpenAI-compatible function calling schema
 - Function references (not strings) for type safety
-- Centralized in tools/__init__.py
+- Centralized in tools/registry.py
 - No logic, only imports and definitions
+- Consumed by agent for tool calling
+- Consumed by MCP server (Phase 15) for Claude Desktop integration
+
+### Tool Count
+- 46 tools total across 6 categories
+- content: 9 tools
+- games: 4 tools
+- search: 6 tools
+- productivity: 16 tools
+- communication: 6 tools
+- meta: 1 tool
+- memory: 4 tools (defined in bot/memory.py, imported in registry)
 
 ### Agent Integration
 ```python
@@ -791,57 +524,205 @@ tools_definitions = [t["definition"] for t in TOOL_REGISTRY.values()]
 result = TOOL_REGISTRY["tool_name"]["fn"](**params)
 ```
 
-## 9. Migration Path
+### MCP Integration (Phase 15)
+```python
+# MCP server reads TOOL_REGISTRY directly
+for tool_name, tool_data in TOOL_REGISTRY.items():
+    mcp_tool = convert_to_mcp_schema(tool_data["definition"])
+    register_mcp_tool(tool_name, mcp_tool)
+```
 
-### Current State
-- `tools/youtube.py` — mixed API + tool logic
-- `tools/games/metrics.py` — mixed API + tool logic
-- `tools/recommendations.py` — mixed API + tool logic
-- `tools/__init__.py` — TOOL_REGISTRY with direct imports
+## 10. Return Shape Contract
 
-### Target State
-- `api/` — pure API clients
-- `tools/tools/` — pure tool logic
-- `tools/__init__.py` — TOOL_REGISTRY only
+### Success Shape
+```python
+{
+    "ok": True,
+    "_stale_notice": None,  # or string if stale
+    "temp_f": 83.6,        # tool-specific data
+    ...
+}
+```
 
-### Migration Steps
-1. Create `api/` directory
-2. Extract API calls from existing files
-3. Create `tools/tools/` directory
-4. Refactor tool functions to use API layer
-5. Update `tools/__init__.py` imports
-6. Test all tools before/after migration
-7. Delete old files
+### Error Shape
+```python
+{
+    "ok": False,
+    "error": "Service unavailable",
+    "code": 500,           # optional error code
+    "_stale_notice": None
+}
+```
 
-### Zero Behavior Change
-- All tool functions maintain same signatures
-- All tool responses maintain same format
-- All tool registrations maintain same names
-- Agent integration unchanged
+### Stale Notice Format
+- `None` for fresh data
+- String for stale data: "⚠️ Data from 4h ago (2026-05-30 09:15)"
+- Agent surfaces stale_notice to user
+- Tool functions use BaseTool.success() to extract stale_notice from API result
 
-## 10. Testing Strategy
+### Internal Keys (Stripped)
+- `_stale` — removed by BaseTool.success()
+- `_cached_at` — removed by BaseTool.success()
+- `_rate_limited` — removed by BaseTool.success()
+- `_retry_after` — removed by BaseTool.success()
+- `_live_failed` — removed by BaseTool.success()
+- Only `_stale_notice` surfaced to user
+
+## 11. Adding a New Tool
+
+### Step 1: Implement Tool Function
+```python
+# tools/category/new_tool.py
+from api.source.source_api import api_function
+from api._handler import BaseTool
+from infra.cache import cache
+
+class NewTool(BaseTool):
+    def my_tool(self, param: str) -> dict:
+        # Call API via BaseAPIHandler
+        handler = SourceAPIHandler()
+        result = handler.call("endpoint", handler.hash(param), lambda: api_function(param))
+        
+        if "error" in result:
+            return self.error(result["error"])
+        
+        # Process data
+        processed = {"processed_data": result["raw"]}
+        return self.success(processed, stale_result=result)
+```
+
+### Step 2: Register in TOOL_REGISTRY
+```python
+# tools/registry.py
+from .category.new_tool import NewTool
+
+new_tool_instance = NewTool()
+
+TOOL_REGISTRY = {
+    "my_tool": {
+        "fn": new_tool_instance.my_tool,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "my_tool",
+                "description": "Tool description",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "param": {
+                            "type": "string",
+                            "description": "Parameter description"
+                        }
+                    },
+                    "required": ["param"]
+                }
+            }
+        }
+    }
+}
+```
+
+### Step 3: Test Tool
+```python
+# test_new_tool.py
+from tools.category.new_tool import NewTool
+
+tool = NewTool()
+result = tool.my_tool("test_value")
+assert result["ok"] == True
+```
+
+### Step 4: Update Documentation
+- Add tool to this SDD in appropriate category section
+- Update ADR-003 if new TTL needed
+- Add examples to relevant docs
+
+## 12. Adding a New API Integration
+
+### Step 1: Create API Handler
+```python
+# api/source/new_api.py
+from api._handler import BaseAPIHandler
+
+class NewAPIHandler(BaseAPIHandler):
+    CACHE_PREFIX = "new_api"
+
+    def _get_client(self):
+        # Load credentials
+        return authenticated_client
+
+    def get_data(self, param: str) -> dict:
+        def _live():
+            # HTTP call
+            return {"raw": response}
+        return self.call("endpoint", self.hash(param), _live)
+```
+
+### Step 2: Add Credentials to .env
+```bash
+# .env
+NEW_API_KEY=your_api_key_here
+```
+
+### Step 3: Update .env.example
+```bash
+# config/.env.example
+NEW_API_KEY=
+```
+
+### Step 4: Test API Handler
+```python
+# test_new_api.py
+from api.source.new_api import NewAPIHandler
+
+handler = NewAPIHandler()
+result = handler.get_data("test_value")
+print(result)
+```
+
+### Step 5: Document API Contract
+Add function documentation to ADR-001 or API-specific doc.
+
+## 13. Testing Strategy
 
 ### API Layer Tests
 - Mock HTTP requests
 - Test error handling
 - Test retry logic
 - Test authentication
+- Test 429 detection and retry_after extraction
+- Test rate limit coordination
+- Test cache coordination
 
 ### Tool Layer Tests
 - Mock API layer
 - Test business logic
-- Test caching
+- Test BaseTool return shapes
 - Test error propagation
+- Test stale_notice extraction
+- Test internal key stripping
 
 ### Integration Tests
 - Test full tool execution
 - Test cache hit/miss
+- Test stale fallback
+- Test rate limit behavior
 - Test error scenarios
 - Test agent integration
+- Test MCP server integration (Phase 15)
 
-## References
-- [ADR-001: API/Tool Separation Pattern](adr/ADR-001.md)
-- [ADR-002: Tool Registry Pattern](adr/ADR-002.md)
-- [ADR-003: Caching Strategy](adr/ADR-003.md)
-- [ARCHITECTURE.md](ARCHITECTURE.md)
-- [TOOLS.md](TOOLS.md)
+## 14. Related ADRs
+
+- [ADR-001: API/Tool Separation Pattern](../adr/ADR-001.md) — Separation between API clients and tool logic
+- [ADR-002: Tool Registry Pattern](../adr/ADR-002.md) — Centralized tool discovery via TOOL_REGISTRY
+- [ADR-003: Caching Strategy](../adr/ADR-003.md) — SQLite-based caching with per-tool TTL
+- [ADR-011: Tool Architecture](../adr/ADR-011.md) — Tools as plug-ins with TOOL_REGISTRY pattern
+- [ADR-018: Offline-First Cache Strategy](../adr/ADR-018.md) — Staleness budget per API
+- [ADR-019: Staleness Budget per API](../adr/ADR-019.md) — Acceptable stale age per tool
+- [ADR-020: Preload on Startup Pattern](../adr/ADR-020.md) — Warm cache on startup
+- [ADR-023: DBManager](../adr/ADR-023.md) — Single owner of database access with retry logic
+- [ADR-024: fetch_url Browser Tool](../adr/ADR-024.md) — Browser tool for reading full web page content
+- [ADR-025: think Scratchpad Tool](../adr/ADR-025.md) — Scratchpad tool for context continuity
+- [ADR-026: RateLimitManager Layer](../adr/ADR-026.md) — API rate limit tracking and quota awareness
+- [ADR-027: PollingManager Layer](../adr/ADR-027.md) — Single owner of polling behavior
+- [ADR-033: MCP Compatibility](../adr/ADR-033.md) — Expose 46 tools to Claude via MCP server (Phase 15)
