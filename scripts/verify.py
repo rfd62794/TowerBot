@@ -56,6 +56,7 @@ TEST_FILES = [
     "tests/test_routes.py",
     "tests/test_router_ai.py",
     "tests/test_agent_routing.py",
+    "tests/test_memory_semantic.py",
 ]
 
 
