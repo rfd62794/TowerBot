@@ -28,7 +28,11 @@ class WordPressAPIHandler(BaseAPIHandler):
             url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/posts"
             params = {"status": status, "per_page": 100}
             response = requests.get(url, auth=self._get_client(), params=params)
-            return response.json()
+            result = response.json()
+            # WordPress API returns list on success, dict on error
+            if isinstance(result, dict) and "code" in result:
+                raise Exception(f"WordPress API error: {result.get('message', 'Unknown error')}")
+            return result
         return self.call("posts", self.hash(status), _live)
 
     def get_post(self, post_id: int) -> dict:
