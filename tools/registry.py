@@ -57,7 +57,7 @@ from .productivity.personal import (
     snooze_personal_task,
     delete_personal_task,
 )
-from .meta.meta import think, get_current_datetime, calculate
+from .meta.meta import think, get_current_datetime, calculate, run_openagent
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -884,6 +884,36 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["expression"]
+                }
+            }
+        }
+    },
+    "run_openagent": {
+        "fn": run_openagent,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "run_openagent",
+                "description": "WHEN: planning PrivyBot's own expansion, analyzing the codebase for strategic gaps, generating next directives, checking repo health. Runs OpenAgent CLI (Robert's own tool) on a repository.\n\nRETURNS: strategic analysis output, repo inventory, or health status.\n\nCOMMANDS: analyze (strategic directives), inventory (structure), health (system status), costs (cost tracking).\n\nUSE analyze --context to focus on a specific area: 'next Phase 15 step', 'autonomous task gaps', 'Phase 16 expansion'.\n\nDO NOT CALL repeatedly — each call invokes an LLM. DO NOT CALL for non-planning tasks.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "enum": ["analyze", "inventory", "health", "costs"],
+                            "description": "OpenAgent subcommand",
+                            "default": "analyze"
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Focus context for analyze (e.g. 'next expansion phase')"
+                        },
+                        "repo_path": {
+                            "type": "string",
+                            "description": "Repo to analyze. Defaults to PrivyBot repo."
+                        }
+                    },
+                    "required": []
                 }
             }
         }

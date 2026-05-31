@@ -8,6 +8,10 @@ Simple passthrough functions only.
 
 from datetime import datetime
 import math
+import subprocess
+from pathlib import Path
+
+PRIVYBOT_REPO = Path("C:/Github/PrivyBot")
 
 
 def think(content: str) -> dict:
@@ -73,3 +77,48 @@ def calculate(expression: str) -> dict:
                 "stale_notice": None}
     except Exception as e:
         return {"ok": False, "error": str(e), "stale_notice": None}
+
+
+def run_openagent(
+    command: str = "analyze",
+    context: str = None,
+    repo_path: str = None
+) -> dict:
+    """Run OpenAgent CLI on a repository. No cache — always fresh."""
+    repo = Path(repo_path) if repo_path else PRIVYBOT_REPO
+
+    cmd = ["uv", "run", "openagent", command]
+    if context and command == "analyze":
+        cmd += ["--context", context]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(repo)
+        )
+        if result.returncode != 0:
+            return {
+                "ok": False,
+                "stale_notice": None,
+                "error": result.stderr.strip() or "OpenAgent command failed",
+                "error_code": "openagent_failed"
+            }
+        return {
+            "ok": True,
+            "stale_notice": None,
+            "command": command,
+            "repo": str(repo),
+            "context": context,
+            "output": result.stdout.strip(),
+        }
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "stale_notice": None,
+                "error": "OpenAgent timed out (120s)",
+                "error_code": "timeout"}
+    except FileNotFoundError:
+        return {"ok": False, "stale_notice": None,
+                "error": "openagent not found — run: uv add openagent-directive",
+                "error_code": "not_installed"}
