@@ -78,14 +78,16 @@ TASKS = {
         "enabled": True,
         "prompt": (
             "Check memory for 'Blog humanization status' — are all 4 existing posts humanized? "
-            "If not: identify which post is next, pull its current content using read_local_file if available, "
+            "If not: identify which post is next, call get_blog_post() to pull current content, "
             "apply five-question extraction frame, draft opening rewrite. "
+            "Call update_blog_post() to save the rewrite. "
             "Save as memory 'Blog rewrite ready: [post name]'. "
             "If all 4 are humanized: check recent commits and YouTube performance, "
             "pick the highest-resonance topic from the 70-post inventory, "
             "generate five-question extraction skeleton using RFD Content Frame "
             "(MOMENT → SURPRISE → STRUGGLE → LESSON → NEXT). "
-            "Save as memory 'Blog draft YYYY-MM-DD: [topic]'. "
+            "Call create_blog_draft() to create WordPress draft. "
+            "Save as memory 'Blog draft created: [topic]'. "
             "Mark URGENT."
         ),
     },
