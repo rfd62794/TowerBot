@@ -50,6 +50,9 @@ from .communication.gmail import (
     check_sender_all,
     read_email,
 )
+from .communication.blog import BlogTools
+
+blog_tools = BlogTools()
 from .productivity.personal import (
     add_personal_task,
     list_personal_tasks,
@@ -649,6 +652,104 @@ TOOL_REGISTRY = {
                 },
             },
         },
+    },
+    "get_blog_posts": {
+        "fn": blog_tools.get_blog_posts,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_blog_posts",
+                "description": "List blog posts from WordPress with id, title, status, and modified date.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "description": "Filter by status: draft, publish, or all",
+                            "default": "draft"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "get_blog_post": {
+        "fn": blog_tools.get_blog_post,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_blog_post",
+                "description": "Get full content of a specific blog post by ID.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "post_id": {
+                            "type": "integer",
+                            "description": "WordPress post ID"
+                        }
+                    },
+                    "required": ["post_id"]
+                }
+            }
+        }
+    },
+    "create_blog_draft": {
+        "fn": blog_tools.create_blog_draft,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "create_blog_draft",
+                "description": "Create a new blog draft in WordPress. Returns post ID and edit URL.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Post title"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Post content (HTML or plain text)"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional list of tags"
+                        }
+                    },
+                    "required": ["title", "content"]
+                }
+            }
+        }
+    },
+    "update_blog_post": {
+        "fn": blog_tools.update_blog_post,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "update_blog_post",
+                "description": "Update blog post content or promote draft to scheduled/publish.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "post_id": {
+                            "type": "integer",
+                            "description": "WordPress post ID"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Updated content (optional)"
+                        },
+                        "status": {
+                            "type": "string",
+                            "description": "New status: draft, publish, scheduled (optional)"
+                        }
+                    },
+                    "required": ["post_id"]
+                }
+            }
+        }
     },
     "get_today_schedule": {
         "fn": get_today_schedule,
