@@ -1,0 +1,152 @@
+routes:
+  chat:
+    model: ollama/gemma3:4b
+    tools: []
+    description: "General conversation, greetings, simple questions requiring no data"
+
+  calendar:
+    model: openrouter/free
+    tools:
+      - get_today_schedule
+      - get_upcoming_events
+      - check_availability
+      - save_commitment
+      - add_personal_task
+      - list_personal_tasks
+      - complete_personal_task
+      - snooze_personal_task
+      - delete_personal_task
+    description: "Schedule, events, availability, commitments, personal task management"
+
+  email:
+    model: openrouter/free
+    tools:
+      - get_inbox_summary
+      - search_email
+      - check_sender
+      - check_sender_all
+      - read_email
+    description: "Inbox, messages, email search"
+
+  voidrift:
+    model: openrouter/free
+    tools:
+      - get_itch_stats
+      - reddit_search
+      - get_recent_commits
+      - get_content_recommendations
+    description: "VoidDrift game stats, Reddit mentions, commits, content"
+
+  youtube:
+    model: openrouter/free
+    tools:
+      - get_youtube_stats
+      - get_top_videos
+      - get_video_analytics
+      - get_retention_curve
+      - get_daily_views
+      - get_audience_demographics
+      - get_traffic_sources
+      - get_device_breakdown
+      - get_geographic_breakdown
+    description: "YouTube channel stats, video performance, analytics"
+
+  goals:
+    model: openrouter/free
+    tools:
+      - get_goals
+      - get_goal
+      - get_current_plan
+      - get_tasks_today
+      - add_task
+      - update_task
+      - get_upcoming_tasks
+      - suggest_goal_progress
+    description: "Goals, tasks, milestones, weekly planning"
+
+  memory:
+    model: openrouter/free
+    tools:
+      - save_memory
+      - get_memories
+      - update_memory
+      - retire_memory
+    description: "Save or retrieve memories and personal context"
+
+  code:
+    model: ollama/qwen2.5-coder:7b
+    tools:
+      - read_local_file
+      - list_local_dir
+      - search_local_code
+      - audit_repo_compliance
+      - analyze_code_quality
+      - analyze_dependencies
+      - analyze_documentation_alignment
+      - inspect_repo
+      - generate_strategic_analysis
+      - find_opportunities
+      - elaborate_task
+      - read_current_state
+      - generate_directive
+    description: "Code analysis, repo inspection, directive generation"
+
+  search:
+    model: openrouter/free
+    tools:
+      - web_search
+      - wiki_lookup
+      - news_search
+      - fetch_url
+    description: "Web search, Wikipedia, news, URL fetch"
+
+  steam:
+    model: openrouter/free
+    tools:
+      - get_game_metrics
+      - get_installed_games
+      - get_sale_info
+    description: "Steam games, pricing, metrics"
+
+  openagent:
+    model: openrouter/free
+    tools:
+      - get_pypi_stats
+      - run_openagent
+    description: "OpenAgent PyPI stats and directive generation"
+
+  think:
+    model: claude
+    tools: []
+    description: "Complex reasoning, architecture planning, multi-step analysis"
+
+  weather:
+    model: openrouter/free
+    tools:
+      - get_weather
+      - get_weather_forecast
+    description: "Current conditions and forecast"
+
+  blog:
+    model: openrouter/free
+    tools:
+      - get_blog_posts
+      - get_blog_post
+      - create_blog_draft
+      - update_blog_post
+    description: "Blog posts, drafts, publishing"
+
+  utility:
+    model: openrouter/free
+    tools:
+      - think
+      - get_current_datetime
+      - calculate
+    description: "Cross-cutting utilities — math, time, deep thinking tool"
+
+  system:
+    model: openrouter/free
+    tools: []
+    # planned: get_system_resources, get_ollama_loaded, get_ollama_model_sizes,
+    #          check_ollama_health, get_daily_cost  (not yet in TOOL_REGISTRY)
+    description: "System resources, Ollama status, budget tracking (tools not yet implemented)"
