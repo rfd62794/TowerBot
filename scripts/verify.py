@@ -59,6 +59,8 @@ TEST_FILES = [
     "tests/test_memory_semantic.py",
     "tests/test_mcp.py",
     "tests/test_deploy.py",
+    "tests/test_task_runner.py",
+    "tests/test_autonomous.py",
 ]
 
 

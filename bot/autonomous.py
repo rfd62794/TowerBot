@@ -8,6 +8,7 @@ import requests
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.agent import respond
+from bot.task_runner import resolve_task, get_all_resolved_tasks
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.db.system_metrics import record_system_snapshot
 
@@ -80,123 +81,33 @@ FALLBACK_TASKS = [
     ),
 ]
 
-# Task definitions with schedules and prompts
-TASKS = {
-    "email_triage": {
-        "schedule_type": "interval",
-        "interval_minutes": 120,
-        "enabled": True,
-        "prompt": (
-            "Check both email inboxes (personal + RFD IT) for unread messages. "
-            "For any that look important or require a response, create a personal task. "
-            "Report: how many emails checked, what tasks created (if any)."
-        ),
-    },
-    "nightly_snapshot": {
-        "schedule_type": "cron",
-        "hour": 23,
-        "minute": 30,
-        "enabled": True,
-        "prompt": (
-            "Pull today's YouTube channel summary and VoidDrift itch.io stats. "
-            "Save a memory entry: 'Daily metrics YYYY-MM-DD' with key numbers. "
-            "Note any significant change from yesterday."
-        ),
-        "pre_run": record_system_snapshot_task,  # Record system metrics before running
-    },
-    "itch_reddit_check": {
-        "schedule_type": "interval",
-        "interval_minutes": 30,
-        "enabled": True,
-        "prompt": (
-            "Search r/incremental_games and r/gamedev for 'VoidDrift'. "
-            "If any mentions found in last 24 hours: save as memory, mark URGENT. "
-            "Report what you found."
-        ),
-    },
-    "openagent_momentum_tracker": {
-        "schedule_type": "cron",
-        "hour": 8,
-        "minute": 0,
-        "enabled": True,
-        "prompt": (
-            "Check download stats for openagent-directive on PyPI using get_pypi_stats. "
-            "Compare to the last saved count in memory (key: 'OpenAgent stats'). "
-            "If week-over-week downloads increased >20%: save to memory, mark URGENT. "
-            "Save current stats as memory 'OpenAgent stats YYYY-MM-DD'. "
-            "Report: last_week count, change from prior week, trend direction."
-        ),
-    },
-    "self_expansion_planner": {
-        "schedule_type": "cron",
-        "hour": 7,
-        "minute": 0,
-        "enabled": True,
-        "prompt": (
-            "Call read_current_state() to get current system state. "
-            "Call find_opportunities(focus='next phase') to identify top priority. "
-            "Call elaborate_task() on the top opportunity description. "
-            "Call generate_directive() to create the RFD directive template. "
-            "Fill in the directive template with specific implementation details. "
-            "Save completed directive as memory 'Proposed directive: [name]'. "
-            "Mark URGENT so Robert sees it in morning briefing."
-        ),
-    },
-    "blog_structure_generator": {
-        "schedule_type": "cron",
-        "hour": 1,
-        "minute": 0,
-        "day_of_week": 6,  # Sunday
-        "enabled": True,
-        "prompt": (
-            "Check memory for 'Blog humanization status' — are all 4 existing posts humanized? "
-            "If not: identify which post is next, call get_blog_post() to pull current content, "
-            "apply five-question extraction frame, draft opening rewrite. "
-            "Call update_blog_post() to save the rewrite. "
-            "Save as memory 'Blog rewrite ready: [post name]'. "
-            "If all 4 are humanized: check recent commits and YouTube performance, "
-            "pick the highest-resonance topic from the 70-post inventory, "
-            "generate five-question extraction skeleton using RFD Content Frame "
-            "(MOMENT → SURPRISE → STRUGGLE → LESSON → NEXT). "
-            "Call create_blog_draft() to create WordPress draft. "
-            "Save as memory 'Blog draft created: [topic]'. "
-            "Mark URGENT."
-        ),
-    },
-}
-
 
 async def run_autonomous_task(task_name: str, send_fn):
     """
     Execute a single autonomous task.
 
     Args:
-        task_name: Key from TASKS dict
+        task_name: Task name from config/tasks.yaml
         send_fn: Async function to send Telegram messages
     """
-    task = TASKS.get(task_name)
-    if not task:
-        logger.error(f"Unknown task: {task_name}")
+    try:
+        task = resolve_task(task_name)
+    except ValueError as e:
+        logger.error(f"Failed to resolve task {task_name}: {e}")
         return
 
     if not task.get("enabled"):
         logger.debug(f"Task disabled: {task_name}")
         return
 
-    # Run pre_run function if defined (e.g., system snapshot)
-    pre_run_fn = task.get("pre_run")
-    if pre_run_fn:
-        try:
-            pre_run_fn()
-        except Exception as e:
-            logger.error(f"Pre-run function failed for {task_name}: {e}")
-
+    # Build prompt: persona prefix + template body
     prefix = (
         "[AUTONOMOUS MODE — Robert is not present. "
         "Take action directly. Do not ask clarifying questions. "
         "Never delete data, never send emails. "
         "Begin summary with URGENT: or DONE:]\n\n"
     )
+    full_prompt = f"{prefix}{task['persona']}\n\n{task['prompt']}"
 
     start = time.time()
     result = ""
@@ -204,14 +115,20 @@ async def run_autonomous_task(task_name: str, send_fn):
 
     try:
         result = await respond(
-            prefix + task["prompt"],
-            thread_id=f"autonomous_{task_name}"
+            full_prompt,
+            thread_id=f"autonomous_{task_name}",
+            max_iter=task['max_iterations']
         )
         duration_ms = int((time.time() - start) * 1000)
 
         # Check if result is urgent
         if result.upper().startswith("URGENT:"):
             urgent = 1
+
+        # urgent_on check from task type
+        if task.get('urgent_on'):
+            if any(kw in result.lower() for kw in task['urgent_on']):
+                urgent = 1
 
         record_agent_action(task_name, result, duration_ms, urgent)
         logger.info(f"Task {task_name} completed in {duration_ms}ms")
@@ -221,26 +138,27 @@ async def run_autonomous_task(task_name: str, send_fn):
             await send_fn(f"🚨 {task_name}:\n{result[:500]}")
 
         # Fallback: consecutive empty runs trigger a micro-task
-        nothing_phrases = [
-            "0 mentions", "0 found", "nothing important",
-            "no urgent", "no changes detected", "nothing new"
-        ]
-        if any(p in result.lower() for p in nothing_phrases):
-            # Count recent empty runs for this task (last 8 hours)
-            recent_empty = _count_recent_empty_runs(task_name, hours=8)
-            if recent_empty >= 2:
-                # 60% chance of post builder, 40% chance of variety task
-                if random.random() < 0.6:
-                    fallback = FALLBACK_TASKS[0]  # post builder
-                else:
-                    fallback = random.choice(FALLBACK_TASKS[1:])  # variety
-                fallback_result = await respond(
-                    f"[MICRO-TASK triggered by {task_name} finding nothing]\n\n"
-                    f"{fallback}",
-                    thread_id="autonomous_fallback"
-                )
-                record_agent_action("fallback", fallback_result)
-                logger.info(f"Fallback micro-task triggered by {task_name}")
+        if task.get('fallback_on_empty'):
+            nothing_phrases = [
+                "0 mentions", "0 found", "nothing important",
+                "no urgent", "no changes detected", "nothing new"
+            ]
+            if any(p in result.lower() for p in nothing_phrases):
+                recent_empty = _count_recent_empty_runs(task_name, hours=8)
+                if recent_empty >= 2:
+                    # 60% chance of post builder, 40% chance of variety task
+                    if random.random() < 0.6:
+                        fallback = FALLBACK_TASKS[0]  # post builder
+                    else:
+                        fallback = random.choice(FALLBACK_TASKS[1:])  # variety
+                    fallback_result = await respond(
+                        f"[MICRO-TASK triggered by {task_name} finding nothing]\n\n"
+                        f"{fallback}",
+                        thread_id="autonomous_fallback",
+                        max_iter=10
+                    )
+                    record_agent_action("fallback", fallback_result)
+                    logger.info(f"Fallback micro-task triggered by {task_name}")
 
     except Exception as e:
         duration_ms = int((time.time() - start) * 1000)
@@ -272,37 +190,37 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         scheduler: AsyncIOScheduler instance
         send_fn: Async function to send Telegram messages
     """
-    for task_name, task in TASKS.items():
-        if not task.get("enabled"):
-            continue
+    for task in get_all_resolved_tasks():
+        schedule = task['schedule']
+        task_name = task['name']
 
-        if task["schedule_type"] == "interval":
+        if schedule['type'] == 'interval':
             scheduler.add_job(
                 run_autonomous_task,
                 "interval",
-                minutes=task["interval_minutes"],
+                minutes=schedule['minutes'],
                 args=[task_name, send_fn],
                 id=task_name,
                 max_instances=1,
                 replace_existing=True,
             )
-            logger.info(f"Registered interval task: {task_name} every {task['interval_minutes']}min")
+            logger.info(f"Registered interval task: {task_name} every {schedule['minutes']}min")
 
-        elif task["schedule_type"] == "cron":
+        elif schedule['type'] == 'cron':
             job_kwargs = {
-                "hour": task["hour"],
-                "minute": task["minute"],
+                "hour": schedule['hour'],
+                "minute": schedule['minute'],
                 "args": [task_name, send_fn],
                 "id": task_name,
                 "max_instances": 1,
                 "replace_existing": True,
             }
-            if "day_of_week" in task:
-                job_kwargs["day_of_week"] = task["day_of_week"]
+            if 'day_of_week' in schedule:
+                job_kwargs["day_of_week"] = schedule['day_of_week']
             scheduler.add_job(
                 run_autonomous_task,
                 "cron",
                 **job_kwargs
             )
-            day_str = f" day {task['day_of_week']}" if "day_of_week" in task else ""
-            logger.info(f"Registered cron task: {task_name} at {task['hour']:02d}:{task['minute']:02d}{day_str}")
+            day_str = f" day {schedule['day_of_week']}" if 'day_of_week' in schedule else ""
+            logger.info(f"Registered cron task: {task_name} at {schedule['hour']:02d}:{schedule['minute']:02d}{day_str}")

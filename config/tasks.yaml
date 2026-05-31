@@ -1,0 +1,44 @@
+# Task instances — schedule and filled-in parameters only
+
+email_triage:
+  template: inbox_scan
+  schedule: {type: interval, minutes: 120}
+  enabled: true
+
+itch_reddit_check:
+  template: reddit_monitor
+  schedule: {type: interval, minutes: 30}
+  enabled: true
+  params:
+    keywords: [VoidDrift]
+    subreddits: [r/incremental_games, r/gamedev]
+    hours: 24
+
+nightly_snapshot:
+  template: metric_snapshot
+  schedule: {type: cron, hour: 23, minute: 30}
+  enabled: true
+  params:
+    data_sources: [youtube, itch]
+    label: "Daily metrics"
+
+openagent_momentum_tracker:
+  template: pypi_monitor
+  schedule: {type: cron, hour: 8, minute: 0}
+  enabled: true
+  params:
+    package: openagent-directive
+    baseline_key: openagent_pypi_baseline
+    label: "OpenAgent stats"
+
+self_expansion_planner:
+  template: self_expand
+  schedule: {type: cron, hour: 7, minute: 0}
+  enabled: true
+  params:
+    focus: "next phase"
+
+blog_structure_generator:
+  template: blog_scaffold
+  schedule: {type: cron, hour: 1, minute: 0, day_of_week: 6}
+  enabled: true

@@ -1,0 +1,23 @@
+# TaskTypes — behavior profiles for autonomous tasks
+# Defines iteration limits, persona, and signal emission per task category
+
+monitor:
+  max_iterations: 5
+  persona: "Monitor for signals. Be brief. Report factually."
+  emit_signals: true
+  fallback_on_empty: true
+
+reporter:
+  max_iterations: 10
+  persona: "Summarize clearly. Pull data before drawing conclusions."
+  urgent_on: [spike, mention, milestone, urgent]
+
+creator:
+  max_iterations: 15
+  persona: "You are PrivyBot's content creator."
+  outputs: [blog_draft, memory]
+
+planner:
+  max_iterations: 25
+  persona: "Think step by step. Use tools systematically before concluding."
+  save_to_memory: true

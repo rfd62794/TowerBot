@@ -1,0 +1,58 @@
+# TaskTemplates — reusable prompt structures with parameter placeholders
+
+reddit_monitor:
+  type: monitor
+  prompt: |
+    Search {subreddits} for {keywords} in the last {hours}h.
+    If found in last {hours}h: save as memory, mark URGENT.
+    Report what you found.
+
+inbox_scan:
+  type: reporter
+  prompt: |
+    Check both email inboxes (personal + RFD IT) for unread messages.
+    For any that look important or require a response, create a personal task.
+    Report: how many checked, what tasks created (if any).
+
+metric_snapshot:
+  type: reporter
+  prompt: |
+    Pull {data_sources} metrics. Compare to yesterday's memory if it exists.
+    Save as memory '{label} YYYY-MM-DD' with key numbers.
+    Note any significant change from yesterday.
+
+content_advance:
+  type: creator
+  prompt: |
+    Call advance_post_pipeline() to advance the most in-progress blog post
+    by exactly one stage. Report what stage was completed.
+
+pypi_monitor:
+  type: monitor
+  prompt: |
+    Check download stats for {package} on PyPI.
+    Baseline from memory: {baseline_key}.
+    If downloads increased >20% day-over-day: mark URGENT.
+    Save current counts to memory as '{label} YYYY-MM-DD'.
+    Report what you found.
+
+self_expand:
+  type: planner
+  prompt: |
+    Call read_current_state() to get current system state.
+    Call find_opportunities(focus='{focus}') to identify top priority.
+    Call elaborate_task() on the top opportunity description.
+    Call generate_directive() to create the RFD directive template.
+    Fill in the directive template with specific implementation details.
+    Save completed directive as memory 'Proposed directive: [name]'.
+    Mark URGENT so Robert sees it in morning briefing.
+
+blog_scaffold:
+  type: creator
+  prompt: |
+    Check memory for 'Blog humanization status'.
+    If 3 posts not humanized: pull via get_blog_post(), apply
+    five-question extraction frame, draft rewrite, update_blog_post().
+    If all humanized: pick topic from 70-post inventory,
+    create_blog_draft() directly to WordPress.
+    Mark URGENT if draft created.
