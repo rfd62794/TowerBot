@@ -25,10 +25,11 @@ def get_cached_model_list() -> list | None:
 def cache_tool_result(tool_name: str, params_hash: str, result: dict, ttl_hours: float) -> None:
     """Cache a tool result with TTL."""
     expires_at = (datetime.datetime.now() + datetime.timedelta(hours=ttl_hours)).isoformat()
+    fetched_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     db.exec(
-        "INSERT OR REPLACE INTO tool_cache (tool_name, params_hash, result, expires_at) "
-        "VALUES (?, ?, ?, ?)",
-        (tool_name, params_hash, json.dumps(result), expires_at), commit=True,
+        "INSERT OR REPLACE INTO tool_cache (tool_name, params_hash, result, expires_at, fetched_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (tool_name, params_hash, json.dumps(result), expires_at, fetched_at), commit=True,
     )
 
 
