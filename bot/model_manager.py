@@ -179,6 +179,7 @@ def should_skip_model(model_id: str) -> tuple[bool, str]:
     """
     from datetime import datetime, timedelta
     from infra.db.model_usage import count_model_calls, count_model_errors, get_last_error_time, count_model_calls_minute
+    from infra.db.budget_tracking import get_budget_status
     
     # Ollama local models never skip
     if model_id == "ollama" or model_id.startswith("ollama/"):
@@ -189,6 +190,19 @@ def should_skip_model(model_id: str) -> tuple[bool, str]:
     # Local models never skip
     if limits.get("rpm") is None:
         return False, "local"
+    
+    # Check budget for paid providers
+    provider = limits.get("provider", "openrouter")
+    if provider in DAILY_PAID_CAPS:
+        daily_cap = DAILY_PAID_CAPS[provider]
+        try:
+            budget = get_budget_status(provider, model_id, daily_cap)
+            if budget["over_budget"]:
+                return True, f"budget_exceeded (${budget['daily_spent_usd']:.2f}/${daily_cap:.2f})"
+            if budget["percent_used"] > 90:
+                return True, f"budget_warning ({budget['percent_used']:.0f}% used)"
+        except Exception:
+            pass  # Budget tracking failure shouldn't block
     
     # Check daily usage — skip if within 5% of limit
     rpd = limits.get("rpd", 200)

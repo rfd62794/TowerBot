@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 from infra.db.schema import _exec
+from infra.db.budget_tracking import record_cost as record_budget_cost
 
 
 def record_model_call(
@@ -43,6 +44,16 @@ def record_model_call(
         ),
         commit=True
     )
+    
+    # Track budget for paid providers with cost
+    if success and cost_usd > 0 and provider != "ollama":
+        from bot.model_manager import DAILY_PAID_CAPS
+        daily_cap = DAILY_PAID_CAPS.get(provider)
+        if daily_cap:
+            try:
+                record_budget_cost(provider, model_id, cost_usd, daily_cap)
+            except Exception:
+                pass  # Budget tracking is non-critical
 
 
 def count_model_calls(model_id: str = None, provider: str = None, minutes: int = None, hours: int = None) -> int:
