@@ -7,10 +7,7 @@ Simple passthrough functions only.
 """
 
 from datetime import datetime
-from zoneinfo import ZoneInfo
 import math
-
-EASTERN = ZoneInfo("America/New_York")
 
 
 def think(content: str) -> dict:
@@ -33,8 +30,11 @@ def think(content: str) -> dict:
 
 
 def get_current_datetime() -> dict:
-    """Return current datetime in Eastern time. No API, no cache."""
-    now = datetime.now(EASTERN)
+    """Return current datetime in local timezone. No API, no cache."""
+    now = datetime.now()
+    # Get local timezone info
+    tz = now.astimezone().tzinfo
+    tz_name = str(tz) if tz else "Local"
     return {
         "ok": True,
         "stale_notice": None,
@@ -42,7 +42,7 @@ def get_current_datetime() -> dict:
         "date": now.strftime("%Y-%m-%d"),
         "time": now.strftime("%H:%M"),
         "day_of_week": now.strftime("%A"),
-        "timezone": "America/New_York",
+        "timezone": tz_name,
         "timestamp": int(now.timestamp()),
     }
 
