@@ -20,6 +20,7 @@ dependencies = [
     "google-api-python-client>=2.0.0",
     "ddgs>=6.0.0",
     "apscheduler>=3.10.4,<4.0",
+    "openagent-directive>=0.2.2",
 ]
 
 [project.scripts]
