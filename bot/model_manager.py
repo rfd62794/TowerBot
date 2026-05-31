@@ -230,10 +230,11 @@ def get_available_model() -> str | None:
         return f"ollama/{ollama_api.model}"
     elif ollama_api.enabled and not ollama_api._starting:
         try:
-            asyncio.create_task(ollama_api.ensure_running())
+            loop = asyncio.get_running_loop()
+            loop.create_task(ollama_api.ensure_running())
             logger.info("[Ollama] Recovery started — routing to OpenRouter")
         except RuntimeError:
-            pass  # no running loop (test context)
+            pass  # no running loop (test context) — do not create the coroutine
     
     # Priority 1: openrouter/free
     throttled = set(get_throttled_models())
