@@ -464,7 +464,7 @@ async def route(chat_id: int, text: str) -> str:
     elif text.startswith("/claude"):
         model_key, message = "claude", text[len("/claude"):].strip()
     else:
-        model_key, message = "default", text
+        model_key, message = None, text
 
     if not message:
         return "Say something."

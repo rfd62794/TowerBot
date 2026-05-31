@@ -42,6 +42,12 @@ from bot.memory import (
 from bot.report import report
 from bot.model_manager import get_available_model, handle_429, handle_success, should_skip_model
 from tools.registry import TOOL_REGISTRY
+from bot.router_ai import (
+    classify as ai_classify,
+    get_tools_for_routes,
+    get_model_for_routes,
+)
+from api.local.ollama_api import ollama_api
 
 # max_retries=0: we manage 429 rotation ourselves; the SDK's internal retries
 # add 19-23s blocking waits before our fallback logic can run.
@@ -412,8 +418,35 @@ def _assistant_tool_msg(msg):
     }
 
 
-async def respond(message: str, thread_id: str, model_key: str = "default") -> str:
+async def respond(message: str, thread_id: str, model_key: str | None = None) -> str:
     try:
+        # ── Intent routing gate — plain user messages only ─────────────────
+        # NOTE: if the previous route was "code" (qwen2.5-coder:7b in VRAM),
+        # classify() will request gemma3:4b → Ollama swaps (~10-20s).
+        # This is rare and covered by _thinking_thread UX.
+        _use_routing = (
+            model_key is None
+            and not message.lstrip().startswith("[AUTONOMOUS MODE]")
+            and ollama_api.enabled
+        )
+        if _use_routing:
+            routes = await ai_classify(message)
+            logger.info("[router_ai] routes=%s for: %.80s", routes, message)
+            focused_names = get_tools_for_routes(routes)
+            model = get_model_for_routes(routes)
+            tools = [
+                TOOL_REGISTRY[t]["definition"]
+                for t in focused_names
+                if t in TOOL_REGISTRY
+            ] + [NAME_THREAD_TOOL]
+            allow_rotation = True
+        else:
+            # Existing behaviour — full tool set, model from env/command
+            tools = ALL_TOOLS
+            model = get_available_model() or MODELS.get(model_key) or MODELS["default"]
+            allow_rotation = model_key in (None, "default")
+        # ──────────────────────────────────────────────────────────────────
+
         try:
             create_thread(thread_id)
         except Exception:
@@ -424,9 +457,7 @@ async def respond(message: str, thread_id: str, model_key: str = "default") -> s
         messages = [{"role": "system", "content": _system_prompt()}]
         messages.extend(get_context(thread_id, 10))
 
-        allow_rotation = (model_key == "default")
-        model = get_available_model() or MODELS.get(model_key) or MODELS["default"]
-        resp, model = await _chat(model, messages, ALL_TOOLS, allow_rotation)
+        resp, model = await _chat(model, messages, tools, allow_rotation)
         msg = resp.choices[0].message
 
         if msg.tool_calls:
