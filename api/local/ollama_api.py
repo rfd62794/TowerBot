@@ -234,9 +234,10 @@ class OllamaSwapManager:
             "stream": False,
         }
         
-        if tools:
-            payload["tools"] = tools
-        
+        # Tools are intentionally omitted — Ollama always returns tool_calls=[]
+        # so tool execution routes through OpenRouter regardless. Passing OpenAI
+        # tool schemas to gemma3:4b causes a 400 Bad Request.
+
         try:
             # Run blocking requests in thread pool
             loop = asyncio.get_event_loop()
