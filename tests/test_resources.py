@@ -30,23 +30,21 @@ def run_all() -> tuple[int, int]:
 
 @test("resources: get_system_resources returns RAM, disk, CPU metrics")
 def test_get_system_resources():
-    from unittest.mock import patch
+    from unittest.mock import patch, MagicMock
     from tools.meta.resources import ResourceTools
     
     # Mock psutil
-    mock_ram = type('obj', (object,), {
-        'total': 16 * (1024**3),
-        'used': 8 * (1024**3),
-        'available': 8 * (1024**3),
-        'percent': 50.0
-    })()
+    mock_ram = MagicMock()
+    mock_ram.total = 16 * (1024**3)
+    mock_ram.used = 8 * (1024**3)
+    mock_ram.available = 8 * (1024**3)
+    mock_ram.percent = 50.0
     
-    mock_disk = type('obj', (object,), {
-        'total': 500 * (1024**3),
-        'used': 200 * (1024**3),
-        'free': 300 * (1024**3),
-        'percent': 40.0
-    })()
+    mock_disk = MagicMock()
+    mock_disk.total = 500 * (1024**3)
+    mock_disk.used = 200 * (1024**3)
+    mock_disk.free = 300 * (1024**3)
+    mock_disk.percent = 40.0
     
     with patch('psutil.virtual_memory', return_value=mock_ram), \
          patch('psutil.disk_usage', return_value=mock_disk), \
@@ -56,7 +54,7 @@ def test_get_system_resources():
         result = tools.get_system_resources()
         
         assert result["ok"] is True, f"Expected ok=True, got {result}"
-        data = result["data"]
+        data = result.get("data", {})
         assert data["ram_total_gb"] == 16.0, f"Expected 16.0GB, got {data['ram_total_gb']}"
         assert data["ram_available_gb"] == 8.0, f"Expected 8.0GB, got {data['ram_available_gb']}"
         assert data["disk_free_gb"] == 300.0, f"Expected 300.0GB, got {data['disk_free_gb']}"
