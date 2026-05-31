@@ -1,6 +1,6 @@
 current_week:
   period: "2026-06-02 to 2026-06-08"
-  focus: "Tool completion + autonomous review"
+  focus: "Autonomous overnight operation — review 7AM briefing results, build budget tracking, start MCP HTTP auth design"
   goals_advancing:
     - palm_beach_2036
     - privybot_complete
