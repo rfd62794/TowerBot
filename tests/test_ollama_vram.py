@@ -112,6 +112,21 @@ def test_vram_check_falls_back_to_psutil_on_api_failure():
     assert result is True, f"Expected True (psutil fallback: 8GB available), got {result}"
 
 
+def test_vram_already_loaded_returns_true():
+    """Model already present in /api/ps — return True immediately without VRAM math."""
+    manager = _make_manager()
+    mock_ctx = _mock_httpx_client({
+        "models": [{"name": "gemma3:4b", "size_vram": int(3.5 * 1024 ** 3)}]
+    })
+
+    async def _run():
+        with patch("api.local.ollama_api.httpx.AsyncClient", return_value=mock_ctx):
+            return await manager._check_vram("gemma3:4b")
+
+    result = asyncio.run(_run())
+    assert result is True, f"Expected True when model already in VRAM, got {result}"
+
+
 # ── harness ────────────────────────────────────────────────────────────────
 
 TESTS = [
@@ -119,6 +134,7 @@ TESTS = [
     test_vram_check_blocks_when_other_processes_use_vram,
     test_vram_check_excludes_current_loaded_model,
     test_vram_check_falls_back_to_psutil_on_api_failure,
+    test_vram_already_loaded_returns_true,
 ]
 
 
