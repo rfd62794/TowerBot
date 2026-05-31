@@ -110,7 +110,7 @@ def test_blog_create_draft():
         assert "edit_url" in result
 
 
-@test("blog tools: update_blog_post returns ok=True")
+@test("blog tools: update_blog_post with status returns ok=True")
 def test_blog_update_post():
     with mock.patch('requests.put') as mock_put, mock.patch('infra.cache.cache.invalidate'):
         mock_put.return_value.json.return_value = {
@@ -125,10 +125,10 @@ def test_blog_update_post():
         assert result["status"] == "publish"
 
 
-@test("blog tools: update_blog_post returns ok=True")
+@test("blog tools: update_blog_post with content returns ok=True")
 def test_update_blog_post():
-    with mock.patch('requests.post') as mock_post, mock.patch('infra.cache.cache.invalidate'):
-        mock_post.return_value.json.return_value = {
+    with mock.patch('requests.put') as mock_put, mock.patch('infra.cache.cache.invalidate'):
+        mock_put.return_value.json.return_value = {
             "id": 123,
             "status": "draft",
             "link": "https://blog.rfditservices.com/?p=123"
