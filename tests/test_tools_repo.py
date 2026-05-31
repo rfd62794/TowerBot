@@ -113,9 +113,4 @@ def run_all():
     print(f"\n{passed}/{len(TESTS)} passed")
     if failed > 0:
         print(f"{failed} failed")
-        return 1
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(run_all())
+    return passed, failed
