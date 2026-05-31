@@ -12,8 +12,36 @@ if str(_root) not in sys.path:
 from dotenv import load_dotenv
 load_dotenv(_root / ".env")
 
+from infra.db import init_db
+init_db()
+
 from infra.mcp.config import MCP_EXPOSED_TOOLS
 from tools.registry import TOOL_REGISTRY
+
+TESTS = []
+
+
+def test(name):
+    def decorator(func):
+        TESTS.append((name, func))
+        return func
+    return decorator
+
+
+def run_all() -> tuple[int, int]:
+    passed = 0
+    failed = 0
+
+    for name, func in TESTS:
+        try:
+            func()
+            print(f"  ✓ mcp: {name}")
+            passed += 1
+        except Exception as e:
+            print(f"  ✗ mcp: {name}: {e}")
+            failed += 1
+
+    return passed, failed
 
 
 @test("mcp: tool listing returns schema")
@@ -95,17 +123,25 @@ def test_jwt_generate_and_validate():
 def test_jwt_expired_token_rejected():
     """Expired JWT token is rejected."""
     from api.mcp.auth import generate_token, validate_token
+    from datetime import datetime, timedelta
+    import jwt
 
-    # Generate token with 1 minute expiry
-    token = generate_token(expiry_minutes=1)
+    # Generate token with negative expiry (already expired)
+    past_time = datetime.utcnow() - timedelta(minutes=2)
+    exp_time = datetime.utcnow() - timedelta(minutes=1)
 
-    # Mock time to make it expired
-    with patch("api.mcp.auth.datetime") as mock_datetime:
-        from datetime import datetime, timedelta
-        mock_datetime.utcnow.return_value = datetime.utcnow() + timedelta(minutes=2)
+    # Manually create an expired token
+    payload = {
+        "iat": past_time,
+        "exp": exp_time,
+        "scope": "mcp_access",
+    }
+    from api.mcp.auth import JWT_SECRET, ALGORITHM
+    token = jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
 
-        payload = validate_token(token)
-        assert payload is None, "Expected None for expired token"
+    # Validate - should return None for expired token
+    result = validate_token(token)
+    assert result is None, "Expected None for expired token"
 
 
 @test("mcp: jwt invalid token rejected")
