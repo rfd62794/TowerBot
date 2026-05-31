@@ -1,6 +1,6 @@
 current_week:
-  period: "2026-05-26 to 2026-06-01"
-  focus: "Tower deploy + PrivyBot hardening"
+  period: "2026-06-02 to 2026-06-08"
+  focus: "Tool completion + autonomous review"
   goals_advancing:
     - palm_beach_2036
     - privybot_complete
@@ -8,35 +8,35 @@ current_week:
     - content_calendar
   tasks:
     - id: task_001
-      title: Deploy PrivyBot to Tower via NSSM
-      due: "2026-06-01"
+      title: Implement summarize_url tool
+      due: "2026-06-03"
       status: pending
       scheduled: null
-      milestone_id: tower_deploy
+      milestone_id: tool_completion
     - id: task_002
-      title: Ship ReactReel OAuth hardening
-      due: "2026-06-01"
-      status: in_progress
+      title: Implement youtube_compare_videos tool
+      due: "2026-06-04"
+      status: pending
       scheduled: null
-      milestone_id: oauth_hardening
+      milestone_id: tool_completion
     - id: task_003
-      title: Record two EIC Shorts
-      due: "2026-05-31"
+      title: Implement draft_email tool
+      due: "2026-06-05"
       status: pending
-      scheduled: "2026-05-30 19:00"
-      milestone_id: may_shorts
+      scheduled: null
+      milestone_id: tool_completion
     - id: task_004
-      title: Complete Goals and Plans system
-      due: "2026-05-30"
-      status: in_progress
-      scheduled: null
-      milestone_id: goals_system
+      title: Review overnight autonomous actions
+      due: "2026-06-02"
+      status: pending
+      scheduled: "2026-06-02 07:30"
+      milestone_id: autonomous_review
     - id: task_005
-      title: Commit PrivyBot before midnight
-      due: "2026-05-30"
+      title: Update ADR for Phase 16
+      due: "2026-06-03"
       status: pending
       scheduled: null
-      milestone_id: tower_deploy
+      milestone_id: documentation
 
 recurring:
   - id: rec_001

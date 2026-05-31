@@ -101,7 +101,7 @@ Agent → Tool Registry → Tool Function → API Handler → External Service
 **meta/** — Meta tools
 - `meta.py` — think() scratchpad
 
-**registry.py** — TOOL_REGISTRY (single source of truth for all 46 tools)
+**registry.py** — TOOL_REGISTRY (single source of truth for all 52 tools)
 
 ### API Layer (`api/`)
 
@@ -506,13 +506,13 @@ TOOL_REGISTRY = {
 - Consumed by MCP server (Phase 15) for Claude Desktop integration
 
 ### Tool Count
-- 46 tools total across 6 categories
+- 52 tools total across 6 categories
 - content: 9 tools
-- games: 4 tools
-- search: 6 tools
+- games: 5 tools
+- search: 9 tools
 - productivity: 16 tools
 - communication: 6 tools
-- meta: 1 tool
+- meta: 3 tools
 - memory: 4 tools (defined in bot/memory.py, imported in registry)
 
 ### Agent Integration
