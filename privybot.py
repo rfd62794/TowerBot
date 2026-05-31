@@ -14,7 +14,17 @@ load_dotenv(env_path)
 
 import asyncio
 import logging
+import sys
 import time
+
+# Windows cp1252 console fix: email snippets and other external data contain
+# Unicode chars (U+034F, etc.) that cp1252 can't encode, crashing StreamHandler.
+# Reconfigure stdout/stderr to UTF-8 with replacement so log output never crashes.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except AttributeError:
+    pass  # NSSM service stdout may not be a reconfigurable TextIOWrapper
 
 # Windows TLS fix: the default ProactorEventLoop intermittently resets async
 # TLS handshakes to api.telegram.org (BrokenResourceError). The SelectorEventLoop
