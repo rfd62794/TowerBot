@@ -20,12 +20,73 @@ goals:
     content: Automation Engineer title within 12 months.
     layer: business
 
+personal:
+  - key: robert_operating_conditions
+    content: "Warrior sessions nights 8PM-12AM and weekends. Lives at parents' house in Greenacres FL on a fold-out cot. Daughter visits nightly — she is the core motivation behind everything. This is the current operating environment, not a temporary situation."
+    layer: personal
+  - key: robert_energy_modes
+    content: "Two modes: sharp energy (focused, building, solving — goes to VoidDrift and PrivyBot) and mostly energy (maintenance, monitoring, review — goes to YouTube and documentation). Never assign sharp-energy work during mostly-energy signals."
+    layer: personal
+  - key: robert_communication_style
+    content: "Direct. Gets frustrated when AI repeats mistakes, suggests explicitly ruled-out things, or over-engineers. Works best when agent picks one clarifying question before any output. Session ends when Robert says done — never assume done early."
+    layer: personal
+  - key: robert_learning_identity
+    content: "Self-taught. No degree — Google certs and shipped projects are the credentials. Text-based learner, handwritten notes. Motivation shifted from external validation (certifications didn't produce promotion) to internal pride in craft."
+    layer: personal
+  - key: working_style
+    content: Warrior sessions nights and weekends. Direct answers. No filler. Clarifying questions before output.
+    layer: personal
+  - key: daughter
+    content: Has a daughter. Sees her nightly. Core motivation.
+    layer: personal
+  - key: current_situation
+    content: Lives at parents house. Fold-out cot. 10 year plan to Palm Beach Island.
+    layer: personal
+  - key: learning_style
+    content: Text-based learning. Handwritten notes. Coursera for certs. Practice before cert.
+    layer: personal
+
+career:
+  - key: day_job_and_constraints
+    content: "Junior Data Administrator at Consumr Buzz (Digital Marketing Fulfillment Agency), approaching 2 years. Actual output: Selenium suites, Chrome Extensions, Python tooling, bookmarklets — far exceeds title. NDA and Non-Compete block commercializing work tools or Convoso/dialer-related freelance."
+    layer: business
+  - key: consulting_available_skills
+    content: "Available for consulting outside Non-Compete: Python automation, Rust development, data pipeline engineering (Brownbook ETL: 671K records, 6m32s, 37-column schema), game development, general automation tooling. NOT available: anything touching Convoso, ViciDial, or dialer software."
+    layer: business
+  - key: career_path_target
+    content: "Goal: 1-2 private consulting clients with mutual patience — not mass market. Priestley model: publish first, pitch second. Build reputation before seeking clients. Path: portfolio → audience → passive income → private consulting."
+    layer: business
+  - key: priestley_audit_current
+    content: "Priestley KPI audit May 2026: Pitch ✅ Publish ⚠️ Product ⚠️ Profile ⚠️ Partnerships ❌. Bottleneck is consistent humanized publishing. Blog pipeline addresses Publish. VoidDrift Play Store assets address Product. YouTube engagement addresses Profile."
+    layer: business
+  - key: consumr_buzz
+    content: Day job. Digital Marketing Fulfillment Agency. IT Dept. Nearly 2 years.
+    layer: business
+  - key: nda_nca
+    content: NDA and Non-Compete block commercializing work tools. No Convoso freelance.
+    layer: business
+  - key: cert_arc
+    content: IT Automation with Python current. UX Design next. Project Management. Associate Data Practitioner. ML Engineer.
+    layer: business
+  - key: consulting_pitch
+    content: I help small business owners get back time they waste on things that should happen automatically.
+    layer: business
+
 projects:
   - key: privybot_status
     content: Built May 29 2026. Running on laptop. Tower deploy this weekend.
     layer: project
   - key: privybot_system_state
-    content: "PrivyBot state May 31 2026: 69 tools, 261 tests passing, 6 autonomous tasks running overnight, self-expansion loop closed via tools/repo/ (13 tools). WordPress blog pipeline live. Phase 16 complete. Budget tracking and MCP HTTP auth are next session priorities."
+    content: "PrivyBot May 31 2026: 69 tools, 261 tests, 6 autonomous tasks running overnight. Phase 16 (Autonomous Operation) complete. tools/repo/ (13 tools) enables self-expansion. WordPress blog pipeline live. Self-expansion loop closed — PrivyBot proposes its own next directive at 7AM daily."
+    layer: project
+  - key: privybot_purpose
+    content: "PrivyBot exists to replace scattered Google apps with one interface, own Robert's data, practice real infrastructure, and evolve into something that manages itself. Primary deliverable: 7AM briefing with channel stats, calendar, email, tasks, weather — unprompted, accurate, from his own data."
+    layer: project
+  - key: privybot_next_priorities
+    content: "Next session priorities: 1) OpenRouter budget tracking — URGENT, tasks running blind on cost, hard cap $0.10/day 2) MCP HTTP server + Tailscale Funnel + JWT auth 3) Fallback task system for idle time 4) Morning briefing WordPress section 5) mem0 Phase 15."
+    layer: project
+  - key: privybot_never_do
+    content: "PrivyBot should NEVER: delete data, send emails autonomously, make purchases, post to social media, execute git operations, commit to main, deploy to Tower without instruction. Always draft and flag. Robert decides, edits, and executes. Agent proposes — human approves."
     layer: project
   - key: reactreel_status
     content: Planned YouTube Shorts SaaS. OAuth hardening this weekend. Robert is User 1.
@@ -43,52 +104,36 @@ projects:
     content: rfditservices.com live. Blog pipeline being built.
     layer: project
 
-technical:
-  - key: default_model
-    content: DeepSeek V4 Flash (free) as default. DeepSeek Chat for /think. Claude Sonnet for /claude.
-    layer: technical
-  - key: coding_agents
-    content: Antigravity (Windsurf+Gemini) for code. Claude for architecture and design.
-    layer: technical
-  - key: tower_setup
-    content: Windows tower, always-on, South Florida home. Laptop for development.
-    layer: technical
-  - key: primitive_philosophy
-    content: Build primitives open source free. Sell the guide cheap. Sell the time expensive.
-    layer: technical
-  - key: rfd_methodology
-    content: Spec-Driven Development. Phase directives. Stop rules. Test anchors. ADRs.
-    layer: technical
+voiddrift:
+  - key: voiddrift_current_state
+    content: "VoidDrift: Rust/Bevy 0.15, Android + WASM. Live at rdug627.itch.io/voidrift, v3.0.10. Phase 5 in progress — Production Tree viewport live. Priced at $0.99 Android after Phase 5 ships. GDD v2.0 locked. Primary active game project."
+    layer: project
+  - key: voiddrift_itch_metrics
+    content: "VoidDrift itch.io May 2026: 505 views, 239 plays, 3 collections, 1 follower, 10.4K impressions, 2.27% CTR. Organic floor 10-20 views/day. Top referrers: idle tag browse + Reddit Feedback Friday. 1-star likely load failure (PowerVR GPU / no WebGL2)."
+    layer: project
+  - key: voiddrift_play_store_blocked
+    content: "VoidDrift Play Store: Internal Testing ready, BLOCKED by three missing assets — app icon (512×512), feature graphic (1024×500), screenshots (min 2). These are the only things between current state and $0.99 Android revenue. Each day without them is a day at $0."
+    layer: project
+  - key: voiddrift_narrative
+    content: "VoidDrift narrative locked: Earth dying, player is seed ship with salvaged Signal engine. Black hole is an egg. ECHO is station AI. Human faction goes silent (Earth ended). Signal fills the void. SlimeGarden is what the seed becomes — never stated in either game."
+    layer: project
+  - key: voiddrift_chassis_value
+    content: "VoidDrift chassis insight: proven mobile pipeline (Bevy, tab architecture, resource chain, dispatch, save/load, Android + WASM, itch.io) is more valuable than any single game. Fork and reskin beats rebuild — entire pipeline proved, new concept ships in days not months."
+    layer: project
+  - key: voiddrift_three_rings
+    content: "VoidDrift GDD: Three rings — Inner (Metal/drones), Middle (H3 Gas + Crystals), Outer (Void Essence). Three loops: Mine→Ingots→Parts→Drones, H3+Metal→Crystals→Upgrades, Void Energy→NGU faster+Black Hole bar. Drone types: Scanner, Miner, Breaker, Grappler, Void Extractor."
+    layer: project
 
-personal:
-  - key: working_style
-    content: Warrior sessions nights and weekends. Direct answers. No filler. Clarifying questions before output.
-    layer: personal
-  - key: daughter
-    content: Has a daughter. Sees her nightly. Core motivation.
-    layer: personal
-  - key: current_situation
-    content: Lives at parents house. Fold-out cot. 10 year plan to Palm Beach Island.
-    layer: personal
-  - key: learning_style
-    content: Text-based learning. Handwritten notes. Coursera for certs. Practice before cert.
-    layer: personal
-
-business:
-  - key: consumr_buzz
-    content: Day job. Digital Marketing Fulfillment Agency. IT Dept. Nearly 2 years.
-    layer: business
-  - key: nda_nca
-    content: NDA and Non-Compete block commercializing work tools. No Convoso freelance.
-    layer: business
-  - key: cert_arc
-    content: IT Automation with Python current. UX Design next. Project Management. Associate Data Practitioner. ML Engineer.
-    layer: business
-  - key: consulting_pitch
-    content: I help small business owners get back time they waste on things that should happen automatically.
-    layer: business
-
-content:
+youtube:
+  - key: youtube_channel_baseline
+    content: "YouTube @robertfloyddugger4516: 18 subscribers, 9 videos. Last 28 days: 2,593 views (+999% vs prior), 6.0 hours watch time. Top: EIC 'the game told me what I became' 595 views 67.4% retention. VoidDrift devlog short: 213 views 121.8% retention (rewatched). Monetization: 1K subs + 4K hours."
+    layer: content
+  - key: youtube_active_series
+    content: "Active series: EIC (Everything is Crab) — primary through June 15. Scritchy Scratchy. Dune Awakening (400 views, climbing). After June 15: Raccoin content. VoidDrift dev logs: highest retention, most underproduced. Bevy community post = highest untapped cold source, still unwritten."
+    layer: content
+  - key: youtube_content_insight
+    content: "Developer lens changes everything about gaming content. VoidDrift devlog at 121.8% retention proves the audience exists for dev-perspective game content. EIC series performs because authenticity of the moment captured, not production quality. Early Creator Flavor is the right frame for imperfect audio."
+    layer: content
   - key: youtube_channel
     content: Robert Floyd Dugger. 18 subscribers. 2029 views last 28 days. Three series — EIC, Scritchy Scratchy, Dune.
     layer: content
@@ -116,3 +161,123 @@ content:
   - key: openagent_pypi_baseline
     content: "openagent-directive PyPI baseline May 2026: ~3 real downloads/week, ~60/month total (mostly automated bots/mirrors). ~10-20 actual users. Python Null version dominates = bots. Launched April 29 2026. No second promotion wave yet. Bug fixed locally, 0.2.3 not yet published."
     layer: content
+
+openagent:
+  - key: openagent_package_status
+    content: "openagent-directive: PyPI v0.2.2, published April 29 2026. CLI tool for repo-aware directive generation via SOUL.md personalization. Bug 1 (List import) fixed locally. Bug 2 (DocumentationAgent abstract class) still open — blocks openagent analyze. v0.2.3 not yet published."
+    layer: project
+  - key: openagent_metrics
+    content: "openagent-directive downloads May 2026: ~60/month total, ~3 real downloads/week. Python Null version dominates (automated bots/mirrors). ~10-20 actual users. One LinkedIn launch post — no second promotion wave. Fix Bug 2, publish 0.2.3, then second post."
+    layer: project
+
+portfolio:
+  - key: rpgcore_purpose
+    content: "rpgCore (Python/pygame): ECS design lab, 1,122 passing tests. Design sandbox for VoidDrift mechanics and future games. Not a product — a lab. Completed: GeneticsComponent, LifecycleComponent, DispatchSystem. Queued: BreedingSystem, ConquestSystem, PersonalityComponent."
+    layer: project
+  - key: shipped_portfolio
+    content: "Shipped projects: PhantomArbiter (Solana DeFi, 1,891 commits), Brownbook ETL (671K records, 6m32s, 37-column schema), DialerListPulse (Streamlit/Telesero), PyPongAI + ContentEngine, GemmAgentGmail, AntSim, GreenGap, TurboShells, ChimeraLab, OrblingConquest. Each is a documentable case study."
+    layer: project
+  - key: operatorgame_lesson
+    content: "OperatorGame lesson: Well-documented architecture without a core game experience is not a product. Systems design without purpose is a case study. Formally assessed and closed. Lesson: never build the frame without the experience inside it."
+    layer: project
+
+rfditservices:
+  - key: rfditservices_site
+    content: "rfditservices.com: live WordPress site, hosted at ssh3.rfditservices.com port 42, username rdugger. Seven real project pages. LinkedIn badge in footer. PrivyBot now has WordPress API tools (get_blog_posts, create_blog_draft, update_blog_post) to interact with the blog directly."
+    layer: project
+  - key: rfditservices_blog_state
+    content: "Blog has 4 AI-generated posts needing humanization. PhantomArbiter post rewritten May 29 using RFD Content Frame (1 of 4 done). 3 remaining. Rule: fix existing before adding new posts. Humanization = retroactive authentic voice, not new content."
+    layer: project
+
+methodology:
+  - key: sdd_methodology
+    content: "Spec-Driven Development: SDD (design) → directive (what to build) → agent (executes). Claude writes directives, Windsurf executes. Every directive has: files to change, stop rule, success criteria, test floor. ADRs lock architecture — agent cannot deviate from locked ADRs."
+    layer: technical
+  - key: proof_standard
+    content: "Proof standard: raw terminal output + device screenshots only. Agent summaries, fabricated test output, and verbal confirmations of fixes are explicitly rejected. 261/261 must pass after every change. Agent summaries are never accepted as verification of anything."
+    layer: technical
+  - key: scope_discipline
+    content: "Scope ceiling: no features beyond what was asked. No abstractions for single-use code. Surgical changes only — every changed line traces directly to the request. If 200 lines could be 50, rewrite. Touch only what the request requires, clean up only your own mess."
+    layer: technical
+  - key: never_suggest_these
+    content: "NEVER suggest: git checkout main (Robert controls main), Tower deploy (shelved until he says go), merging to main without explicit approval. These have been stated more than 5 times. Violations cause immediate frustration and loss of trust."
+    layer: technical
+  - key: default_model
+    content: DeepSeek V4 Flash (free) as default. DeepSeek Chat for /think. Claude Sonnet for /claude.
+    layer: technical
+  - key: coding_agents
+    content: Antigravity (Windsurf+Gemini) for code. Claude for architecture and design.
+    layer: technical
+  - key: tower_setup
+    content: Windows tower, always-on, South Florida home. Laptop for development.
+    layer: technical
+  - key: primitive_philosophy
+    content: Build primitives open source free. Sell the guide cheap. Sell the time expensive.
+    layer: technical
+  - key: rfd_methodology
+    content: Spec-Driven Development. Phase directives. Stop rules. Test anchors. ADRs.
+    layer: technical
+
+technical:
+  - key: ai_workflow
+    content: "Claude: architecture, design, ADRs, directives. Windsurf+Gemini (Antigravity): coding agent for Consumr Buzz work (company-paid, separate accounts). Windsurf preferred for indie — Antigravity moves too fast. Robert is Systemic Designer. Long design conversation before any code."
+    layer: technical
+  - key: primary_languages
+    content: "Python: automation, tools, games, pipelines. Rust: VoidDrift, OperatorGame (speed + Android + WASM). Build: Butler (itch.io), uv (Python package management). DB: SQLite WAL mode. Test: pytest with strict floor requirements. Never PostgreSQL by preference."
+    layer: technical
+  - key: build_pipeline
+    content: "VoidDrift build: run.ps1 / build_wasm.ps1 / publish.ps1 / bake_*.ps1. Config: balance.toml, visual.toml, echo.yaml, tutorial.yaml. Desktop = runtime TOML. WASM/Android = include_str! baked. Remote deploy currently impossible without local build — CI wishlist item."
+    layer: technical
+
+infrastructure:
+  - key: hardware_setup
+    content: "Nitro gaming laptop: current PrivyBot host, dev machine, Ollama installed (nomic-embed-text + gemma3:4b). Tower i5 4-core older gen, 32GB RAM, no GPU: planned PrivyBot host (Phase 7, not yet deployed). Moto G 2025 (720×1604): primary Android test device."
+    layer: technical
+  - key: tailscale_network
+    content: "Tailscale mesh VPN across all Robert's devices — Nitro, Tower, phone. Tailscale Funnel exposes local services to public internet with HTTPS, no router config, free tier. Planned for PrivyBot MCP HTTP server: public endpoint at [device].ts.net, JWT token auth."
+    layer: technical
+  - key: ollama_models
+    content: "Ollama on Nitro: nomic-embed-text (embedding, 274MB, fast on GPU) and gemma3:4b (extraction, 128K context, ~2.5GB). Both enable fully local mem0 integration — zero external API calls for memory operations. Tower gets same models during Phase 7 deployment."
+    layer: technical
+
+financial:
+  - key: revenue_paths
+    content: "Four revenue paths: 1) VoidDrift $0.99 Play Store (blocked by assets) 2) YouTube ad revenue (need 1K subs + 4K hours) 3) OpenAgent consulting leads (PyPI visibility → rfditservices.com → consulting) 4) Private consulting 1-2 clients via Priestley model. No path needs venture."
+    layer: business
+  - key: key_thresholds
+    content: "Critical numbers: YouTube monetization = 1K subs + 4K watch hours (currently 18 subs). VoidDrift price = $0.99. PrivyBot daily paid LLM cap = $0.10 (to be implemented). OpenAgent real downloads = ~3/week baseline. itch.io organic floor = 10-20 views/day."
+    layer: business
+
+brand:
+  - key: systems_builder_identity
+    content: "Core identity: 'I solve friction systematically.' The 20-year insight: Robert has been rebuilding the same core systems — breeding, genetics, culture identity, dispatch, persistent world — from Lands of Hope (browser MMORPG, middle school) through VoidDrift. Systems builder whose instinct is designing transformation chains."
+    layer: personal
+  - key: rfd_content_frame
+    content: "RFD Content Frame: MOMENT → SURPRISE → STRUGGLE → LESSON → NEXT. One specific scene, not a summary. Honest over motivational. No AI-generated filler without Robert's voice. Agent shapes the frame from Robert's raw answers — never writes prose autonomously."
+    layer: personal
+  - key: gumroad_product_target
+    content: "Gumroad knowledge product: 'How I Write Directives That Coding Agents Actually Follow' — $19-29 PDF. Five blog posts become the chapters. Robert knows this material cold. Needs extraction, not invention. The post inventory has 70+ topics across 14+ months of content."
+    layer: business
+  - key: content_distribution
+    content: "Distribution chain: rfditservices.com primary → LinkedIn same day (420 followers, developer audience) → Reddit same week (r/ClaudeAI, r/ChatGPTPromptEngineering, r/LocalLLaMA) → Dev.to for discovery → Gumroad after 5 posts distilled into guide."
+    layer: content
+
+autonomous:
+  - key: autonomous_task_schedule
+    content: "Autonomous tasks running May 31 2026: email_triage (every 2h), itch_reddit_check (every 30min), nightly_snapshot (23:30), blog_structure_generator (Sunday 1AM), self_expansion_planner (7AM daily), openagent_momentum_tracker (8AM daily). Results logged to agent_actions table."
+    layer: project
+  - key: autonomous_blog_pipeline
+    content: "blog_structure_generator checks Blog humanization status memory first. If 3 posts not humanized: pull via get_blog_post(), apply five-question extraction, draft rewrite, update_blog_post(). If all humanized: pick topic from 70-post inventory, create_blog_draft() directly to WordPress."
+    layer: project
+  - key: autonomous_self_expansion
+    content: "self_expansion_planner: calls read_current_state() → find_opportunities() → elaborate_task() → generate_directive(). Produces complete RFD directive. Saves as 'Proposed directive: [name]'. Marks URGENT. Robert reviews in morning briefing, approves or adjusts, hands to Windsurf."
+    layer: project
+  - key: autonomous_task_proof
+    content: "Autonomous task output in agent_actions table. Morning briefing shows 🤖 section with last 8 hours of actions. 🚨 prefix for URGENT results. Tasks that find nothing should still produce something via fallback micro-tasks (not yet implemented — next session priority)."
+    layer: project
+
+extraction:
+  - key: five_question_extraction
+    content: "Content extraction process: 1) One scene, stream of consciousness — where were you, what happened 2) What surprised you, one sentence 3) What was the actual friction, honest 4) What you know now, distilled lesson 5) What changed next, forward motion. Agent asks sequentially, Robert answers raw, agent shapes the RFD frame."
+    layer: content
+
