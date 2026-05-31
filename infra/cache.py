@@ -64,6 +64,8 @@ class CacheManager:
         "wikipedia": 86400,  # 24h (legacy key)
         "reddit": 900,  # 15min (legacy key)
         "fetch_page": 3600,  # 1 hour
+        "wordpress_posts": 300,  # 5min — drafts change frequently
+        "wordpress_post": 300,  # 5min — individual post
     }
 
     # ─── Staleness budget ─────────────────
@@ -108,6 +110,8 @@ class CacheManager:
         "youtube_playlist_id": 86400,
         "youtube_playlist_items": 86400,
         "fetch_page": 3600,
+        "wordpress_posts": 300,
+        "wordpress_post": 300,
     }
 
     # ─── Core methods ─────────────────────
