@@ -17,6 +17,9 @@ logger = logging.getLogger("privy.agent")
 # Track last model used for /status command
 _last_model_used: str | None = None
 
+# Models permanently removed this session due to 404 (model gone on provider)
+_dead_models: set = set()
+
 
 def get_last_model() -> str:
     """Return the last model used, or 'none' if none yet."""
@@ -250,6 +253,11 @@ async def _rotate(messages: list, tools):
         if fallback is None:
             raise _AllRateLimited()
         
+        # Skip permanently dead models (404'd this session)
+        if fallback in _dead_models:
+            handle_429(fallback, 300.0)
+            continue
+        
         # Check if model should be skipped based on rate limits
         should_skip, skip_reason = should_skip_model(fallback)
         if should_skip:
@@ -266,8 +274,17 @@ async def _rotate(messages: list, tools):
         except Exception as e:
             if _is_429(e):
                 handle_429(fallback, _extract_retry_after(e) or 60.0)
+            elif "404" in str(e):
+                # Model gone — validate and permanently remove from session rotation
+                try:
+                    from api.web.openrouter_api import openrouter_api
+                    if not openrouter_api.validate_model(fallback):
+                        _dead_models.add(fallback)
+                        logger.warning("Removed %s from rotation — 404", fallback)
+                except Exception:
+                    handle_429(fallback, 300.0)
             else:
-                # Invalid id or other error: cooldown briefly so it is skipped.
+                # Other error: cooldown briefly so it is skipped.
                 handle_429(fallback, 300.0)
             await report("model_routed", model=fallback, reason=f"skip: {e}")
             continue

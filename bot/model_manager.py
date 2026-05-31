@@ -54,11 +54,10 @@ MODEL_LIMITS = {
     "ollama": {"rpm": None, "rpd": None},
 }
 
-# Known tool-capable free models, used only if the API call fails.
-# Prioritized by test results (PASS models from test_models.py)
+# Known tool-capable free models — fallback only if live discovery fails.
+# deepseek/deepseek-v4-flash:free removed — 404 on OpenRouter (model gone)
 SEED_FREE_MODELS = [
     "openrouter/free",  # primary — auto-routes across all free models with tool calling
-    "deepseek/deepseek-v4-flash:free",  # 1M context, excellent
     "openai/gpt-oss-120b:free",  # OpenAI open-weight, 117B
     "moonshotai/kimi-k2.6:free",  # solid tool calling
     "google/gemma-4-31b-it:free",  # 256K context, function calling
@@ -79,29 +78,14 @@ TOOL_INCOMPATIBLE = {
 
 
 def fetch_free_tool_models() -> list:
-    """Return free, tool-capable model ids. Cached 24h; seeds on failure."""
+    """Return free, tool-capable model ids. Cached 1h via OpenRouterAPIHandler; seeds on failure."""
     cached = get_cached_model_list()
     if cached:
         return cached
 
     try:
-        headers = {
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
-            "HTTP-Referer": "https://github.com/rfd62794/PrivyBot",
-        }
-        # Query for models that support tools
-        resp = httpx.get(f"{OPENROUTER_MODELS_URL}?supported_parameters=tools", headers=headers, timeout=10.0)
-        resp.raise_for_status()
-        data = resp.json().get("data", [])
-
-        result = []
-        for model in data:
-            pricing = model.get("pricing", {})
-            is_free = pricing.get("prompt") == "0" and pricing.get("completion") == "0"
-            has_tools = "tools" in model.get("supported_parameters", [])
-            if is_free and has_tools:
-                result.append(model["id"])
-
+        from api.web.openrouter_api import openrouter_api
+        result = openrouter_api.get_free_models()
         if not result:
             result = SEED_FREE_MODELS
         cache_model_list(result)
@@ -239,7 +223,9 @@ def get_available_model() -> str | None:
     from api.local.ollama_api import ollama_api
     
     # Priority 0: Ollama local
-    if ollama_api.health_check():
+    ollama_healthy = ollama_api.health_check()
+    logger.info("Checking Ollama: enabled=%s health=%s", ollama_api.enabled, ollama_healthy)
+    if ollama_healthy:
         return f"ollama/{ollama_api.model}"
     
     # Priority 1: openrouter/free
