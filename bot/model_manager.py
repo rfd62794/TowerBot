@@ -23,19 +23,25 @@ logger = logging.getLogger("privy.models")
 
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
+# Daily paid API caps by mode
+DAILY_PAID_CAPS = {
+    "dev": 1.00,      # testing — relaxed
+    "production": 0.10,  # overnight steady state
+}
+
+# Current mode from env, defaults to production
+PRIVYBOT_MODE = os.getenv("PRIVYBOT_MODE", "production")
+
 # Known tool-capable free models, used only if the API call fails.
 # Prioritized by test results (PASS models from test_models.py)
 SEED_FREE_MODELS = [
-    "deepseek/deepseek-v4-flash:free",  # default, may throttle temporarily
-    "openrouter/owl-alpha",
-    "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-    "poolside/laguna-xs.2:free",
-    "poolside/laguna-m.1:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-nano-12b-v2-vl:free",
-    "openai/gpt-oss-120b:free",
-    "openai/gpt-oss-20b:free",
-    "z-ai/glm-4.5-air:free",
+    "openrouter/free",  # primary — auto-routes across all free models with tool calling
+    "deepseek/deepseek-v4-flash:free",  # 1M context, excellent
+    "openai/gpt-oss-120b:free",  # OpenAI open-weight, 117B
+    "moonshotai/kimi-k2.6:free",  # solid tool calling
+    "google/gemma-4-31b-it:free",  # 256K context, function calling
+    "nex-agi/deepseek-v3.1-nex-n1:free",  # agent tasks, tool use
+    "qwen/qwen3-coder:free",  # 1M context, coding
 ]
 
 # Models with tool-calling format incompatibilities (leak raw tool-call text)
@@ -61,7 +67,8 @@ def fetch_free_tool_models() -> list:
             "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
             "HTTP-Referer": "https://github.com/rfd62794/PrivyBot",
         }
-        resp = httpx.get(OPENROUTER_MODELS_URL, headers=headers, timeout=10.0)
+        # Query for models that support tools
+        resp = httpx.get(f"{OPENROUTER_MODELS_URL}?supported_parameters=tools", headers=headers, timeout=10.0)
         resp.raise_for_status()
         data = resp.json().get("data", [])
 
@@ -80,6 +87,62 @@ def fetch_free_tool_models() -> list:
     except Exception as e:
         logger.error("fetch_free_tool_models failed: %s", e)
         return SEED_FREE_MODELS
+
+
+def discover_free_models() -> dict:
+    """
+    Query OpenRouter API for current free models with tool calling support.
+    Returns dict with count and list of model IDs.
+    """
+    try:
+        headers = {
+            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+            "HTTP-Referer": "https://github.com/rfd62794/PrivyBot",
+        }
+        resp = httpx.get(f"{OPENROUTER_MODELS_URL}?supported_parameters=tools", headers=headers, timeout=10.0)
+        resp.raise_for_status()
+        data = resp.json().get("data", [])
+
+        result = []
+        for model in data:
+            pricing = model.get("pricing", {})
+            is_free = pricing.get("prompt") == "0" and pricing.get("completion") == "0"
+            has_tools = "tools" in model.get("supported_parameters", [])
+            if is_free and has_tools:
+                result.append(model["id"])
+
+        return {
+            "ok": True,
+            "count": len(result),
+            "models": result
+        }
+    except Exception as e:
+        logger.error("discover_free_models failed: %s", e)
+        return {
+            "ok": False,
+            "error": str(e),
+            "count": 0,
+            "models": []
+        }
+
+
+def get_daily_cap() -> float:
+    """Get current daily paid cap based on PRIVYBOT_MODE."""
+    return DAILY_PAID_CAPS.get(PRIVYBOT_MODE, DAILY_PAID_CAPS["production"])
+
+
+def can_use_paid_model() -> bool:
+    """Check if we're under the daily paid cap for current mode."""
+    from infra.db.rate_limits_db import get_api_state
+    
+    # Get today's cost from OpenRouter API state
+    state = get_api_state("openrouter")
+    daily_cap = get_daily_cap()
+    
+    # quota_used_today is in USD
+    today_cost = state.get("quota_used_today", 0.0)
+    
+    return today_cost < daily_cap
 
 
 def get_available_model() -> str | None:
