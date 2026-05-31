@@ -24,6 +24,18 @@ VRAM_REQUIREMENTS_GB = {
 # Read from env so Tower or other hardware can override without code changes
 TOTAL_VRAM_GB = float(os.environ.get("OLLAMA_VRAM_GB", "4.0"))
 
+CLASSIFICATION_PROMPT = (
+    'Classify the user message into one or more routes.\n'
+    'Return ONLY valid JSON: {{"routes": ["route1"]}}\n\n'
+    'Valid routes: chat, calendar, email, voidrift, youtube, goals, memory,\n'
+    '              code, search, steam, openagent, think, system, weather, blog, utility\n\n'
+    'Rules:\n'
+    '- Use "chat" only when no external data is needed\n'
+    '- Maximum two routes per message\n'
+    '- If uncertain between "chat" and a data route, prefer the data route\n\n'
+    'Message: {message}'
+)
+
 
 class OllamaSwapManager:
     """
@@ -298,6 +310,27 @@ class OllamaSwapManager:
             )
             
             raise
+
+    async def classify(self, message: str) -> str:
+        """Text-only intent classification. No tools, no model swap."""
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": CLASSIFICATION_PROMPT.format(message=message),
+                }
+            ],
+            "stream": False,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(f"{self.host}/api/chat", json=payload)
+                resp.raise_for_status()
+                return resp.json().get("message", {}).get("content", "")
+        except Exception as e:
+            logger.warning("[Ollama] classify() failed: %s", e)
+            return ""  # empty → parse_routes() returns ["chat"]
 
 
 # Module-level singleton
