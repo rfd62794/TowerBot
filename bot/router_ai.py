@@ -5,10 +5,13 @@ instead of 30+. Plain text messages only; slash commands bypass this entirely.
 """
 
 import json
+import logging
 import yaml
 from pathlib import Path
 
 from api.local.ollama_api import ollama_api
+
+logger = logging.getLogger("privy.router")
 
 _routes_path = Path(__file__).parent.parent / "config" / "routes.yaml"
 with open(_routes_path) as _f:
@@ -16,9 +19,19 @@ with open(_routes_path) as _f:
 
 VALID_ROUTES: set[str] = set(ROUTES.keys())
 
-DATA_SIGNALS = {
-    "should", "what about", "how is", "update", "status",
-    "today", "this week", "focus", "what's next", "check",
+KEYWORD_ROUTE_MAP: dict[str, str] = {
+    "email": "email",   "emails": "email",   "inbox": "email",   "mail": "email",
+    "calendar": "calendar", "schedule": "calendar", "meeting": "calendar",
+    "appointments": "calendar", "availability": "calendar",
+    "voidrift": "voidrift", "voiddrift": "voidrift", "itch": "voidrift", "itch.io": "voidrift",
+    "youtube": "youtube", "video": "youtube",   "channel": "youtube",
+    "views": "youtube",  "subscribers": "youtube",
+    "weather": "weather", "forecast": "weather",
+    "blog": "blog", "wordpress": "blog",
+    "goal": "goals",  "goals": "goals",  "task": "goals",  "tasks": "goals",
+    "milestone": "goals", "focus": "goals",
+    "steam": "steam",
+    "reddit": "voidrift", "commit": "code", "commits": "code",
 }
 
 
@@ -33,22 +46,30 @@ def parse_routes(raw: str) -> list[str]:
         return ["chat"]
 
 
-def _has_data_signal(message: str) -> bool:
-    return any(sig in message.lower() for sig in DATA_SIGNALS)
+def _keyword_fallback(message: str) -> list[str]:
+    """Keyword scan — safety net when Ollama returns 'chat' or is unavailable."""
+    msg = message.lower()
+    for keyword, route in KEYWORD_ROUTE_MAP.items():
+        if keyword in msg:
+            return [route]
+    return ["chat"]
 
 
 async def classify(message: str) -> list[str]:
-    """Classify message → route names via Ollama.
+    """Classify message → route names via Ollama with keyword escalation fallback.
 
-    Falls back to ["chat"] if Ollama is disabled or unavailable.
-    Escalates ["chat"] to ["goals"] when message contains data signals.
+    If Ollama is disabled: keyword-only classification.
+    If Ollama returns 'chat': keyword check used as safety net.
     """
     if not ollama_api.enabled:
-        return ["chat"]
+        return _keyword_fallback(message)
     raw = await ollama_api.classify(message)
     routes = parse_routes(raw)
-    if routes == ["chat"] and _has_data_signal(message):
-        return ["goals"]
+    if routes == ["chat"]:
+        escalated = _keyword_fallback(message)
+        if escalated != ["chat"]:
+            logger.info("[router_ai] keyword escalation: chat → %s", escalated)
+            return escalated
     return routes
 
 
