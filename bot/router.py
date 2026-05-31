@@ -8,6 +8,8 @@ PTB, OpenRouter, or direct SQLite (db.py only).
 import uuid
 import time
 import subprocess
+import sys
+import os
 
 from bot.agent import respond, get_last_model
 from infra.db import (
@@ -368,24 +370,108 @@ def handle_mcp_token(expiry: str = "1h") -> str:
 
 
 async def handle_deploy(chat_id: int) -> str:
-    """Handle /deploy command — run deploy script as subprocess."""
+    """Handle /deploy command — git pull, verify, self-restart."""
+    # Guard: only authorized chat ID can trigger deploy
+    authorized_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if str(chat_id) != authorized_chat_id:
+        return "Unauthorized: deploy restricted to owner."
+
     await report("tool_called", tool_name="deploy", result_summary="Starting deploy...")
-    
+
+    _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    last_good_file = os.path.join(_root, ".last_good_commit")
+    deploy_restart_flag = os.path.join(_root, ".deploy_restart")
+
     try:
+        # Step 1: Save current commit as last good
         result = subprocess.run(
-            ["uv", "run", "python", "scripts/deploy.py"],
+            ["git", "rev-parse", "HEAD"],
+            cwd=_root,
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=30
         )
-        output = result.stdout.strip()
-        if not output:
-            output = result.stderr.strip()
-        return output or "Deploy completed."
+        if result.returncode != 0:
+            return f"Deploy failed: git rev-parse error: {result.stderr.strip()}"
+        current_commit = result.stdout.strip()
+        with open(last_good_file, "w") as f:
+            f.write(current_commit)
+
+        # Step 2: Check if there's anything to pull
+        result = subprocess.run(
+            ["git", "fetch"],
+            cwd=_root,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode != 0:
+            return f"Deploy failed: git fetch error: {result.stderr.strip()}"
+
+        result = subprocess.run(
+            ["git", "rev-parse", "@{u}"],
+            cwd=_root,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode != 0:
+            return f"Deploy failed: git rev-parse upstream error: {result.stderr.strip()}"
+        upstream_commit = result.stdout.strip()
+
+        if current_commit == upstream_commit:
+            return "Nothing to deploy — already on latest commit."
+
+        # Step 3: Pull
+        result = subprocess.run(
+            ["git", "pull"],
+            cwd=_root,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        if result.returncode != 0:
+            # Revert on pull failure
+            subprocess.run(["git", "checkout", current_commit], cwd=_root, capture_output=True)
+            return f"Deploy failed: git pull error: {result.stderr.strip()} — reverted."
+
+        # Step 4: Run verify.py
+        result = subprocess.run(
+            ["uv", "run", "python", "scripts/verify.py"],
+            cwd=_root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"}
+        )
+        verify_output = result.stdout.strip() or result.stderr.strip()
+
+        # Parse "N/N" from output
+        import re
+        match = re.search(r"(\d+)/(\d+)", verify_output)
+        if match:
+            passed, total = match.groups()
+            result_str = f"{passed}/{total}"
+        else:
+            result_str = "unknown"
+
+        # Step 5a: Verify fails — revert
+        if result.returncode != 0:
+            subprocess.run(["git", "checkout", current_commit], cwd=_root, capture_output=True)
+            return f"❌ Tests failed: {result_str} — reverted to {current_commit[:7]}"
+
+        # Step 5b: Verify passes — restart
+        with open(deploy_restart_flag, "w") as f:
+            f.write("1")
+        await report("deploy_success", commit=current_commit[:7], result=result_str)
+        return f"✅ {result_str} — restarting..."
+
     except subprocess.TimeoutExpired:
-        return "Deploy timed out after 2 minutes."
+        subprocess.run(["git", "checkout", current_commit], cwd=_root, capture_output=True)
+        return "Deploy timed out — reverted."
     except Exception as e:
-        return f"Deploy failed: {str(e)}"
+        subprocess.run(["git", "checkout", current_commit], cwd=_root, capture_output=True)
+        return f"Deploy failed: {str(e)} — reverted."
 
 
 async def handle_rollback(chat_id: int) -> str:
