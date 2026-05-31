@@ -5,7 +5,7 @@ from datetime import datetime
 from api.web.ddg_api import ddg_api
 from api.web.wikipedia_api import wikipedia_api
 from api.web.reddit_api import reddit_api
-from api.weather.weather_api import get_current_weather
+from api.weather.weather_api import get_current_weather, weather_api
 from infra.db import record_weather_day
 from tools._tool import BaseTool
 
@@ -41,6 +41,47 @@ class SearchTools(BaseTool):
             },
             stale_result=raw,
         )
+
+    def get_weather_forecast(self, days: int = 3) -> dict:
+        """
+        Get weather forecast for South Florida.
+
+        Args:
+            days: Number of forecast days (1-7, default 3)
+
+        Returns:
+            Dict with daily forecast data
+        """
+        from api.weather.weather_api import WMO_CODES
+
+        raw = weather_api.get_forecast(days)
+
+        if raw.get("_live_failed") or "error" in raw:
+            return self.error("Weather forecast unavailable", code="api_failed")
+
+        daily = raw.get("daily", {})
+        times = daily.get("time", [])
+        highs = daily.get("temperature_2m_max", [])
+        lows = daily.get("temperature_2m_min", [])
+        precip = daily.get("precipitation_probability_max", [])
+        codes = daily.get("weathercode", [])
+
+        forecast = []
+        for i, date_str in enumerate(times):
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            forecast.append({
+                "date": date_str,
+                "day_of_week": dt.strftime("%A"),
+                "high_f": highs[i] if i < len(highs) else None,
+                "low_f": lows[i] if i < len(lows) else None,
+                "precipitation_pct": precip[i] if i < len(precip) else None,
+                "condition": WMO_CODES.get(
+                    int(codes[i]) if i < len(codes) else 0, "Unknown"
+                ),
+            })
+
+        return self.success({"days": forecast, "count": len(forecast)},
+                            stale_result=raw)
 
     def web_search(self, query: str, max_results: int = 5) -> dict:
         """
@@ -221,6 +262,19 @@ def reddit_search(query: str, subreddit: str = None, limit: int = 10) -> dict:
 
 def get_weather() -> dict:
     return _search.get_weather()
+
+
+def get_weather_forecast(days: int = 3) -> dict:
+    """
+    Get weather forecast for South Florida.
+
+    Args:
+        days: Number of forecast days (1-7, default 3)
+
+    Returns:
+        Dict with daily forecast data
+    """
+    return _search.get_weather_forecast(days)
 
 
 def fetch_url(url: str, max_chars: int = 3000) -> dict:

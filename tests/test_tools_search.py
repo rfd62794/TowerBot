@@ -116,6 +116,54 @@ def test_weather_history():
         f"Expected today {today}, got {history[0]['date']}"
 
 
+@test("forecast: get_weather_forecast returns ok=True")
+def test_forecast_ok():
+    from tools.search.search_tools import get_weather_forecast
+    result = get_weather_forecast(days=3)
+    assert result.get("ok") == True, f"Expected ok=True, got {result}"
+    assert "stale_notice" in result, "Expected stale_notice key"
+
+
+@test("forecast: returns days array with count > 0")
+def test_forecast_count():
+    from tools.search.search_tools import get_weather_forecast
+    result = get_weather_forecast(days=3)
+    assert "days" in result, "Expected 'days' key"
+    assert "count" in result, "Expected 'count' key"
+    assert result["count"] > 0, "Expected count > 0"
+    assert len(result["days"]) > 0, "Expected non-empty days array"
+
+
+@test("forecast: each day has high_f, low_f, condition, day_of_week, date")
+def test_forecast_structure():
+    from tools.search.search_tools import get_weather_forecast
+    result = get_weather_forecast(days=3)
+    days = result.get("days", [])
+    assert len(days) > 0, "Expected at least one day"
+    for day in days:
+        assert "high_f" in day, "Expected 'high_f' in day"
+        assert "low_f" in day, "Expected 'low_f' in day"
+        assert "condition" in day, "Expected 'condition' in day"
+        assert "day_of_week" in day, "Expected 'day_of_week' in day"
+        assert "date" in day, "Expected 'date' in day"
+
+
+@test("forecast: days=1 returns exactly 1 day")
+def test_forecast_days_1():
+    from tools.search.search_tools import get_weather_forecast
+    result = get_weather_forecast(days=1)
+    assert result["count"] == 1, f"Expected count=1, got {result['count']}"
+    assert len(result["days"]) == 1, f"Expected 1 day, got {len(result['days'])}"
+
+
+@test("forecast: days=7 returns up to 7 days")
+def test_forecast_days_7():
+    from tools.search.search_tools import get_weather_forecast
+    result = get_weather_forecast(days=7)
+    assert result["count"] <= 7, f"Expected count <= 7, got {result['count']}"
+    assert len(result["days"]) <= 7, f"Expected <= 7 days, got {len(result['days'])}"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

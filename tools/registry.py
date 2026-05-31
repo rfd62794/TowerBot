@@ -29,7 +29,7 @@ from .content.discovery import (
 )
 from .games.recommendations import get_content_recommendations
 from .games.metrics import get_game_metrics, get_installed_games, get_sale_info
-from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url
+from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast
 from .productivity.goals import (
     save_commitment,
     get_goals_list,
@@ -472,6 +472,27 @@ TOOL_REGISTRY = {
                 },
             },
         },
+    },
+    "get_weather_forecast": {
+        "fn": get_weather_forecast,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_weather_forecast",
+                "description": "WHEN: user asks about future weather, weekend plans, whether to expect rain.\n\nRETURNS: array of days with high_f, low_f, precipitation_pct, condition, day_of_week.\n\nDO NOT CALL: for current conditions (use get_weather).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "description": "Number of forecast days (1-7, default 3)",
+                            "default": 3
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
     },
     "get_inbox_summary": {
         "fn": get_all_inbox_summary,
