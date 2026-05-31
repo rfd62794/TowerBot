@@ -25,14 +25,24 @@ VRAM_REQUIREMENTS_GB = {
 TOTAL_VRAM_GB = float(os.environ.get("OLLAMA_VRAM_GB", "4.0"))
 
 CLASSIFICATION_PROMPT = (
-    'Classify the user message into one or more routes.\n'
-    'Return ONLY valid JSON: {{"routes": ["route1"]}}\n\n'
-    'Valid routes: chat, calendar, email, voidrift, youtube, goals, memory,\n'
-    '              code, search, steam, openagent, think, system, weather, blog, utility\n\n'
-    'Rules:\n'
-    '- Use "chat" only when no external data is needed\n'
-    '- Maximum two routes per message\n'
-    '- If uncertain between "chat" and a data route, prefer the data route\n\n'
+    'You are a routing assistant. Read the message and select the correct route.\n\n'
+    'Routes — use the FIRST match:\n'
+    '- email: emails, inbox, messages ("what emails", "any mail", "check inbox")\n'
+    '- calendar: schedule, events, meetings, appointments, availability\n'
+    '- voidrift: VoidDrift game, itch.io, Reddit gaming, game commits\n'
+    '- youtube: YouTube channel, videos, analytics, subscribers, views\n'
+    '- goals: goals, tasks, milestones, plans, what to focus on\n'
+    '- memory: save, remember, retrieve specific information\n'
+    '- code: code analysis, repo, development, directives, commits\n'
+    '- search: web search, news, Wikipedia, current events, URLs\n'
+    '- weather: weather, forecast, temperature, rain\n'
+    '- blog: blog posts, WordPress, content drafts, articles\n'
+    '- steam: Steam games, pricing, game sales\n'
+    '- think: complex multi-step planning, architecture, reasoning\n'
+    '- chat: ONLY for pure conversation with zero data needed\n'
+    '          (greetings, opinions, jokes, general questions)\n\n'
+    'Return ONLY valid JSON: {{"routes": ["route1"]}}\n'
+    'Maximum 2 routes. When uncertain, prefer the data route over "chat".\n\n'
     'Message: {message}'
 )
 

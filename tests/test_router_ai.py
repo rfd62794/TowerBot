@@ -10,7 +10,10 @@ _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
-from bot.router_ai import parse_routes, get_tools_for_routes
+import asyncio
+from unittest.mock import AsyncMock, patch
+
+from bot.router_ai import parse_routes, get_tools_for_routes, _keyword_fallback
 
 
 def test_parse_routes_valid_single():
@@ -45,6 +48,32 @@ def test_get_tools_for_routes_merges_and_deduplicates():
     assert len(tools) == len(set(tools)), "Duplicate tools found in merged list"
 
 
+def test_keyword_fallback_email():
+    assert _keyword_fallback("what emails came in?") == ["email"]
+
+
+def test_keyword_fallback_voidrift():
+    assert _keyword_fallback("how's VoidDrift doing?") == ["voidrift"]
+
+
+def test_keyword_fallback_pure_chat():
+    assert _keyword_fallback("hello there") == ["chat"]
+
+
+def test_classify_escalates_on_chat():
+    """Ollama returns 'chat' but message contains 'email' → keyword escalates to email."""
+    import bot.router_ai as rai
+
+    async def _run():
+        with patch.object(rai.ollama_api, "enabled", True), \
+             patch.object(rai.ollama_api, "classify", new_callable=AsyncMock,
+                          return_value='{"routes": ["chat"]}'):
+            return await rai.classify("what emails came in?")
+
+    result = asyncio.run(_run())
+    assert result == ["email"]
+
+
 # ── harness ────────────────────────────────────────────────────────────────
 
 TESTS = [
@@ -54,6 +83,10 @@ TESTS = [
     test_parse_routes_malformed_json_falls_back,
     test_parse_routes_all_unknown_falls_back,
     test_get_tools_for_routes_merges_and_deduplicates,
+    test_keyword_fallback_email,
+    test_keyword_fallback_voidrift,
+    test_keyword_fallback_pure_chat,
+    test_classify_escalates_on_chat,
 ]
 
 
