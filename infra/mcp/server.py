@@ -31,6 +31,10 @@ load_dotenv(_root / ".env")
 
 from infra.mcp.config import MCP_EXPOSED_TOOLS
 from tools.registry import TOOL_REGISTRY
+from infra.db.schema import init_db
+
+# Initialize database before server starts
+init_db()
 
 # Optional JWT auth for SSE
 try:
