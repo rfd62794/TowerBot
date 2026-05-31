@@ -531,6 +531,64 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 
 ---
 
+## Phase 15 — Intelligence Layer 🧠 PLANNED
+
+**Status**: Planned
+**Duration**: 2 weeks
+**Key Deliverables**:
+- mem0 integration — vector-based memory with semantic search
+  - Replace LIKE-based memory search with embeddings
+  - mem0 API client (httpx for async HTTP)
+  - Memory ingestion from conversation exports (Claude, Gemini)
+  - Pre-dump corpus: VoidDrift, OperatorGame, rpgCore, OpenAgent, RFD IT Services, career, architecture decisions
+  - Automatic chunking, embedding, retrieval handled by mem0
+  - Close Assistant gap significantly
+- httpx — async HTTP client for mem0 API calls
+  - Replace requests for async compatibility
+  - Better integration with asyncio event loop
+- MCP compatibility — Model Context Protocol
+  - Expose PrivyBot's 46 tools to Claude directly
+  - Close loop: Claude architects → Windsurf executes → PrivyBot operates
+  - Three systems talk to each other instead of operating in parallel
+- APScheduler — scheduler cleanup (lower priority)
+  - Replace custom scheduler loop with APScheduler
+  - Better job persistence and retry logic
+- Ollama — local model integration (Tower-dependent, Phase 7 first)
+  - Gemma 4 E4B Q4 model for background tasks
+  - Nightly summary, weekly goal synthesis, long-form drafts
+
+**Key Decisions**:
+- mem0 as intelligence core: embeddings + semantic search
+- Conversation pre-dump: one-time corpus load from hundreds of hours of conversations
+- httpx for async: better asyncio integration than requests
+- MCP for Claude integration: tools callable from Claude directly
+- APScheduler: lower priority, custom scheduler works
+- Ollama: Tower-dependent, Phase 7 prerequisite
+
+**Dependency Chain**:
+```
+mem0 + conversation pre-dump  ← the intelligence leap
+    ↑ needs
+httpx                          ← async HTTP for mem0 API calls
+MCP compatibility              ← closes the loop back to Claude
+    ↑ independent of above
+APScheduler                    ← scheduler cleanup, lower priority
+Ollama                         ← Tower-dependent, Phase 7 first
+```
+
+**Unlocked**:
+- Semantic memory search (not LIKE-based)
+- Deep context from conversation history
+- Claude can call PrivyBot tools directly
+- True multi-system collaboration
+- Better async HTTP handling
+
+**Related ADRs**:
+- ADR-032: mem0 Integration (to be written)
+- ADR-033: MCP Compatibility (to be written)
+
+---
+
 ## Phase Progress Summary
 
 | Phase | Status | Completion |
@@ -549,8 +607,9 @@ PrivyBot evolves in 8 phases, from core infrastructure to proactive intelligence
 | Phase 12 — DB Hardening | 💾 IN PROGRESS | 10% |
 | Phase 13 — Logging | 📊 PLANNED | 0% |
 | Phase 14 — PollingManager | ✅ DONE | 100% |
+| Phase 15 — Intelligence Layer | 🧠 PLANNED | 0% |
 
-**Overall Progress**: 50% (7/14 phases complete)
+**Overall Progress**: 47% (7/15 phases complete)
 
 ---
 
