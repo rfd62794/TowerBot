@@ -21,6 +21,22 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
 
 
+def _chunk_message(text: str, max_len: int = 4000) -> list[str]:
+    if len(text) <= max_len:
+        return [text]
+    chunks = []
+    while text:
+        if len(text) <= max_len:
+            chunks.append(text)
+            break
+        split_at = text.rfind('\n', 0, max_len)
+        if split_at == -1:
+            split_at = max_len
+        chunks.append(text[:split_at])
+        text = text[split_at:].lstrip('\n')
+    return chunks
+
+
 async def _keep_typing(chat_id: int, bot, stop_event: asyncio.Event) -> None:
     """Re-send typing indicator every 4s until stop_event is set."""
     while not stop_event.is_set():
@@ -47,21 +63,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         stop.set()
         typing_task.cancel()
 
-    # Markdown safety + transient-network resilience: retry the send with a
-    # short backoff (the Windows TLS handshake can intermittently reset), and
-    # fall back to plain text if Markdown parsing fails.
-    for attempt in range(4):
-        try:
-            await update.message.reply_text(response, parse_mode="Markdown")
-            return
-        except Exception:
+    # Split oversized responses before sending (Telegram hard limit: 4096 chars).
+    # Each chunk gets the same Markdown → plain-text retry/fallback logic.
+    for chunk in _chunk_message(response):
+        for attempt in range(4):
             try:
-                await update.message.reply_text(response, parse_mode=None)
-                return
+                await update.message.reply_text(chunk, parse_mode="Markdown")
+                break
             except Exception:
-                if attempt == 3:
-                    raise
-                await asyncio.sleep(1.5)
+                try:
+                    await update.message.reply_text(chunk, parse_mode=None)
+                    break
+                except Exception:
+                    if attempt == 3:
+                        raise
+                    await asyncio.sleep(1.5)
 
 
 def build_app():
