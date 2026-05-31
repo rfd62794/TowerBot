@@ -729,7 +729,7 @@ TOOL_REGISTRY = {
             "type": "function",
             "function": {
                 "name": "update_blog_post",
-                "description": "Update blog post content or promote draft to scheduled/publish.",
+                "description": "Update blog post title, content, or status.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -737,16 +737,153 @@ TOOL_REGISTRY = {
                             "type": "integer",
                             "description": "WordPress post ID"
                         },
+                        "title": {
+                            "type": "string",
+                            "description": "Updated title (optional)"
+                        },
                         "content": {
                             "type": "string",
                             "description": "Updated content (optional)"
                         },
                         "status": {
                             "type": "string",
-                            "description": "New status: draft, publish, scheduled (optional)"
+                            "description": "New status: draft, publish, future (optional)"
                         }
                     },
                     "required": ["post_id"]
+                }
+            }
+        }
+    },
+    "set_post_excerpt": {
+        "fn": blog_tools.set_post_excerpt,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "set_post_excerpt",
+                "description": "Set the SEO/social preview excerpt for a post.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "post_id": {
+                            "type": "integer",
+                            "description": "WordPress post ID"
+                        },
+                        "excerpt": {
+                            "type": "string",
+                            "description": "Excerpt text for SEO and social previews"
+                        }
+                    },
+                    "required": ["post_id", "excerpt"]
+                }
+            }
+        }
+    },
+    "get_blog_categories": {
+        "fn": blog_tools.get_blog_categories,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_blog_categories",
+                "description": "Get all blog categories with id, name, slug, and count.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+    },
+    "set_post_categories": {
+        "fn": blog_tools.set_post_categories,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "set_post_categories",
+                "description": "Set categories on a post by name. Categories must exist in WordPress first.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "post_id": {
+                            "type": "integer",
+                            "description": "WordPress post ID"
+                        },
+                        "category_names": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of category names"
+                        }
+                    },
+                    "required": ["post_id", "category_names"]
+                }
+            }
+        }
+    },
+    "set_post_tags": {
+        "fn": blog_tools.set_post_tags,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "set_post_tags",
+                "description": "Replace the tag list on an existing post. Creates tags if they don't exist.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "post_id": {
+                            "type": "integer",
+                            "description": "WordPress post ID"
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of tag names"
+                        }
+                    },
+                    "required": ["post_id", "tags"]
+                }
+            }
+        }
+    },
+    "schedule_blog_post": {
+        "fn": blog_tools.schedule_blog_post,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "schedule_blog_post",
+                "description": "Schedule a post for future publication. Accepts ISO datetime string (e.g., 2026-06-02T09:00:00).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "post_id": {
+                            "type": "integer",
+                            "description": "WordPress post ID"
+                        },
+                        "publish_date": {
+                            "type": "string",
+                            "description": "ISO datetime string for scheduled publication"
+                        }
+                    },
+                    "required": ["post_id", "publish_date"]
+                }
+            }
+        }
+    },
+    "search_blog_posts": {
+        "fn": blog_tools.search_blog_posts,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "search_blog_posts",
+                "description": "Search blog posts by title and content.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        }
+                    },
+                    "required": ["query"]
                 }
             }
         }
