@@ -2,12 +2,50 @@
 
 import time
 import logging
+import random
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.agent import respond
-from infra.db.autonomous import record_agent_action
+from infra.db.autonomous import record_agent_action, get_recent_task_actions
 
 logger = logging.getLogger("privy.autonomous")
+
+# Fallback micro-tasks for when primary tasks find nothing
+FALLBACK_TASKS = [
+    (
+        "Pick one unstarted post topic from the content pipeline inventory "
+        "(memory: 'content_pipeline_inventory'). Write Question 1 of the "
+        "five-question extraction — the specific scene prompt Robert would "
+        "need to answer. Save as memory 'Q1 ready: [topic]'."
+    ),
+    (
+        "Find one stale metric in memory (anything with a date older than 3 days "
+        "that can be refreshed). Use available tools to get fresh data. "
+        "Update the memory with the new value and today's date."
+    ),
+    (
+        "Look at this week's commit log (get_recent_commits) and itch.io stats "
+        "(get_itch_stats). Find one specific correlation or pattern. "
+        "Save as memory 'Weekly insight: [date] — [one sentence finding]'."
+    ),
+    (
+        "Read the ROADMAP next steps (read_local_file docs/ROADMAP.md). "
+        "Pick the smallest incomplete item. Write two sentences: what it is "
+        "and what specifically blocks it. Save as memory 'Build context: [item]'."
+    ),
+    (
+        "Check get_blog_posts(status='draft') for any waiting drafts. "
+        "If one exists: read it with get_blog_post(), add one concrete scene "
+        "suggestion that would strengthen Question 1. Update the draft. "
+        "If none: generate a hook sentence for the next post topic in the queue."
+    ),
+    (
+        "Check openagent-directive PyPI stats (get_pypi_stats). Compare to "
+        "the baseline in memory (openagent_pypi_baseline). Note any change. "
+        "If downloads increased >50% day-over-day: mark URGENT. "
+        "Save as memory 'OpenAgent check: [date]'."
+    ),
+]
 
 # Task definitions with schedules and prompts
 TASKS = {
@@ -140,11 +178,44 @@ async def run_autonomous_task(task_name: str, send_fn):
         if urgent:
             await send_fn(f"🚨 {task_name}:\n{result[:500]}")
 
+        # Fallback: consecutive empty runs trigger a micro-task
+        nothing_phrases = [
+            "0 mentions", "0 found", "nothing important",
+            "no urgent", "no changes detected", "nothing new"
+        ]
+        if any(p in result.lower() for p in nothing_phrases):
+            # Count recent empty runs for this task (last 8 hours)
+            recent_empty = _count_recent_empty_runs(task_name, hours=8)
+            if recent_empty >= 2:
+                fallback = random.choice(FALLBACK_TASKS)
+                fallback_result = await respond(
+                    f"[MICRO-TASK triggered by {task_name} finding nothing]\n\n"
+                    f"{fallback}",
+                    thread_id="autonomous_fallback"
+                )
+                record_agent_action("fallback", fallback_result)
+                logger.info(f"Fallback micro-task triggered by {task_name}")
+
     except Exception as e:
         duration_ms = int((time.time() - start) * 1000)
         error_msg = f"ERROR: {str(e)}"
         record_agent_action(task_name, error_msg, duration_ms, 0)
         logger.error(f"Task {task_name} failed: {e}")
+
+
+def _count_recent_empty_runs(task_name: str, hours: int = 8) -> int:
+    """Count how many recent runs of this task found nothing."""
+    actions = get_recent_task_actions(task_name, hours=hours)
+    nothing_phrases = [
+        "0 mentions", "0 found", "nothing important",
+        "no urgent", "no changes detected", "nothing new"
+    ]
+    count = 0
+    for action in actions:
+        result = (action.get("result") or "").lower()
+        if any(p in result for p in nothing_phrases):
+            count += 1
+    return count
 
 
 def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):

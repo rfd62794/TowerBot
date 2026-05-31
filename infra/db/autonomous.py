@@ -50,3 +50,24 @@ def get_overnight_actions():
         }
         for row in rows
     ]
+
+
+def get_recent_task_actions(task_name: str, hours: int = 8) -> list[dict]:
+    """
+    Get recent actions for a specific task.
+
+    Args:
+        task_name: Name of the task to filter by
+        hours: How many hours back to look
+
+    Returns:
+        List of dicts with task_name, ran_at, result, duration_ms, urgent
+    """
+    rows = _exec(
+        "SELECT * FROM agent_actions "
+        "WHERE task_name = ? "
+        "AND ran_at >= datetime('now', ? ) "
+        "ORDER BY ran_at DESC",
+        (task_name, f"-{hours} hours"),
+    ).fetchall()
+    return [dict(r) for r in rows]
