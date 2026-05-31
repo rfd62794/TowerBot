@@ -46,6 +46,7 @@ class BlogTools(BaseTool):
             "title": result.get("title", {}).get("rendered"),
             "content": result.get("content", {}).get("rendered"),
             "status": result.get("status"),
+            "author": result.get("author"),
             "link": result.get("link")
         })
 
