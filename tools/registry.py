@@ -57,7 +57,7 @@ from .productivity.personal import (
     snooze_personal_task,
     delete_personal_task,
 )
-from .meta.meta import think
+from .meta.meta import think, get_current_datetime, calculate
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -766,6 +766,41 @@ TOOL_REGISTRY = {
                 },
             },
         },
+    },
+    "get_current_datetime": {
+        "fn": get_current_datetime,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_current_datetime",
+                "description": "WHEN: any time you need the current date, time, or day of week. Use before scheduling tasks, calculating deadlines, or any time-sensitive operation.\n\nRETURNS: datetime, date, time, day_of_week, timezone, unix timestamp.\n\nDO NOT CALL: for historical dates or date arithmetic (use calculate for that).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+    },
+    "calculate": {
+        "fn": calculate,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "calculate",
+                "description": "WHEN: math expressions, unit conversions, date arithmetic. Supported: +,-,*,/,**,%, sqrt, abs, round, floor, ceil, log, log10, sin, cos, tan, pi, e.\n\nRETURNS: result (number) and result_str (string).\n\nDO NOT CALL: for non-math expressions or string operations.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {
+                            "type": "string",
+                            "description": "Math expression to evaluate (e.g. '2 + 2', 'sqrt(144)', '(88 - 32) * 5/9')"
+                        }
+                    },
+                    "required": ["expression"]
+                }
+            }
+        }
     },
     # Memory tools
     "save_memory": {
