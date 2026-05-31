@@ -390,6 +390,28 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
+    # Migration: add system_metrics table
+    try:
+        _conn.execute("""
+            CREATE TABLE IF NOT EXISTS system_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recorded_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+                ram_used_gb REAL,
+                ram_free_gb REAL,
+                disk_free_gb REAL,
+                cpu_percent REAL,
+                ollama_model TEXT,
+                ollama_ram_gb REAL
+            )
+        """)
+        _conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_system_metrics_recorded_at
+            ON system_metrics(recorded_at DESC)
+        """)
+        _conn.commit()
+    except Exception:
+        pass
+
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
     with _lock:
