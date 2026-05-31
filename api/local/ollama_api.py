@@ -11,15 +11,17 @@ from infra.db.model_usage import record_model_call
 
 logger = logging.getLogger("privy.ollama")
 
-# Minimum RAM requirements per model size
-MIN_RAM_GB = {
-    "gemma3:4b": 2.5,
-    "qwen2.5:3b": 2.0,
-    "qwen2.5:7b": 4.0,
+# Minimum VRAM requirements per model (RTX 3050 Ti = 4GB VRAM)
+MIN_VRAM_GB = {
+    "gemma3:4b":        3.5,
+    "qwen2.5:3b":       2.5,
+    "qwen2.5:7b":       4.0,
     "qwen2.5-coder:7b": 4.0,
-    "llama3.1:8b": 5.0,
-    "default": 2.5,  # Fallback for unknown models
+    "llama3.1:8b":      5.0,  # exceeds 4GB — will always skip on this GPU
+    "default":          3.5,
 }
+
+TOTAL_VRAM_GB = 4.0  # RTX 3050 Ti
 
 
 class OllamaSwapManager:
@@ -63,6 +65,34 @@ class OllamaSwapManager:
         except Exception:
             return False
     
+    def _get_available_vram_gb(self, target_model: str) -> float:
+        """
+        Query /api/ps for VRAM in use and return estimated available VRAM.
+        Accounts for the fact that _loaded_model will be unloaded before
+        target_model is loaded (swap pattern).
+        Falls back to psutil system RAM if /api/ps is unavailable.
+        """
+        try:
+            resp = requests.get(f"{self.host}/api/ps", timeout=3)
+            resp.raise_for_status()
+            models = resp.json().get("models", [])
+
+            # Target already in VRAM — no additional space needed
+            for m in models:
+                if m.get("name") == target_model or m.get("model") == target_model:
+                    return TOTAL_VRAM_GB
+
+            # Sum VRAM in use, excluding _loaded_model (will be unloaded before swap)
+            vram_in_use_bytes = sum(
+                m.get("size_vram", 0) for m in models
+                if m.get("name") != self._loaded_model
+                and m.get("model") != self._loaded_model
+            )
+            available = TOTAL_VRAM_GB - (vram_in_use_bytes / (1024 ** 3))
+            return max(available, 0.0)
+        except Exception:
+            return psutil.virtual_memory().available / (1024 ** 3)
+
     async def ensure_running(self) -> bool:
         """
         Ensure Ollama service is running. If down, attempt to start it.
@@ -131,17 +161,18 @@ class OllamaSwapManager:
             else:
                 model_name = model_id
             
-            # Check available RAM before loading
-            min_ram = MIN_RAM_GB.get(model_name, MIN_RAM_GB["default"])
-            ram = psutil.virtual_memory()
-            ram_available_gb = ram.available / (1024**3)
-            
-            if ram_available_gb < min_ram:
+            # Check available VRAM before loading (falls back to system RAM)
+            min_vram = MIN_VRAM_GB.get(model_name, MIN_VRAM_GB["default"])
+            available_vram_gb = self._get_available_vram_gb(model_name)
+
+            if available_vram_gb < min_vram:
                 logger.warning(
-                    f"Skipping Ollama {model_name} — only {ram_available_gb:.2f}GB free, "
-                    f"need {min_ram}GB"
+                    f"Skipping Ollama {model_name} — only {available_vram_gb:.2f}GB VRAM free, "
+                    f"need {min_vram}GB"
                 )
-                raise Exception(f"Insufficient RAM: {ram_available_gb:.2f}GB available, need {min_ram}GB")
+                raise Exception(
+                    f"Insufficient VRAM: {available_vram_gb:.2f}GB available, need {min_vram}GB"
+                )
             
             # Swap if needed
             swap_start = time.time()
