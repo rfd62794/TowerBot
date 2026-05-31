@@ -6,6 +6,7 @@ Single responsibility: discover models and track throttles.
 """
 
 import os
+import asyncio
 import logging
 
 import httpx
@@ -227,6 +228,12 @@ def get_available_model() -> str | None:
     logger.info("Checking Ollama: enabled=%s health=%s", ollama_api.enabled, ollama_healthy)
     if ollama_healthy:
         return f"ollama/{ollama_api.model}"
+    elif ollama_api.enabled and not ollama_api._starting:
+        try:
+            asyncio.create_task(ollama_api.ensure_running())
+            logger.info("[Ollama] Recovery started — routing to OpenRouter")
+        except RuntimeError:
+            pass  # no running loop (test context)
     
     # Priority 1: openrouter/free
     throttled = set(get_throttled_models())
