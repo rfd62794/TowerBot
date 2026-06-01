@@ -21,7 +21,7 @@ def get_or_create_budget(provider: str, model_id: str, daily_cap_usd: float) -> 
     row = _exec(
         """SELECT * FROM budget_tracking 
            WHERE provider = ? AND model_id = ? 
-           AND date(reset_at) = date('now', 'localtime')
+           AND date(recorded_at) = date('now', 'localtime')
            ORDER BY recorded_at DESC LIMIT 1""",
         (provider, model_id)
     ).fetchone()
@@ -95,7 +95,7 @@ def record_cost(provider: str, model_id: str, cost_usd: float, daily_cap_usd: fl
         """UPDATE budget_tracking 
            SET daily_spent_usd = ?, daily_remaining_usd = ?
            WHERE provider = ? AND model_id = ? 
-           AND date(reset_at) = date('now', 'localtime')""",
+           AND date(recorded_at) = date('now', 'localtime')""",
         (new_spent, new_remaining, provider, model_id),
         commit=True
     )
