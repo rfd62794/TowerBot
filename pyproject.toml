@@ -37,9 +37,6 @@ privybot = "privybot:main"
 [tool.uv]
 package = false
 
-[tool.uv.sources]
-openagent-directive = { path = "../OpenAgent", editable = true }
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
