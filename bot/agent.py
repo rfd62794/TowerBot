@@ -235,11 +235,11 @@ async def _call(model: str, messages: list, tools):
         tokens_out = resp.usage.completion_tokens if resp.usage else 0
         
         # Determine provider from model ID
-        if model.startswith("ollama/"):
+        if model and model.startswith("ollama/"):
             provider = "ollama"
-        elif model.startswith("groq/"):
+        elif model and model.startswith("groq/"):
             provider = "groq"
-        elif model.startswith("google/"):
+        elif model and model.startswith("google/"):
             provider = "google"
         else:
             provider = "openrouter"
@@ -260,11 +260,11 @@ async def _call(model: str, messages: list, tools):
         latency_ms = int((time.time() - start_time) * 1000)
         
         # Determine provider
-        if model.startswith("ollama/"):
+        if model and model.startswith("ollama/"):
             provider = "ollama"
-        elif model.startswith("groq/"):
+        elif model and model.startswith("groq/"):
             provider = "groq"
-        elif model.startswith("google/"):
+        elif model and model.startswith("google/"):
             provider = "google"
         else:
             provider = "openrouter"
