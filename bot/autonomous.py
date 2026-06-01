@@ -207,7 +207,13 @@ async def process_delegation_queue(send_fn) -> None:
     for task in due:
         mark_running(task["id"])
         start = time.time()
-        
+
+        # Guard: skip legacy tasks with NULL prompt
+        if task.get("prompt") is None:
+            mark_failed(task["id"], "legacy task — predates prompt schema")
+            logger.warning(f"[delegation] task {task['id']} has NULL prompt, skipping")
+            continue
+
         try:
             full_prompt = (
                 "[DELEGATED TASK — requested by Claude]\n\n"

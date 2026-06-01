@@ -21,8 +21,8 @@ with open(_routes_path) as _f:
 VALID_ROUTES: set[str] = set(ROUTES.keys())
 
 # Classification model and timeout (separate from chat model for CPU optimization)
-CLASSIFY_MODEL = os.environ.get("OLLAMA_CLASSIFY_MODEL", "qwen2.5:1.5b")
-CLASSIFY_TIMEOUT = float(os.environ.get("OLLAMA_CLASSIFY_TIMEOUT", "15.0"))
+CLASSIFY_MODEL = os.environ.get("OLLAMA_CLASSIFY_MODEL") or "qwen2.5:1.5b"
+CLASSIFY_TIMEOUT = float(os.environ.get("OLLAMA_CLASSIFY_TIMEOUT") or "15.0")
 
 KEYWORD_ROUTE_MAP: dict[str, str] = {
     "email": "email",   "emails": "email",   "inbox": "email",   "mail": "email",
