@@ -226,20 +226,24 @@ def format_response(text: str) -> str:
     text = re.sub(r'`(.+?)`', r'<code>\1</code>', text)
     
     # Escape special characters outside of HTML tags
-    # This is a simple approach - escape <, >, & when not part of a tag
-    def escape_special_chars(match):
-        full_match = match.group(0)
-        # If it's an HTML tag, don't escape
-        if full_match.startswith('<') and full_match.endswith('>'):
-            return full_match
-        # Otherwise escape
-        return full_match.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    # First, protect existing HTML tags by temporarily replacing them
+    tag_pattern = r'<(/?[a-zA-Z][a-zA-Z0-9]*)(?:\s+[^>]*)?>'
+    tags = []
     
-    # Find all potential special chars and escape them appropriately
-    # This regex matches <, >, or & that are not part of an HTML tag
-    text = re.sub(r'&(?![a-zA-Z]{2,6};|#[0-9]{1,4};)', '&amp;', text)
-    text = re.sub(r'<(?![a-zA-Z/])', '&lt;', text)
-    text = re.sub(r'(?<![^>])>', '&gt;', text)
+    def protect_tag(match):
+        tags.append(match.group(0))
+        return f"__TAG_{len(tags)-1}__"
+    
+    text = re.sub(tag_pattern, protect_tag, text)
+    
+    # Now escape special characters in the remaining text
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;')
+    text = text.replace('>', '&gt;')
+    
+    # Restore HTML tags
+    for i, tag in enumerate(tags):
+        text = text.replace(f"__TAG_{i}__", tag)
     
     # Flatten nested bullet indentation (Telegram ignores it)
     # Convert multiple spaces/tabs at line start to single space
