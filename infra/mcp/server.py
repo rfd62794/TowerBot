@@ -37,14 +37,6 @@ from infra.db.schema import init_db
 # Initialize database before server starts
 init_db()
 
-# Optional JWT auth for SSE
-try:
-    from api.mcp.auth import validate_bearer_token
-    JWT_AUTH_AVAILABLE = True
-except ImportError:
-    JWT_AUTH_AVAILABLE = False
-    logging.warning("JWT auth not available — SSE transport will be unauthenticated")
-
 logger = logging.getLogger("privy.mcp")
 
 # Create MCP server
@@ -133,7 +125,7 @@ async def run_stdio():
         )
 
 
-async def run_sse(port: int = 8090, host: str = "0.0.0.0"):
+async def run_sse(port: int = 8090, host: str = "0.0.0.0", validate_bearer_token=None):
     """Run MCP server with SSE transport (remote via Tailscale)."""
     logger.info(f"Starting MCP server with SSE transport on port {port}")
 
@@ -143,7 +135,7 @@ async def run_sse(port: int = 8090, host: str = "0.0.0.0"):
     # SSE endpoint handler
     async def handle_sse(request: Request) -> Response:
         # JWT auth check if available
-        if JWT_AUTH_AVAILABLE:
+        if validate_bearer_token:
             auth_header = request.headers.get("Authorization")
             if not validate_bearer_token(auth_header):
                 return Response("Unauthorized", status_code=401)
@@ -199,7 +191,13 @@ def main():
     if args.transport == "stdio":
         anyio.run(run_stdio)
     else:
-        anyio.run(run_sse, args.port, args.host)
+        # Import JWT auth only for SSE transport
+        try:
+            from api.mcp.auth import validate_bearer_token
+        except ImportError:
+            validate_bearer_token = None
+            logging.warning("JWT auth not available — SSE transport will be unauthenticated")
+        anyio.run(run_sse, args.port, args.host, validate_bearer_token)
 
 
 if __name__ == "__main__":
