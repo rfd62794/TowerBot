@@ -2,6 +2,7 @@
 
 import sys
 import os
+from unittest.mock import MagicMock
 
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
@@ -12,6 +13,14 @@ load_dotenv(os.path.join(_root, ".env"))
 
 from infra.db import init_db
 init_db()
+
+# Patch ChromaDB/Ollama out before any test runs.
+# bot.memory binds `memory_manager` into its own namespace at import time,
+# so we replace it there — patching infra.memory_manager alone is not enough.
+_mock_manager = MagicMock()
+_mock_manager.search.return_value = [{"key": "mock_key", "content": "mock content", "layer": "technical"}]
+import bot.memory as _mem_mod
+_mem_mod.memory_manager = _mock_manager
 
 TESTS = []
 
