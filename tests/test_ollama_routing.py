@@ -10,11 +10,7 @@ if _root not in sys.path:
     sys.path.insert(0, _root)
 
 # Skip tests if OpenAI credentials not available (bot.agent initializes client at module level)
-if not os.getenv("OPENAI_API_KEY") and not os.getenv("OPENAI_ADMIN_KEY"):
-    print("  ⚠ ollama_routing: skipped (OPENAI_API_KEY not set)")
-    def run_all() -> tuple[int, int]:
-        return 0, 0
-    sys.exit(0)
+_SKIP = not os.getenv("OPENAI_API_KEY") and not os.getenv("OPENAI_ADMIN_KEY")
 
 
 _OLLAMA_DICT_RESPONSE = {
@@ -91,6 +87,9 @@ TESTS = [
 
 
 def run_all() -> tuple[int, int]:
+    if _SKIP:
+        print("  \u26a0 ollama_routing: skipped (OPENAI_API_KEY not set)")
+        return 0, 0
     passed = failed = 0
     for t in TESTS:
         try:
