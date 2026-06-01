@@ -1,4 +1,7 @@
-"""Tests for tools/registry.py — tool registration."""
+"""Tests for tools/registry.py — tool registration.
+
+Pytest-style. run_all() shim retained for verify.py compatibility.
+"""
 
 import sys
 import os
@@ -8,36 +11,27 @@ if _root not in sys.path:
     sys.path.insert(0, _root)
 
 
-def test_decorator(name):
-    def wrapper(fn):
-        fn.__name__ = name
-        TESTS.append((name, fn))
-        return fn
-    return wrapper
-
-test = test_decorator
-
-TESTS = []
-
-
-@test("registry: purge_null_tasks in TOOL_REGISTRY")
 def test_purge_null_tasks_in_registry():
     """Assert purge_null_tasks is present in TOOL_REGISTRY keys."""
     from tools.registry import TOOL_REGISTRY
     assert "purge_null_tasks" in TOOL_REGISTRY
 
 
+# --- verify.py shim ---
+
 def run_all() -> tuple[int, int]:
-    from tests._harness import run_all as _run
-    return _run(TESTS)
+    passed, failed = 0, 0
+    for fn in (test_purge_null_tasks_in_registry,):
+        try:
+            fn()
+            print(f"✓ registry: {fn.__name__}")
+            passed += 1
+        except Exception as e:
+            print(f"✗ registry: {fn.__name__}\n  {e}")
+            failed += 1
+    return passed, failed
 
 
 if __name__ == "__main__":
-    passed, failed = run_all()
-    print(f"\n{passed}/{passed + failed} passed.", end=" ")
-    if failed == 0:
-        print("Deploy safe.")
-        sys.exit(0)
-    else:
-        print("Deploy blocked.")
-        sys.exit(1)
+    p, f = run_all()
+    sys.exit(0 if f == 0 else 1)
