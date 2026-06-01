@@ -30,6 +30,7 @@ def temp_db():
             layer TEXT,
             created DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             active INTEGER DEFAULT 1
         )
     """)
@@ -175,7 +176,7 @@ def test_import_dry_run_changes_nothing(temp_db):
         "data": {
             "memory": [
                 {"id": 1, "key": "test_key", "content": "test_content", "layer": "technical", 
-                 "created": "2026-05-31 21:00:00", "updated": "2026-05-31 21:00:00", "active": 1}
+                 "created": "2026-05-31 21:00:00", "updated": "2026-05-31 21:00:00", "updated_at": "2026-05-31 21:00:00", "active": 1}
             ]
         }
     }
@@ -213,8 +214,8 @@ def test_import_applies_latest_wins_correctly(temp_db):
     # Insert existing record
     conn = sqlite3.connect(temp_db)
     conn.execute("""
-        INSERT INTO memory (key, content, layer, updated)
-        VALUES ('test_key', 'old_content', 'technical', '2026-05-30 21:00:00')
+        INSERT INTO memory (key, content, layer, updated, updated_at)
+        VALUES ('test_key', 'old_content', 'technical', '2026-05-30 21:00:00', '2026-05-30 21:00:00')
     """)
     conn.commit()
     conn.close()
@@ -230,7 +231,7 @@ def test_import_applies_latest_wins_correctly(temp_db):
         "data": {
             "memory": [
                 {"id": 1, "key": "test_key", "content": "new_content", "layer": "technical",
-                 "created": "2026-05-30 21:00:00", "updated": "2026-05-31 21:00:00", "active": 1}
+                 "created": "2026-05-30 21:00:00", "updated": "2026-05-31 21:00:00", "updated_at": "2026-05-31 21:00:00", "active": 1}
             ]
         }
     }

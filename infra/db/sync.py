@@ -311,12 +311,13 @@ class DBSync:
                     self._insert_row(cursor, table_name, row)
                 report["added"] += 1
             else:  # LATEST_WINS
-                # Check if exists, use updated_at if available
-                if "updated_at" in row:
+                # Check if exists, use updated_at or updated for timestamp comparison
+                timestamp_field = "updated_at" if "updated_at" in row else "updated"
+                if timestamp_field in row:
                     existing = self._find_by_id(cursor, table_name, row.get("id"))
                     if existing:
-                        existing_updated = existing.get("updated_at")
-                        if row["updated_at"] > existing_updated:
+                        existing_updated = existing.get(timestamp_field)
+                        if existing_updated and row[timestamp_field] > existing_updated:
                             if not dry_run:
                                 self._update_row(cursor, table_name, row)
                             report["updated"] += 1
