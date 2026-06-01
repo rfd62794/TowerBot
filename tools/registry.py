@@ -1658,6 +1658,74 @@ TOOL_REGISTRY = {
             },
         },
     },
+    "sync_db_status": {
+        "fn": sync_db_status,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "sync_db_status",
+                "description": "Get table inventory and sync status. Returns total tables, shared/instance/cache/config tables with row counts, and shared row count total.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+    },
+    "sync_db_export": {
+        "fn": sync_db_export,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "sync_db_export",
+                "description": "Export SHARED tables to JSON file for transfer between instances. Returns export status and output file path.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "tables": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional list of specific tables to export (default: all SHARED tables)"
+                        },
+                        "output_path": {
+                            "type": "string",
+                            "description": "Path for output JSON file (default: sync.json)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "sync_db_import": {
+        "fn": sync_db_import,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "sync_db_import",
+                "description": "Import tables from sync source. Dry-run by default — shows changes without applying. Returns import report with added/updated/conflicts/skipped counts.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "source": {
+                            "type": "string",
+                            "description": "Path to sync JSON file (default: sync.json)"
+                        },
+                        "dry_run": {
+                            "type": "boolean",
+                            "description": "If True, show changes without applying (default: True)"
+                        },
+                        "conflict": {
+                            "type": "string",
+                            "description": "Conflict resolution strategy (default: from config)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
 }
 
 # ─── Convenience exports ──────────────────

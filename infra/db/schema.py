@@ -278,6 +278,13 @@ CREATE TABLE IF NOT EXISTS poll_log (
 );
 
 CREATE INDEX IF NOT EXISTS idx_poll_log_key_time ON poll_log(poll_key, polled_at DESC);
+
+CREATE TABLE IF NOT EXISTS bot_state (
+    id INTEGER PRIMARY KEY,
+    dev_mode INTEGER DEFAULT 0,
+    paused_at TEXT,
+    auto_resume_at TEXT
+);
 """
 
 _conn: sqlite3.Connection | None = None

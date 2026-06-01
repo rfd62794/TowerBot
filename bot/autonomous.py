@@ -1,5 +1,6 @@
 """Autonomous task runner — scheduled agent execution without user presence."""
 
+import os
 import time
 import logging
 import random
@@ -11,6 +12,7 @@ from bot.agent import respond
 from bot.task_runner import resolve_task, get_all_resolved_tasks
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.db.system_metrics import record_system_snapshot
+from infra.db.bot_state import get_dev_mode
 
 logger = logging.getLogger("privy.autonomous")
 
@@ -90,6 +92,12 @@ async def run_autonomous_task(task_name: str, send_fn):
         task_name: Task name from config/tasks.yaml
         send_fn: Async function to send Telegram messages
     """
+    # Check dev mode for production instances
+    instance_role = os.environ.get("INSTANCE_ROLE", "development")
+    if instance_role == "production" and get_dev_mode():
+        logger.info(f"Skipping {task_name} — dev mode active")
+        return
+
     try:
         task = resolve_task(task_name)
     except ValueError as e:
