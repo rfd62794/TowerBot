@@ -321,10 +321,22 @@ class OllamaSwapManager:
             
             raise
 
-    async def classify(self, message: str) -> str:
-        """Text-only intent classification. No tools, no model swap."""
+    async def classify(
+        self,
+        message: str,
+        model: str = None,
+        timeout: float = 15.0
+    ) -> str:
+        """Text-only intent classification. No tools, no model swap.
+
+        Args:
+            message: User message to classify
+            model: Override model for classification (e.g., qwen2.5:1.5b for CPU)
+            timeout: Short timeout to fail fast (default 15s)
+        """
+        use_model = model or self.model
         payload = {
-            "model": self.model,
+            "model": use_model,
             "messages": [
                 {
                     "role": "user",
@@ -334,7 +346,7 @@ class OllamaSwapManager:
             "stream": False,
         }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(f"{self.host}/api/chat", json=payload)
                 resp.raise_for_status()
                 return resp.json().get("message", {}).get("content", "")

@@ -6,6 +6,7 @@ instead of 30+. Plain text messages only; slash commands bypass this entirely.
 
 import json
 import logging
+import os
 import yaml
 from pathlib import Path
 
@@ -18,6 +19,10 @@ with open(_routes_path) as _f:
     ROUTES: dict = yaml.safe_load(_f).get("routes", {})
 
 VALID_ROUTES: set[str] = set(ROUTES.keys())
+
+# Classification model and timeout (separate from chat model for CPU optimization)
+CLASSIFY_MODEL = os.environ.get("OLLAMA_CLASSIFY_MODEL", "qwen2.5:1.5b")
+CLASSIFY_TIMEOUT = float(os.environ.get("OLLAMA_CLASSIFY_TIMEOUT", "15.0"))
 
 KEYWORD_ROUTE_MAP: dict[str, str] = {
     "email": "email",   "emails": "email",   "inbox": "email",   "mail": "email",
@@ -56,21 +61,34 @@ def _keyword_fallback(message: str) -> list[str]:
 
 
 async def classify(message: str) -> list[str]:
-    """Classify message to route names via Ollama with keyword escalation fallback.
+    """Classify message to route names via three-layer fallback stack.
 
-    If Ollama is disabled: keyword-only classification.
-    If Ollama returns 'chat': keyword check used as safety net.
+    Layer 1: Small model with short timeout (fast CPU classification)
+    Layer 2: Keyword heuristic (instant, always works)
+    Layer 3: Default to ["chat"] (safe, never crashes)
     """
-    if not ollama_api.enabled:
-        return _keyword_fallback(message)
-    raw = await ollama_api.classify(message)
-    routes = parse_routes(raw)
-    if routes == ["chat"]:
-        escalated = _keyword_fallback(message)
-        if escalated != ["chat"]:
-            logger.info("[router_ai] keyword escalation: chat -> %s", escalated)
-            return escalated
-    return routes
+    # Layer 1: small model, short timeout
+    if ollama_api.enabled:
+        try:
+            raw = await ollama_api.classify(
+                message,
+                model=CLASSIFY_MODEL,
+                timeout=CLASSIFY_TIMEOUT
+            )
+            routes = parse_routes(raw)
+            if routes != ["chat"]:
+                return routes  # got a real answer, done
+        except Exception:
+            pass  # fall through to keyword fallback
+
+    # Layer 2: keyword heuristic
+    routes = _keyword_fallback(message)
+    if routes != ["chat"]:
+        logger.info(f"[router_ai] keyword fallback → {routes}")
+        return routes
+
+    # Layer 3: default
+    return ["chat"]
 
 
 def get_tools_for_routes(routes: list[str]) -> list[str]:
