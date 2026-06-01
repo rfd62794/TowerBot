@@ -70,28 +70,15 @@ TEST_FILES = [
 ]
 
 
-def _load_and_run(path: str) -> tuple[int, int, list]:
-    """Load a test module and run its tests. Returns (passed, failed, failure_lines)."""
-    import io
+def _load_and_run(path: str) -> tuple[int, int]:
+    """Load a test module and run its tests. Returns (passed, failed)."""
     full_path = os.path.join(_root, path)
     if not os.path.exists(full_path):
-        return -1, 0, []
-
-    # Capture all stdout from the module load + run_all
-    buf = io.StringIO()
-    old_stdout = sys.stdout
-    sys.stdout = buf
-    try:
-        spec = importlib.util.spec_from_file_location("_test_module", full_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        p, f = mod.run_all()
-    finally:
-        sys.stdout = old_stdout
-
-    # Extract only failure lines from captured output
-    failures = [ln for ln in buf.getvalue().splitlines() if ln.startswith("✗") or ln.startswith("  ")]
-    return p, f, failures
+        return -1, 0
+    spec = importlib.util.spec_from_file_location("_test_module", full_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.run_all()
 
 
 def run_all():
@@ -99,10 +86,9 @@ def run_all():
     total_failed = 0
     total_skipped = 0
     file_results = []
-    all_failures = []
 
     for test_file in TEST_FILES:
-        p, f, failures = _load_and_run(test_file)
+        p, f = _load_and_run(test_file)
         if p == -1:
             total_skipped += 1
             file_results.append((test_file, "MISSING", 0, 0))
@@ -110,35 +96,23 @@ def run_all():
         total_passed += p
         total_failed += f
         file_results.append((test_file, "ok" if f == 0 else "FAIL", p, f))
-        if failures:
-            all_failures.append((test_file, failures))
 
-    # Print failures first
-    if all_failures:
-        print("\nFAILURES:")
-        print("-" * 60)
-        for path, lines in all_failures:
-            print(f"  [{os.path.basename(path)}]")
-            for ln in lines:
-                print(f"  {ln}")
-        print()
-
-    # Summary table
+    print()
     print("=" * 60)
     print(f"  {'FILE':<38} {'PASS':>5} {'FAIL':>5}")
     print("-" * 60)
     for path, status, p, f in file_results:
         label = os.path.basename(path)
         if status == "MISSING":
-            print(f"  {'⚠ ' + label:<38} {'skip':>5}")
+            print(f"  [missing]  {label}")
         elif status == "FAIL":
-            print(f"  {'✗ ' + label:<38} {p:>5} {f:>5}")
+            print(f"  [FAIL]     {label:<34} {p:>5} {f:>5}")
         else:
-            print(f"  {'✓ ' + label:<38} {p:>5}")
+            print(f"  [ok]       {label:<34} {p:>5}")
     print("=" * 60)
 
     total = total_passed + total_failed
-    skip_note = f"  ({total_skipped} file(s) missing)" if total_skipped else ""
+    skip_note = f"  ({total_skipped} missing)" if total_skipped else ""
     print(f"  TOTAL  {total_passed} passed  {total_failed} failed{skip_note}")
     print()
 
