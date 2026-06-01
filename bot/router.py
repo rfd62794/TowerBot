@@ -474,6 +474,19 @@ async def handle_deploy(chat_id: int) -> str:
         return f"Deploy failed: {str(e)} — reverted."
 
 
+async def handle_update(chat_id: int) -> str:
+    """Handle /update command — trigger auto-update on production."""
+    instance_role = os.environ.get("INSTANCE_ROLE", "development")
+    if instance_role != "production":
+        return "⚠️ /update only available on production instances"
+
+    async def send_fn(msg: str):
+        await report("update_status", message=msg)
+
+    from scripts.update import check_for_updates
+    return await check_for_updates(send_fn)
+
+
 async def handle_rollback(chat_id: int) -> str:
     """Handle /rollback command — run rollback script as subprocess."""
     await report("tool_called", tool_name="rollback", result_summary="Starting rollback...")
@@ -535,6 +548,8 @@ async def route(chat_id: int, text: str) -> str:
         return handle_status()
     if text == "/deploy" or text.startswith("/deploy"):
         return await handle_deploy(chat_id)
+    if text == "/update" or text.startswith("/update"):
+        return await handle_update(chat_id)
     if text == "/rollback" or text.startswith("/rollback"):
         return await handle_rollback(chat_id)
     if text == "/history" or text.startswith("/history"):
