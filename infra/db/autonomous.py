@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from infra.db.schema import _exec
 
 
-def record_agent_action(task_name: str, result: str, duration_ms: int, urgent: int = 0):
+def record_agent_action(task_name: str, result: str, duration_ms: int, urgent: int = 0, source: str = "autonomous", source_task_id: int = None):
     """
     Record an autonomous task execution to the database.
 
@@ -13,6 +13,8 @@ def record_agent_action(task_name: str, result: str, duration_ms: int, urgent: i
         result: Task output or error message
         duration_ms: Execution time in milliseconds
         urgent: 1 if result starts with "URGENT:", 0 otherwise (auto-detected if not provided)
+        source: Task source (autonomous, delegated, fallback)
+        source_task_id: ID from task_queue for delegated tasks
     """
     # Auto-detect urgent flag if not explicitly provided
     if urgent == 0 and result.upper().startswith("URGENT:"):
@@ -20,8 +22,8 @@ def record_agent_action(task_name: str, result: str, duration_ms: int, urgent: i
 
     ran_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     _exec(
-        "INSERT INTO agent_actions (task_name, ran_at, result, duration_ms, urgent) VALUES (?, ?, ?, ?, ?)",
-        (task_name, ran_at, result, duration_ms, urgent),
+        "INSERT INTO agent_actions (task_name, ran_at, result, duration_ms, urgent, source, source_task_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (task_name, ran_at, result, duration_ms, urgent, source, source_task_id),
         commit=True
     )
 

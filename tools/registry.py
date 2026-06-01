@@ -62,6 +62,7 @@ from .productivity.personal import (
 )
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .meta.sync import sync_db_status, sync_db_export, sync_db_import
+from .meta.delegation import delegation_tools
 from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 from .repo.audit import audit_repo_compliance
 from .repo.analysis import analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
@@ -1722,6 +1723,99 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": []
+                }
+            }
+        }
+    },
+    "queue_task": {
+        "fn": delegation_tools.queue_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "queue_task",
+                "description": "WHEN: delegating investigative or analytical work to PrivyBot. Queues a task for PrivyBot to execute autonomously within 60 seconds. Use for: checking sources, analyzing data, drafting content, running searches, generating reports. RETURNS: task_id for tracking with get_task_result(). DO NOT USE for: simple tool calls Claude can make directly.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "type": "string",
+                            "description": "Full task instructions"
+                        },
+                        "task_name": {
+                            "type": "string",
+                            "description": "Short label for the task",
+                            "default": "delegated"
+                        },
+                        "context": {
+                            "type": "string",
+                            "description": "Additional context or constraints"
+                        },
+                        "priority": {
+                            "type": "string",
+                            "enum": ["urgent", "high", "normal", "low"],
+                            "default": "normal"
+                        },
+                        "run_immediately": {
+                            "type": "boolean",
+                            "default": True
+                        }
+                    },
+                    "required": ["prompt"]
+                }
+            }
+        }
+    },
+    "get_task_result": {
+        "fn": delegation_tools.get_task_result,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_task_result",
+                "description": "WHEN: checking the status or result of a previously queued task. Call after queue_task() to retrieve PrivyBot's output. Status: queued|running|complete|failed|cancelled. Poll every 30-60 seconds until status=complete.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {
+                            "type": "integer",
+                            "description": "ID returned by queue_task()"
+                        }
+                    },
+                    "required": ["task_id"]
+                }
+            }
+        }
+    },
+    "list_pending_tasks": {
+        "fn": delegation_tools.list_pending_tasks,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_pending_tasks",
+                "description": "WHEN: checking what delegated tasks are queued or running. Shows all pending work across all sessions. Use to avoid duplicate queuing.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
+    },
+    "cancel_task": {
+        "fn": delegation_tools.cancel_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "cancel_task",
+                "description": "WHEN: cancelling a queued task before PrivyBot starts it. Only works for status=queued. Cannot cancel running or completed tasks.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {
+                            "type": "integer",
+                            "description": "ID returned by queue_task()"
+                        }
+                    },
+                    "required": ["task_id"]
                 }
             }
         }

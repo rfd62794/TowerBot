@@ -445,6 +445,38 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
+    # Migration: add delegation columns to task_queue
+    try:
+        cols = {row[1] for row in _conn.execute("PRAGMA table_info(task_queue)").fetchall()}
+        if "source" not in cols:
+            _conn.execute("ALTER TABLE task_queue ADD COLUMN source TEXT DEFAULT 'autonomous'")
+        if "prompt" not in cols:
+            _conn.execute("ALTER TABLE task_queue ADD COLUMN prompt TEXT")
+        if "status" not in cols:
+            _conn.execute("ALTER TABLE task_queue ADD COLUMN status TEXT DEFAULT 'queued'")
+        if "result" not in cols:
+            _conn.execute("ALTER TABLE task_queue ADD COLUMN result TEXT")
+        if "started_at" not in cols:
+            _conn.execute("ALTER TABLE task_queue ADD COLUMN started_at TEXT")
+        if "completed_at" not in cols:
+            _conn.execute("ALTER TABLE task_queue ADD COLUMN completed_at TEXT")
+        if "duration_ms" not in cols:
+            _conn.execute("ALTER TABLE task_queue ADD COLUMN duration_ms INTEGER")
+        _conn.commit()
+    except Exception:
+        pass
+
+    # Migration: add delegation columns to agent_actions
+    try:
+        cols = {row[1] for row in _conn.execute("PRAGMA table_info(agent_actions)").fetchall()}
+        if "source" not in cols:
+            _conn.execute("ALTER TABLE agent_actions ADD COLUMN source TEXT DEFAULT 'autonomous'")
+        if "source_task_id" not in cols:
+            _conn.execute("ALTER TABLE agent_actions ADD COLUMN source_task_id INTEGER")
+        _conn.commit()
+    except Exception:
+        pass
+
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
     with _lock:

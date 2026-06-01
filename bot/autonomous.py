@@ -13,6 +13,7 @@ from bot.task_runner import resolve_task, get_all_resolved_tasks
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.db.system_metrics import record_system_snapshot
 from infra.db.bot_state import get_dev_mode
+from infra.db.task_queue import get_due_tasks, mark_running, mark_complete, mark_failed
 
 logger = logging.getLogger("privy.autonomous")
 
@@ -190,6 +191,60 @@ def _count_recent_empty_runs(task_name: str, hours: int = 8) -> int:
     return count
 
 
+async def process_delegation_queue(send_fn) -> None:
+    """
+    Poll task_queue for due delegated tasks.
+    Executes each via agent.respond() with the task prompt.
+    INSTANCE_ROLE check: only production instances process queue.
+    """
+    instance_role = os.environ.get("INSTANCE_ROLE", "development")
+    if instance_role != "production":
+        return
+
+    due = get_due_tasks(limit=3)  # max 3 per poll cycle
+    
+    for task in due:
+        mark_running(task["id"])
+        start = time.time()
+        
+        try:
+            full_prompt = (
+                "[DELEGATED TASK — requested by Claude]\n\n"
+                f"{task['prompt']}"
+            )
+            if task.get("message"):  # context field
+                full_prompt += f"\n\nContext: {task['message']}"
+            
+            result = await respond(
+                full_prompt,
+                thread_id=f"delegation_{task['id']}",
+                max_iter=25  # autonomous max iterations
+            )
+            
+            duration_ms = int((time.time() - start) * 1000)
+            mark_complete(task["id"], result, duration_ms)
+            
+            # Mirror to agent_actions for unified history
+            record_agent_action(
+                task_name=task.get("task_name", "delegated"),
+                result=result,
+                duration_ms=duration_ms,
+                source="delegated",
+                source_task_id=task["id"]
+            )
+            
+            # Alert if urgent
+            if task["priority"] == "urgent":
+                await send_fn(
+                    f"🚨 Delegated task complete:\n{result[:500]}"
+                )
+        
+        except Exception as e:
+            duration_ms = int((time.time() - start) * 1000)
+            mark_failed(task["id"], str(e))
+            logger.error(f"[delegation] task {task['id']} failed: {e}")
+
+
 def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     """
     Register autonomous tasks with APScheduler.
@@ -232,3 +287,14 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
             )
             day_str = f" day {schedule['day_of_week']}" if 'day_of_week' in schedule else ""
             logger.info(f"Registered cron task: {task_name} at {schedule['hour']:02d}:{schedule['minute']:02d}{day_str}")
+
+    # Register delegation queue poll
+    scheduler.add_job(
+        process_delegation_queue,
+        "interval",
+        seconds=60,
+        id="delegation_poll",
+        max_instances=1,
+        kwargs={"send_fn": send_fn}
+    )
+    logger.info("Registered delegation poll: every 60 seconds")
