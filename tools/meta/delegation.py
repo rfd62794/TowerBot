@@ -2,26 +2,33 @@
 
 from tools._tool import BaseTool
 from infra.db.task_queue import add_task, get_task_status, list_pending, cancel_task as _cancel
+from bot.prompts.base import BasePrompt
 
 
 class DelegationTools(BaseTool):
 
     def queue_task(
         self,
-        prompt: str,
+        prompt,
         task_name: str = "delegated",
         context: str = None,
         priority: str = "normal",
         run_immediately: bool = True,
     ) -> dict:
         """Queue a task for PrivyBot to execute."""
+        # Accept prompt object or raw string
+        if isinstance(prompt, BasePrompt):
+            rendered = prompt.render()
+        else:
+            rendered = str(prompt)
+
         task_id = add_task(
-            prompt=prompt,
+            prompt=rendered,
             task_name=task_name,
             context=context,
             priority=priority,
             source="claude",
-            run_at=None if run_immediately else None,
+            run_at=None,
         )
         return self.success({
             "task_id": task_id,
