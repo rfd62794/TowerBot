@@ -187,12 +187,12 @@ def main():
         type=int,
         default=8090,
         help="Port for SSE transport (default: 8090)",
+    )
     parser.add_argument(
         "--host",
         type=str,
         default="0.0.0.0",
         help="Host for SSE transport (default: 0.0.0.0)",
-    )
     )
     args = parser.parse_args()
 
@@ -204,6 +204,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 
 
 
