@@ -40,6 +40,7 @@ from bot.memory import (
     tool_get_memories,
 )
 from bot.report import report
+from bot.transport import set_thinking_tool
 from bot.model_manager import get_available_model, handle_429, handle_success, should_skip_model
 from tools.registry import TOOL_REGISTRY
 from bot.router_ai import (
@@ -156,7 +157,14 @@ def _system_prompt() -> str:
         "  3. Call think() again if direction changes\n\n"
         "For simple single-tool questions:\n"
         "  Skip think() — answer directly.\n\n"
-        "think() output is visible to you and to Robert — use it honestly."
+        "think() output is visible to you and to Robert — use it honestly.\n\n"
+        "TELEGRAM FORMATTING — non-negotiable:\n"
+        "Never use markdown tables in responses. Telegram doesn't render them.\n"
+        "Format data as labeled lines:\n"
+        "  Views: 974\n"
+        "  Watch time: 89 min\n"
+        "Or as compact inline: \"974 views · 89 min · +1 subscriber\"\n"
+        "Use bold labels with HTML: <b>Last 7 days</b>"
     )
 
 
@@ -361,6 +369,9 @@ async def _chat(model: str, messages: list, tools, allow_rotation: bool = True):
 
 
 async def _execute(thread_id: str, name: str, args: dict) -> dict:
+    # Update thinking thread with tool name
+    set_thinking_tool(name)
+    
     # Tool registry tools first
     if name in TOOL_REGISTRY:
         tool_fn = TOOL_REGISTRY[name]["fn"]
@@ -390,6 +401,9 @@ async def _execute(thread_id: str, name: str, args: dict) -> dict:
                          count=r.get("count", 0), keys=keys)
         else:
             await report("tool_called", tool_name=name)
+        
+        # Clear tool name from thinking thread
+        set_thinking_tool(None)
         return r
     if name == "name_thread":
         thread_name = args.get("name", "")

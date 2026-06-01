@@ -42,7 +42,7 @@ def _format(event_type: str, kwargs: dict):
         deadline = kwargs.get("deadline") or "no deadline set"
         return f"📋 Commitment: {kwargs.get('description')}\nDue: {deadline}"
     if event_type == "tool_called":
-        return f"🔧 Tool: {kwargs.get('tool_name')}"
+        return None  # Log only, never surface to user
     if event_type == "error":
         return f"🔴 Error: {kwargs.get('message')}"
     if event_type == "model_routed":

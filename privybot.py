@@ -181,11 +181,15 @@ if __name__ == "__main__":
     # Add message handler
     app.add_handler(MessageHandler(filters.TEXT, handle_message))
 
-    # Layer 3 — report (inject real send, Markdown-safe)
+    # Layer 3 — report (inject real send, HTML-safe)
     async def send_to_telegram(text: str) -> None:
+        from bot.formatter import format_response
+        from telegram.constants import ParseMode
+        
         chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        text = format_response(text)
         try:
-            await app.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+            await app.bot.send_message(chat_id=chat_id, text=text, parse_mode=ParseMode.HTML)
         except Exception:
             await app.bot.send_message(chat_id=chat_id, text=text, parse_mode=None)
 

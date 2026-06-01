@@ -14,8 +14,10 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+from telegram.constants import ParseMode
 
 from bot.router import route
+from bot.formatter import get_tool_display, format_response
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
@@ -28,6 +30,12 @@ THINKING_MESSAGES = [
     "💭 Almost there...",
     "🔄 Pulling it together...",
 ]
+
+
+def set_thinking_tool(tool_name: str | None) -> None:
+    """Set the current tool name for thinking thread display."""
+    global _current_tool
+    _current_tool = tool_name
 
 
 def _chunk_message(text: str, max_len: int = 4000) -> list[str]:
@@ -71,12 +79,19 @@ async def _thinking_thread(chat_id: int, bot, stop_event: asyncio.Event) -> None
         if stop_event.is_set():
             break
         try:
+            # Use tool-specific message if set, otherwise rotate generic messages
+            if _current_tool:
+                icon, name = get_tool_display(_current_tool)
+                display_text = f"{icon} {name}..."
+            else:
+                display_text = THINKING_MESSAGES[i % len(THINKING_MESSAGES)]
+                i += 1
+            
             await bot.edit_message_text(
-                THINKING_MESSAGES[i % len(THINKING_MESSAGES)],
+                display_text,
                 chat_id,
                 msg.message_id,
             )
-            i += 1
         except Exception:
             pass
     try:
@@ -103,12 +118,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         typing_task.cancel()
         thinking_task.cancel()
 
+    # Format response for HTML parse mode
+    response = format_response(response)
+    
     # Split oversized responses before sending (Telegram hard limit: 4096 chars).
-    # Each chunk gets the same Markdown → plain-text retry/fallback logic.
+    # Each chunk gets the same HTML → plain-text retry/fallback logic.
     for chunk in _chunk_message(response):
         for attempt in range(4):
             try:
-                await update.message.reply_text(chunk, parse_mode="Markdown")
+                await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
                 break
             except Exception:
                 try:
