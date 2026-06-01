@@ -1,11 +1,17 @@
 """Tests for database sync system."""
 
+import sys
+import os
+
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _root not in sys.path:
+    sys.path.insert(0, _root)
+
 import pytest
 import sqlite3
-import os
 import tempfile
 import json
-from infra.db.sync import DBSync, SyncPolicy, classify_unknown_table, ConflictStrategy
+from infra.db.sync import DBSync, SyncPolicy, classify_unknown_table, ConflictStrategy, TABLE_REGISTRY
 
 
 @pytest.fixture
@@ -50,16 +56,22 @@ def temp_db():
     
     yield path
     
-    # Cleanup
-    os.unlink(path)
+    # Cleanup - retry for Windows file locking
+    import time
+    for _ in range(5):
+        try:
+            os.unlink(path)
+            break
+        except PermissionError:
+            time.sleep(0.1)
 
 
 def test_classify_known_table_returns_correct_policy():
     """Test that known tables return correct sync policies."""
-    assert DBSync.TABLE_REGISTRY["memory"] == SyncPolicy.SHARED
-    assert DBSync.TABLE_REGISTRY["messages"] == SyncPolicy.INSTANCE
-    assert DBSync.TABLE_REGISTRY["tool_cache"] == SyncPolicy.CACHE
-    assert DBSync.TABLE_REGISTRY["bot_state"] == SyncPolicy.CONFIG
+    assert TABLE_REGISTRY["memory"] == SyncPolicy.SHARED
+    assert TABLE_REGISTRY["messages"] == SyncPolicy.INSTANCE
+    assert TABLE_REGISTRY["tool_cache"] == SyncPolicy.CACHE
+    assert TABLE_REGISTRY["bot_state"] == SyncPolicy.CONFIG
 
 
 def test_classify_unknown_uses_heuristics():

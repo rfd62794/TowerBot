@@ -137,7 +137,13 @@ class DBSync:
                 "table_overrides": {}
             }
         with open(config_path, "r") as f:
-            return yaml.safe_load(f)
+            config = yaml.safe_load(f)
+            return config if config else {
+                "transport": "json_file",
+                "conflict_default": "latest_wins",
+                "alert_on_unknown_tables": True,
+                "table_overrides": {}
+            }
 
     def _get_transport(self) -> SyncTransport:
         transport_type = self.config.get("transport", "json_file")
@@ -148,8 +154,9 @@ class DBSync:
 
     def get_table_policy(self, table_name: str) -> SyncPolicy:
         """Get sync policy for a table, with config override."""
-        if table_name in self.config.get("table_overrides", {}):
-            override = self.config["table_overrides"][table_name]
+        table_overrides = self.config.get("table_overrides") or {}
+        if table_name in table_overrides:
+            override = table_overrides[table_name]
             return SyncPolicy(override)
         if table_name in TABLE_REGISTRY:
             return TABLE_REGISTRY[table_name]
@@ -368,7 +375,7 @@ class DBSync:
         columns = list(row.keys())
         placeholders = ", ".join(["?"] * len(columns))
         values = [row[col] for col in columns]
-        cursor.execute(f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})", values)
+        cursor.execute(f"INSERT OR REPLACE INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})", values)
 
     def _update_row(self, cursor, table_name: str, row: Dict[str, Any]):
         """Update a row in a table."""

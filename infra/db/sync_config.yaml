@@ -10,5 +10,5 @@ conflict_default: latest_wins
 alert_on_unknown_tables: true
 
 # Override auto-classification for specific tables
-table_overrides:
+table_overrides: {}
   # Example: tool_proposals: shared
