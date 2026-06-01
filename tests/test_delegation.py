@@ -151,3 +151,45 @@ def test_list_pending_excludes_completed_tasks(temp_db):
     assert task2 not in task_ids  # completed
     assert task3 in task_ids
     assert len(pending) == 2
+
+
+def run_all() -> tuple[int, int]:
+    import pytest
+    _tests = [
+        test_add_task_returns_integer_id,
+        test_get_task_status_returns_queued_for_new_task,
+        test_mark_complete_updates_status_and_result,
+        test_cancel_queued_task_returns_true,
+        test_cancel_running_task_returns_false,
+        test_list_pending_excludes_completed_tasks,
+    ]
+    passed = failed = 0
+    import sqlite3, tempfile, time
+    for fn in _tests:
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        conn = sqlite3.connect(path)
+        conn.execute("""CREATE TABLE task_queue (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, task_name TEXT, message TEXT,
+            priority TEXT DEFAULT 'normal', created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            scheduled_for DATETIME, sent INTEGER DEFAULT 0, source TEXT DEFAULT 'autonomous',
+            prompt TEXT, status TEXT DEFAULT 'queued', result TEXT,
+            started_at TEXT, completed_at TEXT, duration_ms INTEGER)""")
+        conn.commit(); conn.close()
+        import infra.db.schema as _schema
+        orig = _schema.DB_PATH
+        _schema.DB_PATH = path
+        _schema.init_db()
+        try:
+            fn(path)
+            print(f"  \u2713 delegation: {fn.__name__}")
+            passed += 1
+        except Exception as e:
+            print(f"  \u2717 delegation: {fn.__name__}: {e}")
+            failed += 1
+        finally:
+            _schema.DB_PATH = orig
+            for _ in range(5):
+                try: os.unlink(path); break
+                except: time.sleep(0.1)
+    return passed, failed

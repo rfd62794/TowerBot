@@ -156,3 +156,58 @@ def test_queue_task_accepts_prompt_object(temp_db):
     assert result["ok"] is True
     assert "task_id" in result
     assert result["status"] == "queued"
+
+
+def _make_temp_db():
+    import sqlite3, tempfile
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    conn = sqlite3.connect(path)
+    conn.execute("""CREATE TABLE task_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_name TEXT, message TEXT,
+        priority TEXT DEFAULT 'normal', created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        scheduled_for DATETIME, sent INTEGER DEFAULT 0, source TEXT DEFAULT 'autonomous',
+        prompt TEXT, status TEXT DEFAULT 'queued', result TEXT,
+        started_at TEXT, completed_at TEXT, duration_ms INTEGER)""")
+    conn.commit(); conn.close()
+    import infra.db.schema as _schema
+    orig = _schema.DB_PATH
+    _schema.DB_PATH = path
+    _schema.init_db()
+    return path, orig
+
+
+def run_all() -> tuple[int, int]:
+    simple_tests = [
+        test_reddit_monitor_render_contains_keywords,
+        test_reddit_monitor_render_contains_subreddits,
+        test_pypi_monitor_render_contains_package,
+        test_metric_snapshot_render_contains_sources,
+        test_blog_draft_full_render_contains_rfd_frame,
+        test_blog_draft_skeleton_render_mentions_create_draft,
+        test_investigate_render_contains_question,
+    ]
+    passed = failed = 0
+    for fn in simple_tests:
+        try:
+            fn()
+            print(f"  \u2713 prompts: {fn.__name__}")
+            passed += 1
+        except Exception as e:
+            print(f"  \u2717 prompts: {fn.__name__}: {e}")
+            failed += 1
+    path, orig = _make_temp_db()
+    try:
+        test_queue_task_accepts_prompt_object(path)
+        print(f"  \u2713 prompts: test_queue_task_accepts_prompt_object")
+        passed += 1
+    except Exception as e:
+        print(f"  \u2717 prompts: test_queue_task_accepts_prompt_object: {e}")
+        failed += 1
+    finally:
+        import infra.db.schema as _schema
+        _schema.DB_PATH = orig
+        for _ in range(5):
+            try: os.unlink(path); break
+            except: time.sleep(0.1)
+    return passed, failed
