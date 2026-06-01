@@ -325,7 +325,32 @@ class DBSync:
             conn.commit()
         conn.close()
 
+        # Post-import hook: rebuild Chroma if memory table was imported
+        if table_name == "memory" and not dry_run and report["added"] + report["updated"] > 0:
+            self._rebuild_chroma()
+
         return report
+
+    def _rebuild_chroma(self):
+        """Rebuild Chroma vector store from synced memory table."""
+        try:
+            import subprocess
+            import sys
+            
+            print("🔄 Rebuilding Chroma from synced memory table...")
+            result = subprocess.run(
+                [sys.executable, "scripts/migrate_memories_to_chroma.py"],
+                cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                print("✅ Chroma rebuilt successfully")
+            else:
+                print(f"⚠️ Chroma rebuild failed: {result.stderr}")
+        except Exception as e:
+            print(f"⚠️ Chroma rebuild error: {e}")
 
     def _find_by_id(self, cursor, table_name: str, row_id: Any) -> Optional[Dict[str, Any]]:
         """Find a row by ID."""
