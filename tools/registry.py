@@ -61,6 +61,7 @@ from .productivity.personal import (
     delete_personal_task,
 )
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
+from .meta.sync import sync_db_status, sync_db_export, sync_db_import
 from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 from .repo.audit import audit_repo_compliance
 from .repo.analysis import analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
