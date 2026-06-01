@@ -1176,7 +1176,7 @@ wheels = [
 [[package]]
 name = "openagent-directive"
 version = "0.2.2"
-source = { editable = "../OpenAgent" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "gitpython" },
@@ -1189,19 +1189,9 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "click", specifier = ">=8.1.7" },
-    { name = "gitpython", specifier = ">=3.1.46" },
-    { name = "google-adk", specifier = ">=1.27.0" },
-    { name = "loguru", specifier = ">=0.7.3" },
-    { name = "openai", specifier = ">=2.26.0" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "python-dotenv", specifier = ">=1.2.2" },
-    { name = "requests", specifier = ">=2.32.5" },
-    { name = "rich", specifier = ">=14.3.3" },
+sdist = { url = "https://files.pythonhosted.org/packages/0f/e2/fb20641fec57daa245d9da49b26c606e340aeeae153ec7427505ff65d5a9/openagent_directive-0.2.2.tar.gz", hash = "sha256:b59aa28120dcd5543d697dc46879b95aa233ffb9f213fe2977bde9bad202c75d", size = 364104, upload-time = "2026-04-30T02:51:59.422Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e9/32/02f677d27b19d12fc2081217935693b0f5542769680222e090ef056223bf/openagent_directive-0.2.2-py3-none-any.whl", hash = "sha256:f2af2c6d1f525fdc88548243719867019e730268df1bdd070a8dc67d2b1a1aff", size = 129764, upload-time = "2026-04-30T02:51:57.722Z" },
 ]
 
 [[package]]
@@ -1422,7 +1412,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.0" },
     { name = "mcp", specifier = ">=1.27.2" },
     { name = "ollama", specifier = ">=0.6.2" },
-    { name = "openagent-directive", editable = "../OpenAgent" },
+    { name = "openagent-directive", specifier = ">=0.2.2" },
     { name = "openai", specifier = ">=1.0.0" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pyjwt", specifier = ">=2.13.0" },
