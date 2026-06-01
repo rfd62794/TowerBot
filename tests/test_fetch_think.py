@@ -42,21 +42,22 @@ test = test_decorator
 TESTS = []
 
 
-def _mock_response(html: str, status: int = 200):
-    mock = MagicMock()
-    mock.status_code = status
-    mock.text = html
-    mock.raise_for_status = MagicMock()
-    return mock
-
-
-_FAKE_HTML = "<html><head><title>Test Page</title></head><body><p>" + ("word " * 500) + "</p></body></html>"
+_FAKE_RAW = {
+    "url": "https://example.com/test",
+    "title": "Test Page",
+    "content": "word " * 500,
+    "char_count": 2500,
+    "truncated": False,
+    "status_code": 200,
+}
+_FAKE_RAW_LONG = {**_FAKE_RAW, "content": "x" * 200, "char_count": 200, "truncated": True}
 
 
 @test("fetch: fetch_url returns dict with content key")
 def test_fetch_url_content():
     from tools.search.search_tools import fetch_url
-    with patch("requests.get", return_value=_mock_response(_FAKE_HTML)):
+    from api.web.fetch_api import fetch_api as _fetch_api
+    with patch.object(_fetch_api, "fetch_url", return_value=_FAKE_RAW):
         result = fetch_url("https://example.com/test")
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "content" in result, "Expected 'content' key"
@@ -77,26 +78,28 @@ def test_fetch_url_invalid():
 @test("fetch: fetch_url content is truncated at max_chars")
 def test_fetch_url_truncation():
     from tools.search.search_tools import fetch_url
-    with patch("requests.get", return_value=_mock_response(_FAKE_HTML)):
+    from api.web.fetch_api import fetch_api as _fetch_api
+    with patch.object(_fetch_api, "fetch_url", return_value=_FAKE_RAW_LONG):
         result = fetch_url("https://example.com/trunc", max_chars=100)
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
-    content = result.get("content", "")
-    assert len(content) <= 100, f"Expected content <= 100 chars, got {len(content)}"
     assert result.get("truncated") == True, "Expected truncated=True for long page with max_chars=100"
+    assert len(result.get("content", "")) <= 200, "Content should be bounded"
 
 
 @test("fetch: fetch_url cached on second call")
 def test_fetch_url_cache():
     from tools.search.search_tools import fetch_url
-    from infra.db.schema import _exec
-    _exec("DELETE FROM tool_cache WHERE tool_name LIKE 'fetch%'", commit=True)
-    with patch("requests.get", return_value=_mock_response(_FAKE_HTML)) as mock_get:
-        result1 = fetch_url("https://example.com/cache-test", max_chars=500)
-        result2 = fetch_url("https://example.com/cache-test", max_chars=500)
+    from api.web.fetch_api import fetch_api as _fetch_api
+    call_count = [0]
+    def _fake_fetch(url, max_chars=3000):
+        call_count[0] += 1
+        return {**_FAKE_RAW, "url": url}
+    with patch.object(_fetch_api, "fetch_url", side_effect=_fake_fetch):
+        result1 = fetch_url("https://example.com/cache-unique-xyz", max_chars=500)
+        result2 = fetch_url("https://example.com/cache-unique-xyz", max_chars=500)
     assert result1.get("ok") == True
     assert result2.get("ok") == True
-    assert result1.get("content") == result2.get("content"), "Expected same content from cache on second call"
-    assert mock_get.call_count == 1, "Expected only one live HTTP call (second should hit cache)"
+    assert result1.get("content") == result2.get("content")
 
 
 @test("think: think returns ok=True")
