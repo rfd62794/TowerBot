@@ -61,6 +61,8 @@ TEST_FILES = [
     "tests/test_deploy.py",
     "tests/test_task_runner.py",
     "tests/test_autonomous.py",
+    "tests/test_delegation.py",
+    "tests/test_prompts.py",
 ]
 
 
