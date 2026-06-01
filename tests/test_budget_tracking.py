@@ -50,18 +50,22 @@ def test_get_or_create():
 @test("budget: record_cost updates spent and remaining")
 def test_record_cost():
     from infra.db.budget_tracking import record_cost
+    from infra.db.schema import _exec
+    _exec("DELETE FROM budget_tracking WHERE provider='test_provider_2'", commit=True)
     result = record_cost("test_provider_2", "test_model_2", 1.5, 10.0)
-    assert result["daily_spent_usd"] == 1.5
-    assert result["daily_remaining_usd"] == 8.5
+    assert result["daily_spent_usd"] == 1.5, f"expected 1.5, got {result['daily_spent_usd']}"
+    assert result["daily_remaining_usd"] == 8.5, f"expected 8.5, got {result['daily_remaining_usd']}"
     assert result["over_budget"] is False
 
 
 @test("budget: record_cost detects over_budget")
 def test_over_budget():
     from infra.db.budget_tracking import record_cost
+    from infra.db.schema import _exec
+    _exec("DELETE FROM budget_tracking WHERE provider='test_provider_3'", commit=True)
     result = record_cost("test_provider_3", "test_model_3", 12.0, 10.0)
-    assert result["daily_spent_usd"] == 12.0
-    assert result["daily_remaining_usd"] == -2.0
+    assert result["daily_spent_usd"] == 12.0, f"expected 12.0, got {result['daily_spent_usd']}"
+    assert result["daily_remaining_usd"] == -2.0, f"expected -2.0, got {result['daily_remaining_usd']}"
     assert result["over_budget"] is True
 
 
@@ -77,12 +81,12 @@ def test_get_budget_status():
 @test("budget: get_daily_spent returns total")
 def test_get_daily_spent():
     from infra.db.budget_tracking import get_daily_spent, record_cost
-    # Record a cost and verify it's tracked
+    from infra.db.schema import _exec
+    _exec("DELETE FROM budget_tracking WHERE provider='test_provider_5'", commit=True)
     result = record_cost("test_provider_5", "test_model_5", 2.5, 10.0)
-    assert result["daily_spent_usd"] == 2.5
-    # get_daily_spent aggregates across all entries for today
+    assert result["daily_spent_usd"] == 2.5, f"expected 2.5, got {result['daily_spent_usd']}"
     total = get_daily_spent("test_provider_5", "test_model_5")
-    assert total >= 0
+    assert total >= 2.5, f"expected >= 2.5, got {total}"
     assert isinstance(total, float)
 
 

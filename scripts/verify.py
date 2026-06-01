@@ -64,6 +64,9 @@ TEST_FILES = [
     "tests/test_delegation.py",
     "tests/test_prompts.py",
     "tests/test_auto_update.py",
+    "tests/test_update.py",
+    "tests/test_router.py",
+    "tests/test_registry.py",
 ]
 
 
@@ -71,8 +74,7 @@ def _load_and_run(path: str) -> tuple[int, int]:
     """Load a test module and run its tests. Returns (passed, failed)."""
     full_path = os.path.join(_root, path)
     if not os.path.exists(full_path):
-        print(f"  ⚠ {path}: file not found, skipping")
-        return 0, 0
+        return -1, 0  # sentinel for missing
     spec = importlib.util.spec_from_file_location("_test_module", full_path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -82,15 +84,37 @@ def _load_and_run(path: str) -> tuple[int, int]:
 def run_all():
     total_passed = 0
     total_failed = 0
+    total_skipped = 0
+    file_results = []
 
     for test_file in TEST_FILES:
         p, f = _load_and_run(test_file)
+        if p == -1:
+            total_skipped += 1
+            file_results.append((test_file, "MISSING", 0, 0))
+            continue
         total_passed += p
         total_failed += f
+        file_results.append((test_file, "ok" if f == 0 else "FAIL", p, f))
 
     print()
+    print("=" * 60)
+    print(f"{'FILE':<40} {'PASS':>5} {'FAIL':>5}")
+    print("-" * 60)
+    for path, status, p, f in file_results:
+        label = os.path.basename(path)
+        if status == "MISSING":
+            print(f"  {'⚠ ' + label:<40} {'skip':>5}")
+        elif status == "FAIL":
+            print(f"  {'✗ ' + label:<40} {p:>5} {f:>5}")
+        else:
+            print(f"  {'✓ ' + label:<40} {p:>5}")
+    print("=" * 60)
+
     total = total_passed + total_failed
-    print(f"{total_passed}/{total} passed.", end=" ")
+    skip_note = f"  {total_skipped} file(s) missing" if total_skipped else ""
+    print(f"TOTAL  {total_passed} passed  {total_failed} failed{skip_note}")
+    print()
 
     if total_failed == 0:
         print("Deploy safe.")
@@ -98,6 +122,7 @@ def run_all():
     else:
         print("Deploy blocked.")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     run_all()

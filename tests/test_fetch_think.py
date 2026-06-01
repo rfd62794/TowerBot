@@ -2,6 +2,7 @@
 
 import sys
 import os
+from unittest.mock import patch, MagicMock
 
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
@@ -41,10 +42,22 @@ test = test_decorator
 TESTS = []
 
 
+def _mock_response(html: str, status: int = 200):
+    mock = MagicMock()
+    mock.status_code = status
+    mock.text = html
+    mock.raise_for_status = MagicMock()
+    return mock
+
+
+_FAKE_HTML = "<html><head><title>Test Page</title></head><body><p>" + ("word " * 500) + "</p></body></html>"
+
+
 @test("fetch: fetch_url returns dict with content key")
 def test_fetch_url_content():
     from tools.search.search_tools import fetch_url
-    result = fetch_url("https://en.wikipedia.org/wiki/Python_(programming_language)")
+    with patch("requests.get", return_value=_mock_response(_FAKE_HTML)):
+        result = fetch_url("https://example.com/test")
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert "content" in result, "Expected 'content' key"
     assert result.get("ok") == True, "Expected ok=True"
@@ -64,11 +77,11 @@ def test_fetch_url_invalid():
 @test("fetch: fetch_url content is truncated at max_chars")
 def test_fetch_url_truncation():
     from tools.search.search_tools import fetch_url
-    result = fetch_url("https://en.wikipedia.org/wiki/Python_(programming_language)", max_chars=100)
+    with patch("requests.get", return_value=_mock_response(_FAKE_HTML)):
+        result = fetch_url("https://example.com/trunc", max_chars=100)
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     content = result.get("content", "")
     assert len(content) <= 100, f"Expected content <= 100 chars, got {len(content)}"
-    # For a long page like Wikipedia, truncation should be True
     assert result.get("truncated") == True, "Expected truncated=True for long page with max_chars=100"
 
 
@@ -76,18 +89,14 @@ def test_fetch_url_truncation():
 def test_fetch_url_cache():
     from tools.search.search_tools import fetch_url
     from infra.db.schema import _exec
-    # Clear cache for this URL
     _exec("DELETE FROM tool_cache WHERE tool_name LIKE 'fetch%'", commit=True)
-    
-    result1 = fetch_url("https://en.wikipedia.org/wiki/Python_(programming_language)", max_chars=500)
-    content1 = result1.get("content", "")
-    
-    result2 = fetch_url("https://en.wikipedia.org/wiki/Python_(programming_language)", max_chars=500)
-    content2 = result2.get("content", "")
-    
-    assert content1 == content2, "Expected same content from cache on second call"
+    with patch("requests.get", return_value=_mock_response(_FAKE_HTML)) as mock_get:
+        result1 = fetch_url("https://example.com/cache-test", max_chars=500)
+        result2 = fetch_url("https://example.com/cache-test", max_chars=500)
     assert result1.get("ok") == True
     assert result2.get("ok") == True
+    assert result1.get("content") == result2.get("content"), "Expected same content from cache on second call"
+    assert mock_get.call_count == 1, "Expected only one live HTTP call (second should hit cache)"
 
 
 @test("think: think returns ok=True")
