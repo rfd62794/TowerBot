@@ -1,0 +1,14 @@
+# Database sync configuration
+
+# Transport method: json_file | tailscale | server | postgres
+transport: json_file
+
+# Default conflict resolution strategy
+conflict_default: latest_wins
+
+# Alert on unknown tables detected at runtime
+alert_on_unknown_tables: true
+
+# Override auto-classification for specific tables
+table_overrides:
+  # Example: tool_proposals: shared
