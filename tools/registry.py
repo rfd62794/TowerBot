@@ -62,6 +62,7 @@ from .productivity.personal import (
 )
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .meta.sync import sync_db_status, sync_db_export, sync_db_import
+from .meta.admin import purge_null_tasks
 from .meta.delegation import delegation_tools
 from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 from .repo.audit import audit_repo_compliance
@@ -1727,6 +1728,17 @@ TOOL_REGISTRY = {
             }
         }
     },
+    "purge_null_tasks": {
+        "fn": purge_null_tasks,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "purge_null_tasks",
+                "description": "Admin: cancel all queued tasks with null or empty prompts. Returns count of cancelled tasks.",
+                "parameters": {"type": "object", "properties": {}, "required": []}
+            }
+        }
+    },
     "queue_task": {
         "fn": delegation_tools.queue_task,
         "definition": {
@@ -1834,3 +1846,5 @@ def get_tool(name: str) -> dict | None:
 def get_tool_fn(name: str):
     entry = TOOL_REGISTRY.get(name)
     return entry["fn"] if entry else None
+
+
