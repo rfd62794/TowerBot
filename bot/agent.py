@@ -40,7 +40,7 @@ from bot.memory import (
     tool_get_memories,
 )
 from bot.report import report
-from bot.transport import set_thinking_tool
+from bot.thinking import set_thinking_tool
 from bot.model_manager import get_available_model, handle_429, handle_success, should_skip_model
 from tools.registry import TOOL_REGISTRY
 from bot.router_ai import (

@@ -18,6 +18,7 @@ from telegram.constants import ParseMode
 
 from bot.router import route
 from bot.formatter import get_tool_display, format_response
+from bot.thinking import get_current_tool
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
@@ -30,12 +31,6 @@ THINKING_MESSAGES = [
     "💭 Almost there...",
     "🔄 Pulling it together...",
 ]
-
-
-def set_thinking_tool(tool_name: str | None) -> None:
-    """Set the current tool name for thinking thread display."""
-    global _current_tool
-    _current_tool = tool_name
 
 
 def _chunk_message(text: str, max_len: int = 4000) -> list[str]:
@@ -80,8 +75,9 @@ async def _thinking_thread(chat_id: int, bot, stop_event: asyncio.Event) -> None
             break
         try:
             # Use tool-specific message if set, otherwise rotate generic messages
-            if _current_tool:
-                icon, name = get_tool_display(_current_tool)
+            current_tool = get_current_tool()
+            if current_tool:
+                icon, name = get_tool_display(current_tool)
                 display_text = f"{icon} {name}..."
             else:
                 display_text = THINKING_MESSAGES[i % len(THINKING_MESSAGES)]
