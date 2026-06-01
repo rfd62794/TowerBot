@@ -32,6 +32,19 @@ from tools.productivity.goals import (
 
 _current_threads: dict[int, str] = {}
 _ROUTER_STARTUP = time.time()
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def get_live_commit() -> str:
+    """Return live 7-char git HEAD hash, or 'unknown' on failure."""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            capture_output=True, text=True, cwd=_BASE_DIR
+        )
+        return result.stdout.strip() if result.returncode == 0 else 'unknown'
+    except Exception:
+        return 'unknown'
 
 
 def handle_status() -> str:
@@ -83,7 +96,7 @@ def handle_status() -> str:
         lines.append("✅ All polls current")
 
     if last_deploy:
-        lines.append(f"\nCurrent commit: {last_deploy['commit_hash'][:7] if last_deploy['commit_hash'] else 'unknown'}")
+        lines.append(f"\nCurrent commit: {get_live_commit()}")
         lines.append(f"  \"{last_deploy['commit_message']}\"")
         lines.append(f"  Deployed: {last_deploy['deployed_at']}")
     if stable and last_deploy and stable["id"] != last_deploy["id"]:
