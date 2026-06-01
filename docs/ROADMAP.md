@@ -173,6 +173,28 @@ PrivyBot is built in 15 phases — from core infrastructure to intelligent perso
 
 ---
 
+## Phase 18 — Test Suite Standardization 🧪 BACKLOG
+
+**Status**: Backlog — Tower stable, bot running permanently
+
+**Estimated**: 11-16 hours, 2-3 sessions
+
+**Key Deliverables:**
+- Migrate 38 custom harness files to pytest
+- conftest.py with shared fixtures (DB, mocks, async setup)
+- Test markers: unit/integration/external
+- Layered directory structure (unit/, integration/, external/, bot/, api/)
+- pytest configuration in pyproject.toml
+- Delete _harness.py and _setup.py
+
+**Prerequisite**: Tower stable, bot running permanently
+
+**Rationale**: Tests pass but suite is messy with two frameworks (custom @test decorator vs pytest). No shared fixtures, no test markers, code duplication. This is backlog work — adds zero functionality, doesn't move bot closer to Tower.
+
+**Related ADRs**: None (infrastructure work)
+
+---
+
 ## Phase 8 — Publish 📚 FUTURE
 
 **Status**: Future
