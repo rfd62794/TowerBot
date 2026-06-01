@@ -291,15 +291,16 @@ _conn: sqlite3.Connection | None = None
 _lock = threading.Lock()
 
 
-def init_db() -> None:
+def init_db(db_path: str = DB_PATH) -> None:
     global _conn
-    _conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    _conn = sqlite3.connect(db_path, check_same_thread=False)
     _conn.row_factory = sqlite3.Row
 
-    # Enable WAL mode for concurrent access
-    _conn.execute("PRAGMA journal_mode=WAL")
-    _conn.execute("PRAGMA synchronous=NORMAL")
-    _conn.commit()
+    # WAL mode only applies to file-based DBs (not :memory:)
+    if db_path != ":memory:":
+        _conn.execute("PRAGMA journal_mode=WAL")
+        _conn.execute("PRAGMA synchronous=NORMAL")
+        _conn.commit()
 
     _conn.executescript(SCHEMA)
     _conn.commit()
