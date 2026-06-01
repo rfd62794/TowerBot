@@ -57,10 +57,10 @@ def test_mcp_tool_listing_returns_schema():
         assert len(tools) > 0, "Expected at least one tool"
 
         for tool in tools:
-            assert "name" in tool, "Tool must have name"
-            assert "description" in tool, "Tool must have description"
-            assert "inputSchema" in tool, "Tool must have inputSchema"
-            assert tool["name"] in MCP_EXPOSED_TOOLS, f"Tool {tool['name']} not in MCP_EXPOSED_TOOLS"
+            assert hasattr(tool, "name"), "Tool must have name"
+            assert hasattr(tool, "description"), "Tool must have description"
+            assert hasattr(tool, "inputSchema"), "Tool must have inputSchema"
+            assert tool.name in MCP_EXPOSED_TOOLS, f"Tool {tool.name} not in MCP_EXPOSED_TOOLS"
 
     asyncio.run(run_test())
 
@@ -82,8 +82,9 @@ def test_mcp_tool_execution_calls_correct_fn():
 
         assert isinstance(result, list), "Expected list of results"
         assert len(result) == 1, "Expected single result"
-        assert result[0]["type"] == "text", "Expected text type"
-        assert "text" in result[0], "Expected text content"
+        assert hasattr(result[0], "type"), "Expected type attribute"
+        assert result[0].type == "text", "Expected text type"
+        assert hasattr(result[0], "text"), "Expected text attribute"
 
     asyncio.run(run_test())
 
@@ -96,7 +97,7 @@ def test_mcp_tool_not_in_exposed_set_raises():
 
     async def run_test():
         try:
-            await call_tool("think", {})
+            await call_tool("name_thread", {})
             assert False, "Expected ValueError for non-exposed tool"
         except ValueError as e:
             assert "not exposed via MCP" in str(e)

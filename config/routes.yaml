@@ -146,7 +146,34 @@ routes:
 
   system:
     model: openrouter/free
-    tools: []
-    # planned: get_system_resources, get_ollama_loaded, get_ollama_model_sizes,
-    #          check_ollama_health, get_daily_cost  (not yet in TOOL_REGISTRY)
-    description: "System resources, Ollama status, budget tracking (tools not yet implemented)"
+    tools:
+      - get_system_resources
+      - get_ollama_loaded
+      - get_ollama_model_sizes
+      - get_privybot_memory
+      - get_daily_cost
+    description: "System resources, Ollama status, budget tracking"
+
+  tasks:
+    model: openrouter/free
+    tools:
+      - queue_task
+      - get_task_result
+      - list_pending_tasks
+      - cancel_task
+      - purge_null_tasks
+      - sync_db_export
+      - sync_db_import
+      - sync_db_status
+    description: "Task queue management, DB sync operations"
+
+  wordpress:
+    model: openrouter/free
+    tools:
+      - schedule_blog_post
+      - search_blog_posts
+      - set_post_categories
+      - set_post_excerpt
+      - set_post_tags
+      - get_blog_categories
+    description: "WordPress post scheduling, search, and taxonomy"
