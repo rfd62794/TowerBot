@@ -125,6 +125,17 @@ async def run_stdio():
         )
 
 
+def is_tailscale_ip(ip: str) -> bool:
+    """Tailscale uses 100.64.0.0/10 CGNAT range."""
+    try:
+        parts = ip.split(".")
+        if len(parts) == 4 and int(parts[0]) == 100:
+            return 64 <= int(parts[1]) <= 127
+    except Exception:
+        pass
+    return False
+
+
 async def run_sse(port: int = 8090, host: str = "0.0.0.0", validate_bearer_token=None):
     """Run MCP server with SSE transport (remote via Tailscale)."""
     logger.info(f"Starting MCP server with SSE transport on port {port}")
@@ -134,11 +145,14 @@ async def run_sse(port: int = 8090, host: str = "0.0.0.0", validate_bearer_token
 
     # SSE endpoint handler
     async def handle_sse(request: Request) -> Response:
-        # JWT auth check if available
-        if validate_bearer_token:
-            auth_header = request.headers.get("Authorization")
-            if not validate_bearer_token(auth_header):
-                return Response("Unauthorized", status_code=401)
+        # Bypass JWT for Tailscale connections (internal network)
+        client_ip = request.client.host if request.client else ""
+        if not is_tailscale_ip(client_ip):
+            # Only validate JWT for non-Tailscale connections
+            if validate_bearer_token:
+                auth_header = request.headers.get("Authorization")
+                if not validate_bearer_token(auth_header):
+                    return Response("Unauthorized", status_code=401)
 
         async with sse.connect_sse(
             request.scope, request.receive, request._send
