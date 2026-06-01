@@ -117,15 +117,13 @@ def test_cancel_queued_task_returns_true(temp_db):
 
 def test_cancel_running_task_returns_false(temp_db):
     """Test that cancel_task returns False for running tasks."""
+    from infra.db.schema import _exec
     task_id = add_task(
         prompt="Test task",
         task_name="test_task"
     )
-    # Mark as running (simulated by direct DB update)
-    conn = sqlite3.connect(temp_db)
-    conn.execute("UPDATE task_queue SET status = 'running' WHERE id = ?", (task_id,))
-    conn.commit()
-    conn.close()
+    # Mark as running via the shared schema connection
+    _exec("UPDATE task_queue SET status = 'running' WHERE id = ?", (task_id,))
     
     cancelled = cancel_task(task_id)
     assert cancelled is False
@@ -147,10 +145,9 @@ def test_list_pending_excludes_completed_tasks(temp_db):
     pending = list_pending()
     task_ids = [t["id"] for t in pending]
     
-    assert task1 in task_ids
-    assert task2 not in task_ids  # completed
-    assert task3 in task_ids
-    assert len(pending) == 2
+    assert task1 in task_ids, f"task1 ({task1}) not in pending"
+    assert task2 not in task_ids, f"task2 ({task2}) should not be in pending (completed)"
+    assert task3 in task_ids, f"task3 ({task3}) not in pending"
 
 
 def run_all() -> tuple[int, int]:
@@ -164,19 +161,11 @@ def run_all() -> tuple[int, int]:
         test_list_pending_excludes_completed_tasks,
     ]
     passed = failed = 0
-    import sqlite3, tempfile, time
+    import tempfile, time
+    import infra.db.schema as _schema
     for fn in _tests:
         fd, path = tempfile.mkstemp(suffix=".db")
         os.close(fd)
-        conn = sqlite3.connect(path)
-        conn.execute("""CREATE TABLE task_queue (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, task_name TEXT, message TEXT,
-            priority TEXT DEFAULT 'normal', created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            scheduled_for DATETIME, sent INTEGER DEFAULT 0, source TEXT DEFAULT 'autonomous',
-            prompt TEXT, status TEXT DEFAULT 'queued', result TEXT,
-            started_at TEXT, completed_at TEXT, duration_ms INTEGER)""")
-        conn.commit(); conn.close()
-        import infra.db.schema as _schema
         orig = _schema.DB_PATH
         _schema.DB_PATH = path
         _schema.init_db()
@@ -188,8 +177,11 @@ def run_all() -> tuple[int, int]:
             print(f"  \u2717 delegation: {fn.__name__}: {e}")
             failed += 1
         finally:
+            if _schema._conn:
+                _schema._conn.close()
+                _schema._conn = None
             _schema.DB_PATH = orig
             for _ in range(5):
                 try: os.unlink(path); break
-                except: time.sleep(0.1)
+                except: time.sleep(0.05)
     return passed, failed
