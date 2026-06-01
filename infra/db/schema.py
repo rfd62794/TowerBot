@@ -285,6 +285,66 @@ CREATE TABLE IF NOT EXISTS bot_state (
     paused_at TEXT,
     auto_resume_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS chains (
+    id TEXT PRIMARY KEY,
+    template_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'running',
+    current_step INTEGER NOT NULL DEFAULT 0,
+    payload_ref TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS chain_steps (
+    id TEXT PRIMARY KEY,
+    chain_id TEXT NOT NULL,
+    step_index INTEGER NOT NULL,
+    step_type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    input_payload_id TEXT,
+    output_payload_id TEXT,
+    started_at TEXT,
+    completed_at TEXT,
+    error TEXT,
+    FOREIGN KEY (chain_id) REFERENCES chains(id)
+);
+
+CREATE TABLE IF NOT EXISTS chain_payloads (
+    id TEXT PRIMARY KEY,
+    chain_id TEXT NOT NULL,
+    step_id TEXT,
+    type TEXT NOT NULL,
+    schema_version TEXT NOT NULL DEFAULT 'v1',
+    data TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (chain_id) REFERENCES chains(id)
+);
+
+CREATE TABLE IF NOT EXISTS pattern_candidates (
+    id TEXT PRIMARY KEY,
+    step_sequence_hash TEXT NOT NULL UNIQUE,
+    observed_count INTEGER NOT NULL DEFAULT 1,
+    first_seen TEXT NOT NULL,
+    last_seen TEXT NOT NULL,
+    success_rate REAL NOT NULL DEFAULT 0.0,
+    promotion_status TEXT NOT NULL DEFAULT 'candidate',
+    template_draft TEXT
+);
+
+CREATE TABLE IF NOT EXISTS approval_listeners (
+    id TEXT PRIMARY KEY,
+    chain_id TEXT NOT NULL,
+    step_id TEXT NOT NULL,
+    telegram_chat_id TEXT NOT NULL,
+    message_id TEXT,
+    expires_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'waiting',
+    response TEXT,
+    FOREIGN KEY (chain_id) REFERENCES chains(id)
+);
 """
 
 _conn: sqlite3.Connection | None = None

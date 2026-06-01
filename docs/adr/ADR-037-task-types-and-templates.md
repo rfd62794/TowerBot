@@ -1,7 +1,7 @@
 # ADR-037: TaskTypes and Templates for Autonomous Tasks
 
 ## Status
-Proposed
+Superseded by ADR-037.md
 
 ## Context
 Autonomous tasks are currently bespoke — each task is a hand-written prompt with implicit knowledge about iteration depth, persona, and behavior. Adding a new task requires writing a prompt from scratch and knowing the right configuration. This knowledge is implicit and not reusable.

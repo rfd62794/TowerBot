@@ -67,6 +67,7 @@ TEST_FILES = [
     "tests/test_update.py",
     "tests/test_router.py",
     "tests/test_registry.py",
+    "tests/test_chain_schema.py",
 ]
 
 
