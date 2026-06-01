@@ -133,7 +133,7 @@ async def run_stdio():
         )
 
 
-async def run_sse(port: int = 8090):
+async def run_sse(port: int = 8090, host: str = "0.0.0.0"):
     """Run MCP server with SSE transport (remote via Tailscale)."""
     logger.info(f"Starting MCP server with SSE transport on port {port}")
 
@@ -168,7 +168,7 @@ async def run_sse(port: int = 8090):
 
     # Run with uvicorn
     import uvicorn
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info")
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server_instance = uvicorn.Server(config)
     await server_instance.serve()
 
@@ -187,14 +187,24 @@ def main():
         type=int,
         default=8090,
         help="Port for SSE transport (default: 8090)",
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Host for SSE transport (default: 0.0.0.0)",
+    )
     )
     args = parser.parse_args()
 
     if args.transport == "stdio":
         anyio.run(run_stdio)
     else:
-        anyio.run(run_sse, args.port)
+        anyio.run(run_sse, args.port, args.host)
 
 
 if __name__ == "__main__":
     main()
+
+
+
+
