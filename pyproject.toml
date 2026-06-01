@@ -28,6 +28,7 @@ dependencies = [
     "ollama>=0.6.2",
     "mcp>=1.27.2",
     "pyjwt>=2.13.0",
+    "pytest>=9.0.0",
 ]
 
 [project.scripts]
@@ -38,3 +39,10 @@ package = false
 
 [tool.uv.sources]
 openagent-directive = { path = "../OpenAgent", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
