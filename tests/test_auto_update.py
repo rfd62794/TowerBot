@@ -25,12 +25,13 @@ TESTS = []
 
 @test("auto-update: trigger_restart spawns detached PowerShell")
 def test_trigger_restart():
-    """Test that trigger_restart spawns a detached PowerShell process."""
+    """Test that trigger_restart spawns detached PowerShell processes."""
     from scripts.update import trigger_restart
     with patch("subprocess.Popen") as mock_popen:
         trigger_restart()
-        mock_popen.assert_called_once()
-        args = mock_popen.call_args[0][0]
+        assert mock_popen.call_count == 2
+        # First call should be PrivyBot
+        args = mock_popen.call_args_list[0][0][0]
         assert "powershell" in args
         assert "net stop PrivyBot" in " ".join(args)
         assert "net start PrivyBot" in " ".join(args)
@@ -129,7 +130,7 @@ def test_triggers_restart_when_behind():
                         result = asyncio.run(scripts.update.check_for_updates(send_fn))
                         assert "Restarting" in result
                         assert "def5678" in result
-                        mock_popen.assert_called_once()
+                        assert mock_popen.call_count == 2  # PrivyBot + PrivybotMCP
     finally:
         if original_role is None:
             os.environ.pop("INSTANCE_ROLE", None)

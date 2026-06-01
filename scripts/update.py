@@ -8,9 +8,16 @@ INSTANCE_ROLE = os.environ.get("INSTANCE_ROLE", "development")
 
 def trigger_restart():
     """Detached process survives service stop and handles restart."""
+    # Restart PrivyBot
     subprocess.Popen(
         ["powershell", "-WindowStyle", "Hidden", "-Command",
-         "Start-Sleep 3; net stop PrivyBot; net start PrivyBot"],
+         "Start-Sleep -Seconds 2; net stop PrivyBot; net start PrivyBot"],
+        creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    )
+    # Restart PrivybotMCP — delayed to let PrivyBot come up first
+    subprocess.Popen(
+        ["powershell", "-WindowStyle", "Hidden", "-Command",
+         "Start-Sleep -Seconds 5; net stop PrivybotMCP; net start PrivybotMCP"],
         creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
     )
 
