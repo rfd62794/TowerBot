@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(_root, ".env"))
 
 from infra.db import init_db
+init_db()
 from infra.memory_manager import MemoryManager
 
 
@@ -41,8 +42,9 @@ def test_semantic_save_and_search():
     mock_col.upsert = mock_upsert
     mock_col.query = mock_query
 
-    with patch.object(manager, "_collection") as mock_col_method:
-        mock_col_method.return_value = mock_col
+    with patch.object(manager, "_get_collection", return_value=mock_col), \
+         patch("infra.memory_manager._sql_save"), \
+         patch("infra.memory_manager._sql_get_memories", return_value=[]):
         manager.save("test_sem_key", "test semantic content xyz", "technical")
         results = manager.search("semantic content", limit=5)
 
@@ -73,8 +75,10 @@ def test_semantic_update_mirrors_chroma():
     mock_col.upsert = mock_upsert
     mock_col.query = mock_query
 
-    with patch.object(manager, "_collection") as mock_col_method:
-        mock_col_method.return_value = mock_col
+    with patch.object(manager, "_get_collection", return_value=mock_col), \
+         patch("infra.memory_manager._sql_save"), \
+         patch("infra.memory_manager._sql_update"), \
+         patch("infra.memory_manager._sql_get_memories", return_value=[]):
         manager.save("test_update_key", "original content", "project")
         manager.update("test_update_key", "updated content")
         results = manager.search("updated content", limit=5)
@@ -109,8 +113,10 @@ def test_semantic_retire_deletes_from_chroma():
     mock_col.delete = mock_delete
     mock_col.query = mock_query
 
-    with patch.object(manager, "_collection") as mock_col_method:
-        mock_col_method.return_value = mock_col
+    with patch.object(manager, "_get_collection", return_value=mock_col), \
+         patch("infra.memory_manager._sql_save"), \
+         patch("infra.memory_manager._sql_retire"), \
+         patch("infra.memory_manager._sql_get_memories", return_value=[]):
         manager.save("test_retire_key", "to be retired", "personal")
         manager.retire("test_retire_key")
         results = manager.search("retired", limit=5)
@@ -125,9 +131,8 @@ def test_semantic_fallback_on_chroma_error():
     mock_col = MagicMock()
     mock_col.query.side_effect = Exception("Chroma unavailable")
 
-    with patch.object(manager, "_collection") as mock_col_method, \
+    with patch.object(manager, "_get_collection", return_value=mock_col), \
          patch("infra.memory_manager._sql_get_memories") as mock_sql:
-        mock_col_method.return_value = mock_col
         mock_sql.return_value = [
             {"key": "fallback_key", "content": "fallback content", "layer": "technical"}
         ]
