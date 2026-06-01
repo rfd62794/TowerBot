@@ -14,6 +14,7 @@ from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.db.system_metrics import record_system_snapshot
 from infra.db.bot_state import get_dev_mode
 from infra.db.task_queue import get_due_tasks, mark_running, mark_complete, mark_failed
+from scripts.update import check_for_updates
 
 logger = logging.getLogger("privy.autonomous")
 
@@ -298,3 +299,14 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         kwargs={"send_fn": send_fn}
     )
     logger.info("Registered delegation poll: every 60 seconds")
+
+    # Register auto-update check
+    scheduler.add_job(
+        check_for_updates,
+        "interval",
+        minutes=30,
+        id="auto_update_check",
+        max_instances=1,
+        kwargs={"send_fn": send_fn}
+    )
+    logger.info("Registered auto-update check: every 30 minutes")
