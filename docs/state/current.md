@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 21 — Complete
+Phase 22 — Complete
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -51,8 +51,20 @@ Phase 21 — Complete
   - 24 new tests in test_phase21.py
   - Test floor: 497 passed, 0 failed
 
+- Phase 22: Director Tools — Full Operational Access
+  - tools/meta/director.py: 13 new tools for Claude (chains, templates, memories, DB inspection)
+  - Chain tools: get_chains, get_chain, get_chain_payload, start_chain, cancel_chain, resume_chain
+  - Template tools: list_templates, get_template, write_template, delete_experimental_template
+  - Memory tools: list_memories, delete_memory
+  - Pattern tools: get_promotion_candidates
+  - DB inspection: query_db (SELECT-only)
+  - Hard boundary: write_template and delete_experimental_template cannot touch canonical/
+  - All 13 tools registered in TOOL_REGISTRY and exposed via MCP
+  - 22 new tests in test_director_tools.py
+  - Test floor: 519 passed, 0 failed
+
 ## Next
-Phase 22: TBD
+Phase 23: TBD
 
 ---
 

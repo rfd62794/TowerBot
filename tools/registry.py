@@ -64,6 +64,14 @@ from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .meta.sync import sync_db_status, sync_db_export, sync_db_import
 from .meta.admin import purge_null_tasks, get_logs, run_diagnostic
 from .meta.delegation import delegation_tools
+from .meta.director import (
+    get_chains, get_chain, get_chain_payload,
+    start_chain, cancel_chain, resume_chain,
+    list_templates, get_template, write_template,
+    delete_experimental_template,
+    list_memories, delete_memory,
+    get_promotion_candidates, query_db
+)
 from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 from .repo.audit import audit_repo_compliance
 from .repo.analysis import analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
@@ -2083,6 +2091,307 @@ TOOL_REGISTRY = {
                 "name": "run_diagnostic",
                 "description": "Aggregate health check for Tower's PrivyBot instance. Returns queue depth, null task count, memory count, Chroma status, recent errors, last failed tasks, and current git HEAD.",
                 "parameters": {"type": "object", "properties": {}, "required": []}
+            }
+        }
+    },
+    "get_chains": {
+        "fn": get_chains,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_chains",
+                "description": "List chains, optionally filtered by status. Returns count and list of chain dicts.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "description": "Filter by status: running, waiting_approval, paused, complete, failed, or None for all"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max rows returned (default 20, max 100)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "get_chain": {
+        "fn": get_chain,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_chain",
+                "description": "Get full chain detail including all steps and payload summaries.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "chain_id": {
+                            "type": "string",
+                            "description": "Chain ID to fetch"
+                        }
+                    },
+                    "required": ["chain_id"]
+                }
+            }
+        }
+    },
+    "get_chain_payload": {
+        "fn": get_chain_payload,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_chain_payload",
+                "description": "Get full payload contents by ID including deserialized data.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "payload_id": {
+                            "type": "string",
+                            "description": "Payload ID to fetch"
+                        }
+                    },
+                    "required": ["payload_id"]
+                }
+            }
+        }
+    },
+    "start_chain": {
+        "fn": start_chain,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "start_chain",
+                "description": "Instantiate and start a chain from a template. Runs in background thread.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "template_name": {
+                            "type": "string",
+                            "description": "Template name (without .yaml extension)"
+                        },
+                        "initial_payload": {
+                            "type": "object",
+                            "description": "Optional initial payload dict"
+                        }
+                    },
+                    "required": ["template_name"]
+                }
+            }
+        }
+    },
+    "cancel_chain": {
+        "fn": cancel_chain,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "cancel_chain",
+                "description": "Halt a running or waiting chain by setting status to failed.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "chain_id": {
+                            "type": "string",
+                            "description": "Chain ID to cancel"
+                        }
+                    },
+                    "required": ["chain_id"]
+                }
+            }
+        }
+    },
+    "resume_chain": {
+        "fn": resume_chain,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "resume_chain",
+                "description": "Resume a chain that is waiting_approval or paused. Advances current_step by 1 and runs in background.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "chain_id": {
+                            "type": "string",
+                            "description": "Chain ID to resume"
+                        }
+                    },
+                    "required": ["chain_id"]
+                }
+            }
+        }
+    },
+    "list_templates": {
+        "fn": list_templates,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_templates",
+                "description": "List available templates from canonical, experimental, or both.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "source": {
+                            "type": "string",
+                            "description": "Source: 'canonical', 'experimental', or 'all' (default)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "get_template": {
+        "fn": get_template,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_template",
+                "description": "Get full template content by name including source and YAML dict.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Template name (without .yaml extension)"
+                        }
+                    },
+                    "required": ["name"]
+                }
+            }
+        }
+    },
+    "write_template": {
+        "fn": write_template,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "write_template",
+                "description": "Write a template to templates/experimental/. Validates YAML and structure. Cannot write to canonical.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Template name (without .yaml extension)"
+                        },
+                        "yaml_content": {
+                            "type": "string",
+                            "description": "Valid YAML string conforming to template schema"
+                        }
+                    },
+                    "required": ["name", "yaml_content"]
+                }
+            }
+        }
+    },
+    "delete_experimental_template": {
+        "fn": delete_experimental_template,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "delete_experimental_template",
+                "description": "Delete a template from experimental only. Cannot delete canonical templates.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Template name (without .yaml extension)"
+                        }
+                    },
+                    "required": ["name"]
+                }
+            }
+        }
+    },
+    "list_memories": {
+        "fn": list_memories,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_memories",
+                "description": "List memories, optionally filtered by layer. Returns key, layer, content preview.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "layer": {
+                            "type": "string",
+                            "description": "Filter by layer: technical, project, personal, business, content, or None for all"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max rows returned (default 50, max 200)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "delete_memory": {
+        "fn": delete_memory,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "delete_memory",
+                "description": "Soft-delete a memory by key (sets active=0, data preserved).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "key": {
+                            "type": "string",
+                            "description": "Memory key to delete"
+                        }
+                    },
+                    "required": ["key"]
+                }
+            }
+        }
+    },
+    "get_promotion_candidates": {
+        "fn": get_promotion_candidates,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_promotion_candidates",
+                "description": "List pattern candidates from observer, optionally filtered by promotion status.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "description": "Filter by status: candidate, ready_to_promote, or None for all"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "query_db": {
+        "fn": query_db,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "query_db",
+                "description": "Execute a read-only SQL query against Tower's DB. SELECT statements only. Use for inspection and diagnosis.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sql": {
+                            "type": "string",
+                            "description": "SELECT SQL query string"
+                        },
+                        "params": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional query parameters"
+                        }
+                    },
+                    "required": ["sql"]
+                }
             }
         }
     },
