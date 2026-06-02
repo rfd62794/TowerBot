@@ -1,3 +1,23 @@
+triggers:
+  useless_fact:
+    phrases: [random fact, interesting fact, tell me a fact, fact of the day, useless fact, random trivia]
+  number_fact:
+    phrases: [fact about number, number fact, date fact, math fact, year fact, trivia about]
+  random_quote:
+    phrases: [random quote, quote of the day, inspirational quote, tell me a quote, famous quote]
+  wiki_random:
+    phrases: [random wikipedia, random article, wikipedia random, random wiki, surprise me]
+  spacex_latest_launch:
+    phrases: [spacex launch, rocket launch, latest launch, space launch, spacex]
+  jina_read:
+    phrases: [read url, read article, extract content, summarize url, fetch content]
+  country_info:
+    phrases: [country info, about country, country data, tell me about, country details]
+  cratesio_info:
+    phrases: [rust crate, crates.io, crate info, rust package, crate details]
+  hackernews_search:
+    phrases: [hacker news, hn search, search hn, hn stories, tech news]
+
 routes:
   chat:
     model: ollama/gemma3:4b
