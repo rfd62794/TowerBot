@@ -172,6 +172,24 @@ def test_create_page_returns_id():
         assert result["link"] == "https://example.com/new-page"
 
 
+@test("pages: delete_page returns ok=True")
+def test_delete_page_success():
+    with mock.patch('requests.delete') as mock_delete, mock.patch('infra.cache.cache.invalidate'):
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "id": 3,
+            "deleted": True
+        }
+        mock_response.text = '{"id": 3}'
+        mock_delete.return_value = mock_response
+        blog = BlogTools()
+        result = blog.delete_page(page_id=3)
+        assert result["ok"] is True
+        assert result["page_id"] == 3
+        assert result["deleted"] is True
+
+
 def run_all():
     passed = 0
     failed = 0
