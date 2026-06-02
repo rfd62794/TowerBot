@@ -334,6 +334,29 @@ def test_wiki_random_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("spacex_latest_launch: returns name, date_utc, and success keys")
+def test_spacex_latest_launch_success():
+    from tools.search.search_tools import spacex_latest_launch
+    result = spacex_latest_launch()
+    if result.get("ok") == True:
+        assert "name" in result, "Expected 'name' key on success"
+        assert "date_utc" in result, "Expected 'date_utc' key on success"
+        assert "success" in result, "Expected 'success' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("spacex_latest_launch: handles API error gracefully")
+def test_spacex_latest_launch_error():
+    from tools.search.search_tools import spacex_latest_launch
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = spacex_latest_launch()
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
