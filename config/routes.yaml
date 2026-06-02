@@ -27,7 +27,7 @@ triggers:
     phrases: [board game, boardgame, bgg, board game search, find board game]
   lichess_user:
     phrases: [lichess, chess rating, lichess user, chess player, lichess profile]
-  a2a_search:
+  search_tools:
     phrases: [search tools, find tools, tool discovery, mcp tools, a2a search]
   register_tool_from_spec:
     phrases: [register tool, add tool from spec, openapi spec, tool registration]
@@ -35,6 +35,10 @@ triggers:
     phrases: [list tools, experimental tools, tool list, show tools]
   promote_tool:
     phrases: [promote tool, approve tool, tool promotion]
+  list_all_tools:
+    phrases: [list all tools, tool catalog, browse tools, show all tools]
+  get_tool_info:
+    phrases: [tool info, tool details, get tool information]
 
 routes:
   chat:
@@ -232,6 +236,9 @@ routes:
       - register_tool_from_spec
       - list_experimental_tools
       - promote_tool
+      - search_tools
+      - list_all_tools
+      - get_tool_info
     description: "System resources, Ollama status, budget tracking, director access, tool discovery"
 
   tasks:
