@@ -438,7 +438,7 @@ def query_db(sql: str, params: list = None) -> dict:
             }
 
     try:
-        cursor = _exec(sql, tuple(params) if params else None)
+        cursor = _exec(sql, tuple(params) if params else ())
         rows = cursor.fetchall()
         result = [dict(r) for r in (rows or [])]
         return {"ok": True, "count": len(result), "rows": result}
