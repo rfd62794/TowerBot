@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 26 — Complete
+Phase 25 — Complete
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
