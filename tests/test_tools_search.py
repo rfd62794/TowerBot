@@ -422,6 +422,29 @@ def test_cratesio_info_not_found():
     assert "error" in result, "Expected 'error' key for nonexistent crate"
 
 
+@test("hackernews_search: returns query, count, and results keys")
+def test_hackernews_search_success():
+    from tools.search.search_tools import hackernews_search
+    result = hackernews_search("python", 5)
+    if result.get("ok") == True:
+        assert "query" in result, "Expected 'query' key on success"
+        assert "count" in result, "Expected 'count' key on success"
+        assert "results" in result, "Expected 'results' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("hackernews_search: handles API error gracefully")
+def test_hackernews_search_error():
+    from tools.search.search_tools import hackernews_search
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = hackernews_search("test")
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

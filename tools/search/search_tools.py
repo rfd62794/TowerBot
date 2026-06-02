@@ -531,6 +531,44 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch crate info: {e}")
 
+    def hackernews_search(self, query: str, limit: int = 10) -> dict:
+        """
+        Search Hacker News via Algolia API.
+
+        Args:
+            query: Search query
+            limit: Maximum results to return (default 10)
+
+        Returns:
+            Dict with search results including title, url, points, author, etc.
+        """
+        try:
+            url = f"http://hn.algolia.com/api/v1/search"
+            params = {"query": query, "hitsPerPage": limit}
+            resp = httpx.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            hits = data.get("hits", [])
+            results = []
+            for hit in hits:
+                results.append({
+                    "title": hit.get("title", ""),
+                    "url": hit.get("url", ""),
+                    "points": hit.get("points", 0),
+                    "author": hit.get("author", ""),
+                    "created_at": hit.get("created_at_i", 0),
+                    "object_id": hit.get("objectID", "")
+                })
+            return self.success({
+                "query": query,
+                "count": len(results),
+                "results": results
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Hacker News API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to search Hacker News: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -743,3 +781,17 @@ def cratesio_info(crate_name: str) -> dict:
         Dict with crate data including name, version, description, downloads, etc.
     """
     return _search.cratesio_info(crate_name)
+
+
+def hackernews_search(query: str, limit: int = 10) -> dict:
+    """
+    Search Hacker News via Algolia API.
+
+    Args:
+        query: Search query
+        limit: Maximum results to return (default 10)
+
+    Returns:
+        Dict with search results including title, url, points, author, etc.
+    """
+    return _search.hackernews_search(query, limit)
