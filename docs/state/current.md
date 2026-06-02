@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 20b — Complete
+Phase 20c — Complete
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -29,5 +29,14 @@ Phase 20b — Complete
   - 18 new tests in test_approval.py
   - Test floor: 417 passed, 0 failed
 
+- Phase 20c: Observer + Digest + First Template + Production Wiring
+  - templates/canonical/hourly_fact.yaml: First canonical template (3 steps)
+  - infra/chain/template_loader.py: YAML loading + validation
+  - infra/chain/observer.py: Pattern observation logic
+  - bot/autonomous.py: Observer job (30min) + weekly digest (Sunday 08:00)
+  - bot/approval_router.py: resume_chain_fn wired to real ChainRunner
+  - 20 new tests in test_phase20c.py
+  - Test floor: 437 passed, 0 failed
+
 ## Next
-Phase 20c: Pattern observer, weekly digest, template YAML loading
+Phase 21: Promotion pipeline, n8n integration, model roles config
