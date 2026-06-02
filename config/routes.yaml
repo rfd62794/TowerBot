@@ -96,6 +96,7 @@ routes:
     tools:
       - web_search
       - wiki_lookup
+      - wiki_random
       - news_search
       - fetch_url
       - useless_fact

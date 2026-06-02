@@ -389,6 +389,28 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch quote: {e}")
 
+    def wiki_random(self) -> dict:
+        """
+        Get a random Wikipedia article summary.
+
+        Returns:
+            Dict with title, extract, and URL
+        """
+        try:
+            resp = httpx.get("https://en.wikipedia.org/api/rest_v1/page/random/summary", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return self.success({
+                "title": data.get("title", ""),
+                "extract": data.get("extract", ""),
+                "url": data.get("content_urls", {}).get("desktop", {}).get("page", ""),
+                "lang": data.get("lang", "en")
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Wikipedia API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch random Wikipedia article: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -542,3 +564,13 @@ def random_quote() -> dict:
         Dict with quote content, author, and tags
     """
     return _search.random_quote()
+
+
+def wiki_random() -> dict:
+    """
+    Get a random Wikipedia article summary.
+
+    Returns:
+        Dict with title, extract, and URL
+    """
+    return _search.wiki_random()
