@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 23 — Complete
+Phase 24 — Complete
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -74,8 +74,22 @@ Phase 23 — Complete
   - 18 new tests in test_tool_registry.py
   - Test floor: 537 passed, 0 failed
 
+- Phase 24: Model Router Wiring + Tool Index
+  - config/task_types.yaml: Added model_role field to all 5 TaskTypes (monitor, reporter, creator, planner, chat)
+  - Model role mappings: monitor→fast_intent (Groq), reporter→long_context (Gemini Flash), creator→long_context (Gemini Flash), planner→reasoning (DeepSeek), chat→chat (Gemini Flash)
+  - bot/model_helpers.py: New shared helper with call_openrouter() and get_task_model_role()
+  - bot/autonomous.py: Wired model_router into run_autonomous_task() and process_delegation_queue()
+  - Autonomous tasks now route through model_router based on task_type's model_role
+  - tools/meta/tool_index.py: 3 new tools (search_tools, list_all_tools, get_tool_info)
+  - search_tools: Fast fuzzy search of all registered tools by name and description
+  - list_all_tools: List all tools with optional prefix filter
+  - get_tool_info: Get full information about a specific tool by exact name
+  - All 3 tool index tools registered in TOOL_REGISTRY and auto-exposed via MCP
+  - 15 new tests in test_model_wiring.py
+  - Test floor: 552 passed, 0 failed
+
 ## Next
-Phase 24: TBD
+Phase 25: TBD
 
 ---
 
