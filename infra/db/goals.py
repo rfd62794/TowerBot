@@ -90,12 +90,18 @@ def get_task(task_id: str) -> dict | None:
     return dict(row) if row else None
 
 
-def update_task_status(task_id: str, status: str) -> None:
+def update_task_status(task_id: str, status: str, due_date: str = None) -> None:
     completed_at = "CURRENT_TIMESTAMP" if status == "complete" else "NULL"
-    _exec(
-        f"UPDATE tasks SET status = ?, completed_at = {completed_at} WHERE id = ?",
-        (status, task_id), commit=True,
-    )
+    if due_date:
+        _exec(
+            f"UPDATE tasks SET status = ?, due_date = ?, completed_at = {completed_at} WHERE id = ?",
+            (status, due_date, task_id), commit=True,
+        )
+    else:
+        _exec(
+            f"UPDATE tasks SET status = ?, completed_at = {completed_at} WHERE id = ?",
+            (status, task_id), commit=True,
+        )
 
 
 def get_tasks_due_today() -> list[dict]:

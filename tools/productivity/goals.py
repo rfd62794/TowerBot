@@ -175,13 +175,14 @@ class GoalsTools(BaseTool):
             "tasks": tasks
         })
 
-    def update_task(self, task_id: str, status: str) -> dict:
+    def update_task(self, task_id: str, status: str, due_date: str = None) -> dict:
         """
-        Update task status.
+        Update task status and optionally due_date.
 
         Args:
             task_id: Task ID
             status: New status (pending, in_progress, complete, cancelled)
+            due_date: Optional new due date (YYYY-MM-DD format)
 
         Returns:
             Dict with updated task
@@ -190,7 +191,7 @@ class GoalsTools(BaseTool):
         if not task:
             return self.error(f"Task not found: {task_id}", code="not_found")
         
-        update_task_status(task_id, status)
+        update_task_status(task_id, status, due_date)
         
         # Return updated task
         updated = get_task(task_id)
@@ -243,8 +244,8 @@ def get_current_plan() -> dict:
     return _goals.get_current_plan()
 
 
-def update_task(task_id: str, status: str) -> dict:
-    return _goals.update_task(task_id, status)
+def update_task(task_id: str, status: str, due_date: str = None) -> dict:
+    return _goals.update_task(task_id, status, due_date)
 
 
 def suggest_goal_progress(milestone_id: str) -> dict:
