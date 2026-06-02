@@ -62,7 +62,7 @@ from .productivity.personal import (
 )
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .meta.sync import sync_db_status, sync_db_export, sync_db_import
-from .meta.admin import purge_null_tasks
+from .meta.admin import purge_null_tasks, get_logs, run_diagnostic
 from .meta.delegation import delegation_tools
 from .repo.filesystem import read_local_file, list_local_dir, search_local_code
 from .repo.audit import audit_repo_compliance
@@ -1735,6 +1735,41 @@ TOOL_REGISTRY = {
             "function": {
                 "name": "purge_null_tasks",
                 "description": "Admin: cancel all queued tasks with null or empty prompts. Returns count of cancelled tasks.",
+                "parameters": {"type": "object", "properties": {}, "required": []}
+            }
+        }
+    },
+    "get_logs": {
+        "fn": get_logs,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_logs",
+                "description": "Read the tail of Tower's PrivyBot log file. Returns structured log lines with optional keyword filter.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "lines": {
+                            "type": "integer",
+                            "description": "Number of log lines to return. Default 50, max 200."
+                        },
+                        "filter_str": {
+                            "type": "string",
+                            "description": "Optional keyword filter — only return lines containing this string (case-insensitive)."
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "run_diagnostic": {
+        "fn": run_diagnostic,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "run_diagnostic",
+                "description": "Aggregate health check for Tower's PrivyBot instance. Returns queue depth, null task count, memory count, Chroma status, recent errors, last failed tasks, and current git HEAD.",
                 "parameters": {"type": "object", "properties": {}, "required": []}
             }
         }
