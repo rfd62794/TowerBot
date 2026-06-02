@@ -379,6 +379,29 @@ def test_jina_read_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("country_info: returns name, capital, and population keys")
+def test_country_info_success():
+    from tools.search.search_tools import country_info
+    result = country_info("United States")
+    if result.get("ok") == True:
+        assert "name" in result, "Expected 'name' key on success"
+        assert "capital" in result, "Expected 'capital' key on success"
+        assert "population" in result, "Expected 'population' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("country_info: handles API error gracefully")
+def test_country_info_error():
+    from tools.search.search_tools import country_info
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = country_info()
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

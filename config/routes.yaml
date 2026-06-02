@@ -100,11 +100,12 @@ routes:
       - news_search
       - fetch_url
       - jina_read
+      - country_info
       - useless_fact
       - number_fact
       - random_quote
       - spacex_latest_launch
-    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, random facts, quotes, SpaceX"
+    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, random facts, quotes, SpaceX"
 
   steam:
     model: openrouter/free
