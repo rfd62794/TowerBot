@@ -12,9 +12,10 @@ from infra.db.chains import (
 )
 from infra.db.payloads import create_payload, get_payload
 from infra.chain.steps import (
-    StepError, StepSkipped,
+    StepError, StepSkipped, StepLoopBack,
     handle_tool_call, handle_llm_call, handle_condition_check,
-    handle_transform, handle_spawn_chain, handle_approval_wait
+    handle_transform, handle_spawn_chain, handle_approval_wait,
+    handle_agent_step, handle_loop_back
 )
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,8 @@ STEP_HANDLERS = {
     'transform':       handle_transform,
     'spawn_chain':     handle_spawn_chain,
     'approval_wait':   handle_approval_wait,
+    'agent_step':      handle_agent_step,
+    'loop_back':       handle_loop_back,
 }
 
 
@@ -113,9 +116,21 @@ class ChainRunner:
                 if step_type == 'tool_call':
                     payload = handler(step, payload, self.tool_registry)
                 elif step_type == 'llm_call':
-                    payload = handler(step, payload, self.call_model_fn)
+                    role = step_config.get('model_role', 'reasoning')
+                    # Wrap call_model_fn to route through model_router
+                    def routed_call(prompt: str, role: str = role) -> str:
+                        from infra.model_router import route
+                        result = route(
+                            role=role,
+                            call_fn=self.call_model_fn,
+                            prompt=prompt
+                        )
+                        return result['result']
+                    payload = handler(step, payload, routed_call)
                 elif step_type == 'spawn_chain':
                     payload = handler(step, payload, self.create_chain_fn)
+                elif step_type == 'agent_step':
+                    payload = handler(step, payload, self.call_model_fn)
                 else:
                     payload = handler(step, payload)
 
@@ -130,6 +145,34 @@ class ChainRunner:
                                     current_step=global_index)
                 logger.info(f"Chain {chain_id} paused at step {global_index}: {e}")
                 return get_chain(chain_id)
+
+            except StepLoopBack as e:
+                # Find the anchor step index by name
+                anchor_index = next(
+                    (i for i, s in enumerate(step_definitions)
+                     if s.get('name') == e.anchor_step_name),
+                    None
+                )
+                if anchor_index is None:
+                    update_step(step['id'], status='failed',
+                                error=f"Loop anchor not found: {e.anchor_step_name}")
+                    update_chain_status(chain_id, 'failed')
+                    return get_chain(chain_id)
+
+                # Update payload with loop count before persisting
+                output_payload = create_payload(
+                    chain_id, 'loop_state', payload, step_id=step['id']
+                )
+                update_step(step['id'], status='complete',
+                            output_payload_id=output_payload['id'])
+                update_chain_status(chain_id, 'running',
+                                    current_step=anchor_index)
+                logger.info(
+                    f"Chain {chain_id} looping back to step {anchor_index} "
+                    f"'{e.anchor_step_name}' (iteration {e.iteration})"
+                )
+                # Recurse with updated step_definitions from anchor
+                return self.run(chain_id, step_definitions)
 
             except StepError as e:
                 update_step(step['id'], status='failed', error=str(e))

@@ -20,6 +20,20 @@ class StepSkipped(Exception):
     pass
 
 
+class StepLoopBack(Exception):
+    """
+    Raised when a loop_back step triggers.
+    Carries the anchor step name to loop back to.
+    Not a failure — a deliberate redirect.
+    """
+    def __init__(self, anchor_step_name: str, iteration: int):
+        self.anchor_step_name = anchor_step_name
+        self.iteration = iteration
+        super().__init__(
+            f"Loop back to '{anchor_step_name}' (iteration {iteration})"
+        )
+
+
 def handle_tool_call(step: dict, payload: dict,
                      tool_registry: dict) -> dict:
     """
@@ -193,6 +207,129 @@ def handle_approval_wait(step: dict, payload: dict,
             )
 
     raise StepSkipped(f"Waiting for approval: listener {listener['id']}")
+
+
+def handle_agent_step(step: dict, payload: dict,
+                      call_model_fn: Callable) -> dict:
+    """
+    Reasoning step — model examines current chain context and decides
+    what to do next. Returns payload with 'agent_decision' dict.
+
+    The model receives:
+    - Current payload summary
+    - Available actions: call_tool, llm_call, complete, loop_back, fail
+    - Step config constraints
+
+    step config:
+      role: model role to use (default: 'reasoning')
+      available_tools: list of tool names the agent can reference
+      context_fields: list of payload fields to include in context
+      instruction: specific guidance for this decision point
+
+    Returns payload enriched with:
+      agent_decision: {action, target, args, reasoning}
+    """
+    config = step.get('config', {})
+    role = config.get('role', 'reasoning')
+    available_tools = config.get('available_tools', [])
+    context_fields = config.get('context_fields', [])
+    instruction = config.get('instruction', 'Decide the next action.')
+
+    # Build context from payload fields
+    context = {k: payload.get(k) for k in context_fields if k in payload}
+
+    prompt = f"""You are deciding the next action in a chain.
+
+Current context:
+{context}
+
+Available actions:
+- call_tool: call a specific tool. Specify target (tool name) and args.
+- llm_call: run a language model step. Specify target (role) and args.
+- loop_back: retry from an earlier step. Specify target (step name).
+- complete: chain is done. No target needed.
+- fail: unrecoverable error. Specify reasoning.
+
+Available tools: {available_tools}
+
+Instruction: {instruction}
+
+Respond with a JSON object only:
+{{
+    "action": "call_tool|llm_call|complete|loop_back|fail",
+    "target": "tool_name_or_step_name_or_null",
+    "args": {{}},
+    "reasoning": "brief explanation"
+}}"""
+
+    try:
+        raw = call_model_fn(prompt=prompt, role=role)
+        import json
+        # Strip markdown fences if present
+        clean = raw.strip()
+        if clean.startswith("```"):
+            lines = clean.split("\n")
+            clean = "\n".join(lines[1:-1])
+        decision = json.loads(clean)
+    except Exception as e:
+        raise StepError(f"agent_step failed to parse decision: {e}")
+
+    valid_actions = {"call_tool", "llm_call", "complete", "loop_back", "fail"}
+    if decision.get("action") not in valid_actions:
+        raise StepError(
+            f"agent_step returned invalid action: {decision.get('action')}"
+        )
+
+    return {**payload, "agent_decision": decision}
+
+
+def handle_loop_back(step: dict, payload: dict) -> dict:
+    """
+    Loop back to an earlier step.
+    Raises StepLoopBack — runner catches and resets current_step.
+
+    step config:
+      anchor_step_name: str — name of step to loop back to
+      max_iterations: int — default 3, hard ceiling
+      condition_field: str — optional payload field to check
+      condition_value: any — if condition_field equals this, loop;
+                             else pass through (no loop)
+    """
+    config = step.get('config', {})
+    anchor = config.get('anchor_step_name')
+    max_iter = config.get('max_iterations', 3)
+    condition_field = config.get('condition_field')
+    condition_value = config.get('condition_value')
+
+    if not anchor:
+        raise StepError("loop_back step missing anchor_step_name")
+
+    # Check condition if specified
+    if condition_field is not None:
+        field_val = payload.get(condition_field)
+        if field_val != condition_value:
+            # Condition not met — pass through, no loop
+            return {**payload, "loop_skipped": True}
+
+    # Check iteration count from payload
+    loop_key = f"_loop_count_{anchor}"
+    current_count = payload.get(loop_key, 0)
+
+    if current_count >= max_iter:
+        raise StepError(
+            f"loop_back exceeded max_iterations ({max_iter}) "
+            f"for anchor '{anchor}'"
+        )
+
+    updated_payload = {
+        **payload,
+        loop_key: current_count + 1
+    }
+
+    raise StepLoopBack(
+        anchor_step_name=anchor,
+        iteration=current_count + 1
+    )
 
 
 # --- Helpers ---

@@ -1,11 +1,14 @@
 """
 Payload CRUD operations.
-JSON serialization lives here. Schema validation is a Phase 20 concern.
+JSON serialization lives here. Schema validation is a Phase 21 concern.
 """
 import json
 import uuid
+import logging
 from datetime import datetime, timezone
 from infra.db.schema import _exec
+
+logger = logging.getLogger(__name__)
 
 
 def _now() -> str:
@@ -22,6 +25,27 @@ def create_payload(chain_id: str, payload_type: str, data: dict,
     """Create and persist a payload. data must be a dict."""
     if not isinstance(data, dict):
         raise TypeError(f"data must be a dict, got {type(data).__name__}")
+    
+    # Validate with Pydantic — adds chain_id and schema_version
+    try:
+        from infra.chain.schemas import validate_payload
+        validated = validate_payload(payload_type, {
+            **data,
+            "chain_id": chain_id,
+            "step_id": step_id,
+            "schema_version": schema_version
+        })
+        serialized = validated.to_db_dict()
+    except Exception as e:
+        # Log the error and fall back to raw dict — never crash a chain
+        logger.warning(f"Pydantic validation failed for payload_type '{payload_type}': {e}. Falling back to raw dict.")
+        serialized = {
+            **data,
+            "chain_id": chain_id,
+            "step_id": step_id,
+            "schema_version": schema_version
+        }
+    
     payload_id = _uuid()
     now = _now()
     _exec(
@@ -29,7 +53,7 @@ def create_payload(chain_id: str, payload_type: str, data: dict,
            (id, chain_id, step_id, type, schema_version, data, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)""",
         (payload_id, chain_id, step_id, payload_type,
-         schema_version, json.dumps(data), now),
+         schema_version, json.dumps(serialized), now),
         commit=True,
     )
     return get_payload(payload_id)

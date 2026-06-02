@@ -95,6 +95,18 @@ def handle_status() -> str:
     elif poll_status:
         lines.append("✅ All polls current")
 
+    # Budget spend
+    try:
+        from infra.model_router import get_today_spend
+        spend = get_today_spend()
+        lines.append(
+            f"Today's spend: ${spend['spent_usd']:.4f} / "
+            f"${spend['cap_usd']} "
+            f"({'⚠️ WARNING' if spend['at_warning'] else 'OK'})"
+        )
+    except Exception:
+        lines.append("Today's spend: unavailable")
+
     if last_deploy:
         lines.append(f"\nCurrent commit: {get_live_commit()}")
         lines.append(f"  \"{last_deploy['commit_message']}\"")
