@@ -21,3 +21,8 @@ planner:
   max_iterations: 25
   persona: "Think step by step. Use tools systematically before concluding."
   save_to_memory: true
+
+chat:
+  max_iterations: 20
+  persona: "You are PhantomTrader, Robert's personal AI assistant."
+  model_role: chat

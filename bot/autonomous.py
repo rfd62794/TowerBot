@@ -9,7 +9,9 @@ import requests
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.agent import respond
-from bot.task_runner import resolve_task, get_all_resolved_tasks
+from bot.task_runner import resolve_task, get_all_resolved_tasks, get_task_model_role
+from bot.model_helpers import call_openrouter
+from infra.model_router import route
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.db.system_metrics import record_system_snapshot
 from infra.db.bot_state import get_dev_mode
@@ -196,7 +198,7 @@ def _count_recent_empty_runs(task_name: str, hours: int = 8) -> int:
 async def process_delegation_queue(send_fn) -> None:
     """
     Poll task_queue for due delegated tasks.
-    Executes each via agent.respond() with the task prompt.
+    Executes each via model_router if task has model_role, else agent.respond().
     INSTANCE_ROLE check: only production instances process queue.
     """
     instance_role = os.environ.get("INSTANCE_ROLE", "development")
@@ -223,18 +225,34 @@ async def process_delegation_queue(send_fn) -> None:
             if task.get("message"):  # context field
                 full_prompt += f"\n\nContext: {task['message']}"
             
-            result = await respond(
-                full_prompt,
-                thread_id=f"delegation_{task['id']}",
-                max_iter=25  # autonomous max iterations
-            )
+            # Check if task has a model_role for routing
+            task_name = task.get("task_name", "delegated")
+            model_role = get_task_model_role(task_name)
+            
+            if model_role:
+                # Use model_router for tasks with defined model_role
+                logger.info(f"[delegation] task {task['id']} using model_router with role: {model_role}")
+                routed = route(
+                    role=model_role,
+                    call_fn=call_openrouter,
+                    prompt=full_prompt
+                )
+                result = routed["result"]
+            else:
+                # Fall back to agent.respond() for tasks without model_role
+                logger.info(f"[delegation] task {task['id']} using agent.respond() (no model_role)")
+                result = await respond(
+                    full_prompt,
+                    thread_id=f"delegation_{task['id']}",
+                    max_iter=25  # autonomous max iterations
+                )
             
             duration_ms = int((time.time() - start) * 1000)
             mark_complete(task["id"], result, duration_ms)
             
             # Mirror to agent_actions for unified history
             record_agent_action(
-                task_name=task.get("task_name", "delegated"),
+                task_name=task_name,
                 result=result,
                 duration_ms=duration_ms,
                 source="delegated",

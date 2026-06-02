@@ -119,3 +119,34 @@ def get_all_resolved_tasks() -> list[dict]:
             # Skip tasks with missing templates/types
             print(f"Warning: Skipping {task_name}: {e}")
     return resolved
+
+
+def get_task_model_role(task_name: str) -> str | None:
+    """
+    Extract model_role from task type configuration.
+    
+    Args:
+        task_name: Name of the task from config/tasks.yaml
+    
+    Returns:
+        model_role string if defined, None otherwise
+    """
+    tasks = load_tasks()
+    templates = load_templates()
+    task_types = load_task_types()
+
+    if task_name not in tasks:
+        return None
+
+    task_config = tasks[task_name]
+    template_name = task_config.get("template")
+    if not template_name or template_name not in templates:
+        return None
+
+    template = templates[template_name]
+    type_name = template.get("type")
+    if not type_name or type_name not in task_types:
+        return None
+
+    task_type = task_types[type_name]
+    return task_type.get("model_role")
