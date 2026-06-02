@@ -95,9 +95,11 @@ def test_scheduler_jobs():
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from bot.autonomous import setup_autonomous_scheduler
     scheduler = AsyncIOScheduler()
-    setup_autonomous_scheduler(scheduler, lambda x: None)
+    async def mock_send(x):
+        pass
+    setup_autonomous_scheduler(scheduler, mock_send)
     jobs = scheduler.get_jobs()
-    assert len(jobs) >= 6, f"Expected at least 6 jobs, got {len(jobs)}"
+    assert len(jobs) >= 8, f"Expected at least 8 jobs, got {len(jobs)}"
 
 
 @test("autonomous: get_all_resolved_tasks returns 6 enabled tasks")
