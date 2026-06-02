@@ -162,10 +162,12 @@ routes:
       - list_pending_tasks
       - cancel_task
       - purge_null_tasks
+      - get_logs
+      - run_diagnostic
       - sync_db_export
       - sync_db_import
       - sync_db_status
-    description: "Task queue management, DB sync operations"
+    description: "Task queue management, DB sync operations, admin diagnostics"
 
   wordpress:
     model: openrouter/free

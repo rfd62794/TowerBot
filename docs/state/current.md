@@ -40,3 +40,12 @@ Phase 20c — Complete
 
 ## Next
 Phase 21: Promotion pipeline, n8n integration, model roles config
+
+---
+
+## Admin Tools (Post-Phase 20c)
+- tools/meta/admin.py: get_logs() and run_diagnostic() added
+- tools/registry.py: Both tools registered
+- config/routes.yaml: Both tools added to tasks route
+- tests/test_admin_tools.py: 8 tests
+- Test floor: 445 passed, 0 failed
