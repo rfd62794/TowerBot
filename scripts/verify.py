@@ -73,6 +73,7 @@ TEST_FILES = [
     "tests/test_phase20c.py",
     "tests/test_admin_tools.py",
     "tests/test_phase21.py",
+    "tests/test_director_tools.py",
 ]
 
 
