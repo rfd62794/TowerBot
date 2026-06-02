@@ -77,16 +77,19 @@ Phase 24 — Complete
 - Phase 24: Model Router Wiring + Tool Index
   - config/task_types.yaml: Added model_role field to all 5 TaskTypes (monitor, reporter, creator, planner, chat)
   - Model role mappings: monitor→fast_intent (Groq), reporter→long_context (Gemini Flash), creator→long_context (Gemini Flash), planner→reasoning (DeepSeek), chat→chat (Gemini Flash)
-  - bot/model_helpers.py: New shared helper with call_openrouter() and get_task_model_role()
+  - config/model_registry.yaml: Updated groq_llama_3_1_70b and gemini_flash to use direct providers (groq, google) instead of openrouter
+  - bot/model_helpers.py: Added provider-specific call functions (call_groq, call_gemini, call_openrouter) and get_call_fn(provider)
   - bot/autonomous.py: Wired model_router into run_autonomous_task() and process_delegation_queue()
   - Autonomous tasks now route through model_router based on task_type's model_role
+  - infra/model_router.py: Updated route() to use get_call_fn(provider) for provider-specific API calls
   - tools/meta/tool_index.py: 3 new tools (search_tools, list_all_tools, get_tool_info)
   - search_tools: Fast fuzzy search of all registered tools by name and description
   - list_all_tools: List all tools with optional prefix filter
   - get_tool_info: Get full information about a specific tool by exact name
   - All 3 tool index tools registered in TOOL_REGISTRY and auto-exposed via MCP
-  - 15 new tests in test_model_wiring.py
-  - Test floor: 552 passed, 0 failed
+  - config/routes.yaml: Added 3 tool index tools to system route with trigger phrases
+  - 11 new tests in test_model_wiring.py
+  - Test floor: 548 passed, 0 failed
 
 ## Next
 Phase 25: TBD
