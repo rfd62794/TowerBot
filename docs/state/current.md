@@ -115,8 +115,26 @@ Phase 26 — Complete
   - scripts/verify.py: Added test_wordpress_pages.py to TEST_FILES
   - Test floor: 559 passed, 0 failed (548 + 11)
 
+## Post-Phase 26: Housekeeping + Google Tasks Tests
+- tools/meta/admin.py: Fixed cursor indexing bug in run_diagnostic (lines 116, 127, 136) - now calls .fetchone() before indexing
+- tools/meta/director.py: Fixed false-positive CREATE keyword blocking in query_db (line 434) - now uses word-boundary regex
+- tests/test_admin_tools.py: Added 3 regression tests (run_diagnostic_queue_depth_numeric, query_db_created_at_not_blocked, query_db_create_table_still_blocked)
+- tests/test_google_tasks.py: Created new test file with 14 unit tests for Google Tasks tools (list_google_tasks, get_google_task, create_google_task, update_google_task, complete_google_task, delete_google_task, sync_google_tasks)
+- scripts/verify.py: Added test_google_tasks.py to TEST_FILES
+- Test floor: 576 passed, 0 failed (559 + 3 + 14)
+
+## Phase 27: Template Scheduler
+- bot/autonomous.py: Added run_scheduled_template() function to execute templates via ChainRunner
+- bot/autonomous.py: Added setup_template_scheduler() function to register template-based scheduled jobs
+- bot/autonomous.py: Integrated template scheduler into setup_autonomous_scheduler()
+- bot/autonomous.py: Templates with trigger.schedule config now auto-register APScheduler jobs
+- bot/autonomous.py: Supports interval (minutes) and cron (hour, minute, day_of_week) triggers
+- bot/autonomous.py: Respects stop_after_hour config to limit template execution hours
+- tests/test_autonomous.py: Added 3 tests for template scheduler (registers jobs, skips non-schedule, loads and creates chain)
+- Test floor: 579 passed, 0 failed (576 + 3)
+
 ## Next
-Phase 27: TBD
+Phase 28: TBD
 
 ---
 

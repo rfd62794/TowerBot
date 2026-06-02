@@ -34,8 +34,22 @@ git push origin dev
 
 Before requesting user approval for main merge:
 - All tests must pass: `uv run python scripts/verify.py`
-- Expected test count: 157/157
+- Current test floor: 576/0/0 (check docs/state/current.md for certified floor)
 - Spot checks must verify key functionality
+
+## Test Runner: verify.py vs pytest
+
+**verify.py is the authoritative test suite runner.**
+
+- `scripts/verify.py` runs all test files in a specific order (see TEST_FILES list)
+- This is the full test suite that determines deployment safety
+- Always use verify.py to check the certified test floor
+
+- `pytest` can be used for quick checks on individual test files
+- Example: `uv run pytest tests/test_admin_tools.py`
+- pytest does NOT run the full suite and is not authoritative for deployment
+
+**Never assume pytest results represent the full test floor.**
 
 ## Deployment Safety
 
