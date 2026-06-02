@@ -323,6 +323,23 @@ CREATE TABLE IF NOT EXISTS chain_payloads (
     FOREIGN KEY (chain_id) REFERENCES chains(id)
 );
 
+CREATE TABLE IF NOT EXISTS experimental_tools (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    source_url TEXT,
+    input_schema TEXT NOT NULL,
+    handler_code TEXT,
+    status TEXT NOT NULL DEFAULT 'experimental',
+    use_count INTEGER NOT NULL DEFAULT 0,
+    error_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    promoted_at TEXT,
+    last_used_at TEXT,
+    notes TEXT
+);
+
 CREATE TABLE IF NOT EXISTS pattern_candidates (
     id TEXT PRIMARY KEY,
     step_sequence_hash TEXT NOT NULL UNIQUE,

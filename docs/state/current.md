@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 22 — Complete
+Phase 23 — Complete
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -63,8 +63,19 @@ Phase 22 — Complete
   - 22 new tests in test_director_tools.py
   - Test floor: 519 passed, 0 failed
 
+- Phase 23: Tool Discovery + Dynamic Registration
+  - infra/db/schema.py: Added experimental_tools table for dynamic tool registry
+  - tools/meta/tool_registry.py: 4 new tools (a2a_search, register_tool_from_spec, list_experimental_tools, promote_tool)
+  - a2a_search: Search a2asearch.com index for MCP tools and skills with fallback URL
+  - register_tool_from_spec: Fetch OpenAPI spec, generate tool definitions, register to experimental_tools table
+  - list_experimental_tools: List dynamically registered tools with status filter
+  - promote_tool: Promote experimental tool to promoted status (explicit call only, no auto-promotion)
+  - All 4 tools registered in TOOL_REGISTRY and auto-exposed via MCP
+  - 18 new tests in test_tool_registry.py
+  - Test floor: 537 passed, 0 failed
+
 ## Next
-Phase 23: TBD
+Phase 24: TBD
 
 ---
 
