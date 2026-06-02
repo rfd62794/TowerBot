@@ -132,7 +132,8 @@ def test_runner_pauses_on_step_skipped(test_db):
     from infra.chain.runner import ChainRunner
     chain = create_chain("test_template")
     runner = ChainRunner()
-    step_defs = [{'name': 'wait', 'type': 'approval_wait', 'config': {}}]
+    step_defs = [{'name': 'wait', 'type': 'approval_wait',
+                  'config': {'telegram_chat_id': 'chat-123'}}]
     result = runner.run(chain['id'], step_defs)
     assert result['status'] == 'waiting_approval'
 
@@ -277,7 +278,7 @@ def test_spawn_chain_handler_returns_id(test_db):
 def test_approval_wait_raises_skipped(test_db):
     """handle_approval_wait always raises StepSkipped."""
     from infra.chain.steps import handle_approval_wait, StepSkipped
-    step = {'id': 'step-1', 'config': {}}
+    step = {'id': 'step-1', 'chain_id': 'c1', 'name': 's1', 'config': {'telegram_chat_id': 'chat-123'}}
     try:
         handle_approval_wait(step, {})
         assert False, "Expected StepSkipped"
