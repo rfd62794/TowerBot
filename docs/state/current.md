@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 20a — Complete
+Phase 20b — Complete
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -20,5 +20,14 @@ Phase 20a — Complete
   - 20 new tests in test_chain_runner.py
   - Test floor: 399 passed, 0 failed
 
+- Phase 20b: Approval Step + Telegram Reply Router
+  - infra/chain/approval.py: Approval listener CRUD + message building
+  - infra/chain/steps.py: Real approval_wait handler (creates listener, calls send_fn)
+  - bot/approval_router.py: Callback parser + handler
+  - bot/transport.py: handle_callback_query async handler
+  - privybot.py: CallbackQueryHandler registration
+  - 18 new tests in test_approval.py
+  - Test floor: 417 passed, 0 failed
+
 ## Next
-Phase 20b: approval_wait step type, Telegram reply router
+Phase 20c: Pattern observer, weekly digest, template YAML loading

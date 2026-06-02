@@ -45,22 +45,22 @@ def create_listener(chain_id: str, step_id: str,
 
 def get_listener(listener_id: str) -> dict | None:
     """Fetch a listener by ID."""
-    rows = _exec(
+    row = _exec(
         "SELECT * FROM approval_listeners WHERE id=?",
         (listener_id,)
-    )
-    return dict(rows[0]) if rows else None
+    ).fetchone()
+    return dict(row) if row else None
 
 
 def get_waiting_listener_for_chain(chain_id: str) -> dict | None:
     """Find the active waiting listener for a chain."""
-    rows = _exec(
+    row = _exec(
         """SELECT * FROM approval_listeners
            WHERE chain_id=? AND status='waiting'
            ORDER BY expires_at ASC LIMIT 1""",
         (chain_id,)
-    )
-    return dict(rows[0]) if rows else None
+    ).fetchone()
+    return dict(row) if row else None
 
 
 def resolve_listener(listener_id: str, response: str,
