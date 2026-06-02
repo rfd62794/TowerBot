@@ -490,6 +490,29 @@ def test_iss_location_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("open_library_search: returns query, count, and results keys")
+def test_open_library_search_success():
+    from tools.search.search_tools import open_library_search
+    result = open_library_search("python", 3)
+    if result.get("ok") == True:
+        assert "query" in result, "Expected 'query' key on success"
+        assert "count" in result, "Expected 'count' key on success"
+        assert "results" in result, "Expected 'results' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("open_library_search: handles API error gracefully")
+def test_open_library_search_error():
+    from tools.search.search_tools import open_library_search
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = open_library_search("test")
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

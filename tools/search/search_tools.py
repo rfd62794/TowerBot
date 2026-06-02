@@ -631,6 +631,43 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch ISS location: {e}")
 
+    def open_library_search(self, query: str, limit: int = 5) -> dict:
+        """
+        Search for books via Open Library API.
+
+        Args:
+            query: Search query (title, author, or subject)
+            limit: Maximum results to return (default 5)
+
+        Returns:
+            Dict with book data including title, author, year, and cover URL
+        """
+        try:
+            url = f"https://openlibrary.org/search.json"
+            params = {"q": query, "limit": limit}
+            resp = httpx.get(url, params=params, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            docs = data.get("docs", [])
+            results = []
+            for doc in docs:
+                results.append({
+                    "title": doc.get("title", ""),
+                    "author": ", ".join(doc.get("author_name", [])),
+                    "first_publish_year": doc.get("first_publish_year", None),
+                    "cover_id": doc.get("cover_i", None),
+                    "key": doc.get("key", "")
+                })
+            return self.success({
+                "query": query,
+                "count": len(results),
+                "results": results
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Open Library API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to search Open Library: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -881,3 +918,17 @@ def iss_location() -> dict:
         Dict with ISS latitude, longitude, and timestamp
     """
     return _search.iss_location()
+
+
+def open_library_search(query: str, limit: int = 5) -> dict:
+    """
+    Search for books via Open Library API.
+
+    Args:
+        query: Search query (title, author, or subject)
+        limit: Maximum results to return (default 5)
+
+    Returns:
+        Dict with book data including title, author, year, and cover URL
+    """
+    return _search.open_library_search(query, limit)
