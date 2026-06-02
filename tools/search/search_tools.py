@@ -318,6 +318,27 @@ class SearchTools(BaseTool):
             "truncated": raw.get("truncated", False)
         }, stale_result=raw)
 
+    def useless_fact(self) -> dict:
+        """
+        Get a random interesting fact from Useless Facts API.
+
+        Returns:
+            Dict with fact text and source URL
+        """
+        try:
+            resp = httpx.get("https://uselessfacts.jsph.pl/random.json?language=en", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return self.success({
+                "fact": data.get("text", ""),
+                "source": data.get("source_url", ""),
+                "source": data.get("source", "uselessfacts.jsph.pl")
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Useless Facts API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch useless fact: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -437,3 +458,13 @@ def fetch_url(url: str, max_chars: int = 3000) -> dict:
         Dict with url, title, content, char_count, truncated
     """
     return _search.fetch_url(url, max_chars)
+
+
+def useless_fact() -> dict:
+    """
+    Get a random interesting fact from Useless Facts API.
+
+    Returns:
+        Dict with fact text and source URL
+    """
+    return _search.useless_fact()

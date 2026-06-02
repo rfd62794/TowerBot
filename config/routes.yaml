@@ -98,7 +98,8 @@ routes:
       - wiki_lookup
       - news_search
       - fetch_url
-    description: "Web search, Wikipedia, news, URL fetch"
+      - useless_fact
+    description: "Web search, Wikipedia, news, URL fetch, random facts"
 
   steam:
     model: openrouter/free
