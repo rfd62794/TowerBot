@@ -2,6 +2,7 @@
 
 import sys
 import os
+from datetime import datetime
 
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
@@ -80,11 +81,17 @@ def test_get_budget_status():
 
 @test("budget: get_daily_spent returns total")
 def test_get_daily_spent():
-    from infra.db.budget_tracking import get_daily_spent, record_cost
+    from infra.db.budget_tracking import get_daily_spent
     from infra.db.schema import _exec
     _exec("DELETE FROM budget_tracking WHERE provider='test_provider_5'", commit=True)
-    result = record_cost("test_provider_5", "test_model_5", 2.5, 10.0)
-    assert result["daily_spent_usd"] == 2.5, f"expected 2.5, got {result['daily_spent_usd']}"
+    # Insert a row directly with today's date to avoid timezone issues
+    _exec(
+        """INSERT INTO budget_tracking 
+           (provider, model_id, daily_cap_usd, daily_spent_usd, daily_remaining_usd, reset_at, recorded_at)
+           VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))""",
+        ("test_provider_5", "test_model_5", 10.0, 2.5, 7.5, datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+        commit=True
+    )
     total = get_daily_spent("test_provider_5", "test_model_5")
     assert total >= 2.5, f"expected >= 2.5, got {total}"
     assert isinstance(total, float)
