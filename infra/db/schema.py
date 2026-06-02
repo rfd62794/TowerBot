@@ -538,6 +538,15 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
+    # Migration: add google_task_id to tasks table for Google Tasks sync
+    try:
+        cols = {row[1] for row in _conn.execute("PRAGMA table_info(tasks)").fetchall()}
+        if "google_task_id" not in cols:
+            _conn.execute("ALTER TABLE tasks ADD COLUMN google_task_id TEXT")
+            _conn.commit()
+    except Exception:
+        pass
+
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:
     with _lock:

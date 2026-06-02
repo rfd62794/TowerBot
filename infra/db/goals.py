@@ -169,3 +169,39 @@ def list_commitments(status: str = None) -> list[dict]:
             "SELECT * FROM commitments ORDER BY id DESC"
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ─── Google Tasks sync for goals/tasks table ───
+
+def get_unsynced_tasks() -> list[dict]:
+    """Get tasks without google_task_id."""
+    rows = _exec(
+        "SELECT * FROM tasks WHERE google_task_id IS NULL AND status != 'complete' ORDER BY due_date ASC"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def set_google_task_id(task_id: str, google_task_id: str) -> None:
+    """Set the Google Task ID for a local task."""
+    _exec(
+        "UPDATE tasks SET google_task_id = ? WHERE id = ?",
+        (google_task_id, task_id),
+        commit=True,
+    )
+
+
+def get_tasks_completed_since(since: str) -> list[dict]:
+    """Get tasks completed since timestamp that have google_task_id."""
+    rows = _exec(
+        "SELECT * FROM tasks WHERE completed_at > ? AND google_task_id IS NOT NULL ORDER BY completed_at DESC",
+        (since,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_tasks_with_google_id() -> list[dict]:
+    """Get all tasks that have a google_task_id."""
+    rows = _exec(
+        "SELECT * FROM tasks WHERE google_task_id IS NOT NULL ORDER BY due_date ASC"
+    ).fetchall()
+    return [dict(r) for r in rows]

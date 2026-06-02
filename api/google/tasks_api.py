@@ -90,6 +90,28 @@ class TasksAPIHandler(BaseAPIHandler):
             logger.warning(f"[tasks] delete_task failed: {e}")
             return False
 
+    def update_task(self, tasklist_id: str, google_task_id: str, title: str = None, notes: str = None, due: str = None, status: str = None) -> dict | None:
+        """Update existing task in Google Tasks. Direct write — no cache, no stale."""
+        try:
+            client = self._get_client()
+            body = {}
+            if title:
+                body["title"] = title
+            if notes:
+                body["notes"] = notes
+            if due:
+                body["due"] = due + "T00:00:00.000Z"
+            if status:
+                body["status"] = status
+            return client.tasks().patch(
+                tasklist=tasklist_id,
+                task=google_task_id,
+                body=body,
+            ).execute()
+        except Exception as e:
+            logger.warning(f"[tasks] update_task failed: {e}")
+            return None
+
 
 # Module-level instance
 tasks_api = TasksAPIHandler()
@@ -109,6 +131,9 @@ def complete_task(tasklist_id, google_task_id):
 
 def delete_task(tasklist_id, google_task_id):
     return tasks_api.delete_task(tasklist_id, google_task_id)
+
+def update_task(tasklist_id, google_task_id, title=None, notes=None, due=None, status=None):
+    return tasks_api.update_task(tasklist_id, google_task_id, title, notes, due, status)
 
 # Backwards compat for test imports
 def _get_tasks_client():
