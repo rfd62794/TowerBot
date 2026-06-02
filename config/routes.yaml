@@ -204,6 +204,7 @@ routes:
       - get_page
       - update_page
       - create_page
+      - delete_page
     description: "Blog posts, drafts, publishing"
 
   utility:

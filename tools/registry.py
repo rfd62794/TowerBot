@@ -1197,6 +1197,26 @@ TOOL_REGISTRY = {
             }
         }
     },
+    "delete_page": {
+        "fn": blog_tools.delete_page,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "delete_page",
+                "description": "Delete a WordPress page permanently. DO NOT CALL without prior approval_wait step.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "page_id": {
+                            "type": "integer",
+                            "description": "WordPress page ID"
+                        }
+                    },
+                    "required": ["page_id"]
+                }
+            }
+        }
+    },
     "set_post_excerpt": {
         "fn": blog_tools.set_post_excerpt,
         "definition": {

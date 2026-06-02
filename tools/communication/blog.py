@@ -294,6 +294,22 @@ class BlogTools(BaseTool):
             "status": result.get("status")
         })
 
+    def delete_page(self, page_id: int) -> dict:
+        """
+        Delete a WordPress page permanently.
+        DO NOT CALL: without prior approval_wait step.
+        """
+        handler = WordPressAPIHandler()
+        result = handler.delete_page(page_id)
+
+        if "error" in result:
+            return self.error(result["error"])
+
+        return self.success({
+            "page_id": result.get("id"),
+            "deleted": True
+        })
+
     def advance_post_pipeline(self, topic: str = None) -> dict:
         """
         Advance the most in-progress blog post by exactly one stage.

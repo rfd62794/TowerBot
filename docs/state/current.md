@@ -102,16 +102,18 @@ Phase 26 — Complete
   - Autonomous self-direction achieved — Tower now plans its own work
 
 - Phase 26: WordPress Pages Tools
-  - api/web/wordpress_api.py: Added get_pages, get_page, update_page, create_page methods
-  - tools/communication/blog.py: Added 4 page tool wrappers (get_pages, get_page, update_page, create_page)
-  - tools/registry.py: Registered 4 new page tools with full definitions
-  - infra/mcp/config.py: 4 new tools auto-exposed via MCP (uses TOOL_REGISTRY keys)
+  - api/web/wordpress_api.py: Added get_pages, get_page, update_page, create_page, delete_page methods
+  - tools/communication/blog.py: Added 5 page tool wrappers (get_pages, get_page, update_page, create_page, delete_page)
+  - tools/registry.py: Registered 5 new page tools with full definitions
+  - infra/mcp/config.py: 5 new tools auto-exposed via MCP (uses TOOL_REGISTRY keys)
+  - config/routes.yaml: Added 5 page tools to blog route
   - update_page preserves status unless explicitly provided (status=None → no change)
   - create_page defaults to status='draft' (never publish without explicit status='publish')
+  - delete_page permanently removes a page (DO NOT CALL without prior approval_wait step)
   - DO NOT CALL notes in docstrings guide Tower's autonomous decision-making
-  - tests/test_wordpress_pages.py: 10 new tests covering all page operations
+  - tests/test_wordpress_pages.py: 11 new tests covering all page operations
   - scripts/verify.py: Added test_wordpress_pages.py to TEST_FILES
-  - Test floor: 558 passed, 0 failed (548 + 10)
+  - Test floor: 559 passed, 0 failed (548 + 11)
 
 ## Next
 Phase 27: TBD

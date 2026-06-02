@@ -296,3 +296,24 @@ class WordPressAPIHandler(BaseAPIHandler):
             return result
         except Exception as e:
             return {"error": str(e), "_live_failed": True}
+
+    def delete_page(self, page_id: int) -> dict:
+        """DELETE /wp-json/wp/v2/pages/{id}"""
+        # Write operation — bypass self.call() entirely
+        try:
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/pages/{page_id}"
+            response = requests.delete(url, auth=self._get_client())
+            
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    return {"error": error_data.get("message", f"HTTP {response.status_code}"), "_live_failed": True}
+                except:
+                    return {"error": f"HTTP {response.status_code}", "_live_failed": True}
+            
+            result = response.json()
+            cache.invalidate(self.cache_key("pages"))
+            cache.invalidate(self.cache_key(f"page_{page_id}"))
+            return result
+        except Exception as e:
+            return {"error": str(e), "_live_failed": True}
