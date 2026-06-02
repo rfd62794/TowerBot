@@ -286,11 +286,11 @@ def promote_tool(name: str) -> dict:
         rows = _exec(
             "SELECT * FROM experimental_tools WHERE name=?",
             (name,)
-        )
+        ).fetchone()
         if not rows:
             return {"ok": False, "error": f"Tool not found: {name}"}
 
-        task = dict(rows[0])
+        task = dict(rows)
         if task["status"] == "promoted":
             return {"ok": False, "error": f"Tool already promoted: {name}"}
 

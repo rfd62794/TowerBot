@@ -124,11 +124,10 @@ def test_a2a_search_limit_capped(mock_get):
 # ─────────────────────────────────────────────
 
 @patch("tools.meta.tool_registry.httpx.get")
-def test_register_tool_from_spec_valid(mock_get, test_db):
+@patch("tools.meta.tool_registry._exec")
+def test_register_tool_from_spec_valid(mock_exec, mock_get):
     """Mock spec with 2 endpoints — 2 tools registered."""
-    # Set global connection to test DB
-    from infra.db import schema
-    schema._conn = test_db
+    mock_exec.return_value = None  # No existing tools
     
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -183,10 +182,11 @@ def test_register_tool_from_spec_empty_spec(mock_get):
 
 
 @patch("tools.meta.tool_registry.httpx.get")
-def test_register_tool_from_spec_deduplication(mock_get, test_db):
+@patch("tools.meta.tool_registry._exec")
+def test_register_tool_from_spec_deduplication(mock_exec, mock_get):
     """Same tool registered twice — second skipped."""
-    from infra.db import schema
-    schema._conn = test_db
+    # First call: no existing tool
+    mock_exec.return_value = None
     
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -208,6 +208,9 @@ def test_register_tool_from_spec_deduplication(mock_get, test_db):
     assert result1["ok"] is True
     assert len(result1["registered"]) == 1
 
+    # Second call: tool exists
+    mock_exec.return_value = ["existing"]
+    
     # Second registration (should skip)
     result2 = register_tool_from_spec("https://example.com/spec.json")
     assert result2["ok"] is True
@@ -216,10 +219,10 @@ def test_register_tool_from_spec_deduplication(mock_get, test_db):
 
 
 @patch("tools.meta.tool_registry.httpx.get")
-def test_register_tool_prefix(mock_get, test_db):
+@patch("tools.meta.tool_registry._exec")
+def test_register_tool_prefix(mock_exec, mock_get):
     """tool_prefix='myapi' — names start with 'myapi_'."""
-    from infra.db import schema
-    schema._conn = test_db
+    mock_exec.return_value = None
     
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -243,10 +246,10 @@ def test_register_tool_prefix(mock_get, test_db):
 
 
 @patch("tools.meta.tool_registry.httpx.get")
-def test_register_tool_max_tools_cap(mock_get, test_db):
+@patch("tools.meta.tool_registry._exec")
+def test_register_tool_max_tools_cap(mock_exec, mock_get):
     """Spec with 10 endpoints, max_tools=3 — only 3 registered."""
-    from infra.db import schema
-    schema._conn = test_db
+    mock_exec.return_value = None
     
     mock_response = MagicMock()
     mock_response.json.return_value = {
@@ -381,35 +384,35 @@ def test_list_experimental_tools_filtered():
 # PROMOTE TOOL
 # ─────────────────────────────────────────────
 
-def test_promote_tool_success(test_db):
+def test_promote_tool_success():
     """Experimental tool — status becomes promoted."""
-    from infra.db import schema
-    schema._conn = test_db
-    schema._conn.execute(
-        """INSERT INTO experimental_tools (id, name, description, source_type, source_url, input_schema, status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        ("test-id-4", "to_promote", "Tool to promote", "openapi", "https://example.com", "{}", "experimental", "2024-01-01T00:00:00Z")
-    )
-    schema._conn.commit()
+    with patch("infra.db.schema._exec") as mock_exec:
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {
+            "id": "test-id-4", "name": "to_promote", "description": "Tool to promote",
+            "source_type": "openapi", "source_url": "https://example.com",
+            "input_schema": "{}", "status": "experimental", "created_at": "2024-01-01T00:00:00Z"
+        }
+        mock_exec.return_value = mock_cursor
+        
+        result = promote_tool("to_promote")
+        assert result["ok"] is True
+        assert result["name"] == "to_promote"
+        assert result["previous_status"] == "experimental"
+        assert "promoted_at" in result
 
-    result = promote_tool("to_promote")
-    assert result["ok"] is True
-    assert result["name"] == "to_promote"
-    assert result["previous_status"] == "experimental"
-    assert "promoted_at" in result
 
-
-def test_promote_tool_already_promoted(test_db):
+def test_promote_tool_already_promoted():
     """Already promoted — ok=False."""
-    from infra.db import schema
-    schema._conn = test_db
-    schema._conn.execute(
-        """INSERT INTO experimental_tools (id, name, description, source_type, source_url, input_schema, status, created_at, promoted_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        ("test-id-5", "already_promoted", "Already promoted", "openapi", "https://example.com", "{}", "promoted", "2024-01-01T00:00:00Z", "2024-01-02T00:00:00Z")
-    )
-    schema._conn.commit()
-
-    result = promote_tool("already_promoted")
-    assert result["ok"] is False
-    assert "already promoted" in result["error"]
+    with patch("infra.db.schema._exec") as mock_exec:
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = {
+            "id": "test-id-5", "name": "already_promoted", "description": "Already promoted",
+            "source_type": "openapi", "source_url": "https://example.com",
+            "input_schema": "{}", "status": "promoted", "created_at": "2024-01-01T00:00:00Z"
+        }
+        mock_exec.return_value = mock_cursor
+        
+        result = promote_tool("already_promoted")
+        assert result["ok"] is False
+        assert "already promoted" in result["error"]
