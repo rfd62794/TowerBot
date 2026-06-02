@@ -21,6 +21,8 @@ triggers:
     phrases: [earthquake, recent earthquakes, quake, seismic, tremor]
   iss_location:
     phrases: [iss location, space station, where is iss, iss position, international space station]
+  open_library_search:
+    phrases: [search books, book search, find book, open library, library search]
 
 routes:
   chat:
@@ -129,11 +131,12 @@ routes:
       - hackernews_search
       - usgs_earthquake
       - iss_location
+      - open_library_search
       - useless_fact
       - number_fact
       - random_quote
       - spacex_latest_launch
-    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, Hacker News, earthquakes, ISS, random facts, quotes, SpaceX"
+    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, Hacker News, earthquakes, ISS, Open Library, random facts, quotes, SpaceX"
 
   steam:
     model: openrouter/free
