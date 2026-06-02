@@ -102,11 +102,12 @@ routes:
       - jina_read
       - country_info
       - cratesio_info
+      - hackernews_search
       - useless_fact
       - number_fact
       - random_quote
       - spacex_latest_launch
-    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, random facts, quotes, SpaceX"
+    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, Hacker News, random facts, quotes, SpaceX"
 
   steam:
     model: openrouter/free
