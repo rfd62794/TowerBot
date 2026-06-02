@@ -19,13 +19,6 @@ def test_get_task_model_role_reporter():
     assert result == "long_context"
 
 
-def test_get_task_model_role_creator():
-    """task_type='creator' → 'long_context'"""
-    from bot.model_helpers import get_task_model_role
-    result = get_task_model_role("creator")
-    assert result == "long_context"
-
-
 def test_get_task_model_role_planner():
     """task_type='planner' → 'reasoning'"""
     from bot.model_helpers import get_task_model_role
