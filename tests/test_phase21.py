@@ -3,25 +3,38 @@ Phase 21 tests: Pydantic schemas, model router, agent_step, loop_back.
 """
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from infra.chain.schemas import (
-    BasePayload, RFDFrame, TextDraftPayload, DataStatsPayload,
-    DataResearchPayload, ActionApprovalPayload, AgentDecisionPayload,
-    validate_payload, PAYLOAD_SCHEMAS
-)
-from infra.model_router import get_model_for_role, route, get_today_spend
-from infra.chain.steps import handle_agent_step, handle_loop_back, StepLoopBack, StepError
-from infra.db.payloads import create_payload
-from infra.db.budget_tracking import get_warning_sent_today, mark_warning_sent
-from unittest.mock import patch, MagicMock
-import pytest
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _root not in sys.path:
+    sys.path.insert(0, _root)
+
+from dotenv import load_dotenv
+load_dotenv(os.path.join(_root, ".env"))
+
+from infra.db import init_db
+init_db()
+
+TESTS = []
+
+
+def test(name):
+    def decorator(func):
+        TESTS.append((name, func))
+        return func
+    return decorator
+
+
+def run_all() -> tuple[int, int]:
+    from tests._harness import run_all as _run
+    return _run(TESTS)
 
 
 # Pydantic schema tests
 
+@test("schemas: text_draft_payload_valid")
 def test_text_draft_payload_valid():
     """TextDraftPayload with required fields — validates, word_count computed."""
+    from infra.chain.schemas import TextDraftPayload
     payload = TextDraftPayload(
         chain_id="test-chain",
         payload_type="text/draft",
@@ -34,19 +47,26 @@ def test_text_draft_payload_valid():
     assert payload.layer == "technical"
 
 
+@test("schemas: text_draft_payload_missing_required")
 def test_text_draft_payload_missing_required():
     """Missing title — raises ValidationError."""
-    with pytest.raises(Exception):  # Pydantic ValidationError
+    from infra.chain.schemas import TextDraftPayload
+    try:
         TextDraftPayload(
             chain_id="test-chain",
             payload_type="text/draft",
             body="No title here",
             layer="technical"
         )
+        assert False, "Expected ValidationError"
+    except Exception:
+        pass  # Expected
 
 
+@test("schemas: rfd_frame_complete")
 def test_rfd_frame_complete():
     """All 5 slots filled — is_complete() True."""
+    from infra.chain.schemas import RFDFrame
     frame = RFDFrame(
         moment="A moment",
         surprise="A surprise",
@@ -57,8 +77,10 @@ def test_rfd_frame_complete():
     assert frame.is_complete() is True
 
 
+@test("schemas: rfd_frame_incomplete")
 def test_rfd_frame_incomplete():
     """One slot empty — is_complete() False."""
+    from infra.chain.schemas import RFDFrame
     frame = RFDFrame(
         moment="A moment",
         surprise="A surprise",
@@ -69,8 +91,10 @@ def test_rfd_frame_incomplete():
     assert frame.is_complete() is False
 
 
+@test("schemas: data_stats_payload")
 def test_data_stats_payload():
     """DataStatsPayload round-trips through to_db_dict/from_db_dict."""
+    from infra.chain.schemas import DataStatsPayload
     payload = DataStatsPayload(
         chain_id="test-chain",
         payload_type="data/stats",
@@ -84,16 +108,20 @@ def test_data_stats_payload():
     assert restored.values == {"users": 100, "active": 50}
 
 
+@test("schemas: validate_payload_unknown_type")
 def test_validate_payload_unknown_type():
     """Unknown type — returns BasePayload, no error."""
+    from infra.chain.schemas import validate_payload, BasePayload
     result = validate_payload("unknown_type", {"chain_id": "test", "foo": "bar"})
     assert isinstance(result, BasePayload)
     assert result.chain_id == "test"
     assert result.foo == "bar"
 
 
+@test("schemas: validate_payload_known_type")
 def test_validate_payload_known_type():
     """'text/draft' — returns TextDraftPayload instance."""
+    from infra.chain.schemas import validate_payload, TextDraftPayload
     result = validate_payload("text/draft", {
         "chain_id": "test",
         "title": "Test",
@@ -106,57 +134,70 @@ def test_validate_payload_known_type():
 
 # Router tests
 
-@patch('infra.model_router._get_daily_spent')
-def test_router_free_model_first(mock_spent):
+@test("router: free_model_first")
+def test_router_free_model_first():
     """Role 'fast_intent' — first candidate is free tier."""
-    mock_spent.return_value = 0.0
-    models = get_model_for_role('fast_intent')
-    assert len(models) > 0
-    assert models[0]['tier'] == 'free'
+    from infra.model_router import get_model_for_role
+    from unittest.mock import patch
+    with patch('infra.model_router._get_daily_spent', return_value=0.0):
+        models = get_model_for_role('fast_intent')
+        assert len(models) > 0
+        assert models[0]['tier'] == 'free'
 
 
-@patch('infra.model_router._get_daily_spent')
-def test_router_skips_paid_at_cap(mock_spent):
+@test("router: skips_paid_at_cap")
+def test_router_skips_paid_at_cap():
     """Budget at cap — paid models skipped, free used."""
-    mock_spent.return_value = 0.30  # Over $0.25 cap
+    from infra.model_router import route
+    from unittest.mock import patch
     
-    def mock_call_fn(model, provider, prompt, **kwargs):
-        return f"Response from {model}"
-    
-    # Should skip paid models and use free ones
-    result = route('reasoning', mock_call_fn, "test prompt")
-    assert 'result' in result
-    assert 'model_used' in result
+    with patch('infra.model_router._get_daily_spent', return_value=0.30):
+        def mock_call_fn(model, provider, prompt, **kwargs):
+            return f"Response from {model}"
+        
+        result = route('reasoning', mock_call_fn, "test prompt")
+        assert 'result' in result
+        assert 'model_used' in result
 
 
-@patch('infra.model_router._get_daily_spent')
-def test_router_raises_if_all_fail(mock_spent):
+@test("router: raises_if_all_fail")
+def test_router_raises_if_all_fail():
     """All models fail — raises RuntimeError."""
-    mock_spent.return_value = 0.0
+    from infra.model_router import route
+    from unittest.mock import patch
     
-    def failing_call_fn(model, provider, prompt, **kwargs):
-        raise Exception("All failed")
-    
-    with pytest.raises(RuntimeError):
-        route('reasoning', failing_call_fn, "test prompt")
+    with patch('infra.model_router._get_daily_spent', return_value=0.0):
+        def failing_call_fn(model, provider, prompt, **kwargs):
+            raise Exception("All failed")
+        
+        try:
+            route('reasoning', failing_call_fn, "test prompt")
+            assert False, "Expected RuntimeError"
+        except RuntimeError:
+            pass  # Expected
 
 
-@patch('infra.model_router._get_daily_spent')
-@patch('infra.model_router._record_spend')
-def test_router_records_spend(mock_record, mock_spent):
+@test("router: records_spend")
+def test_router_records_spend():
     """Paid model call — cost recorded to budget tracker."""
-    mock_spent.return_value = 0.0
+    from infra.model_router import route
+    from unittest.mock import patch
     
-    def mock_call_fn(model, provider, prompt, **kwargs):
-        return "Response"
-    
-    route('reasoning', mock_call_fn, "test prompt")
-    # Should have called _record_spend at least once
-    assert mock_record.called
+    with patch('infra.model_router._get_daily_spent', return_value=0.0), \
+         patch('infra.model_router._record_spend') as mock_record:
+        def mock_call_fn(model, provider, prompt, **kwargs):
+            return "Response"
+        
+        route('reasoning', mock_call_fn, "test prompt")
+        assert mock_record.called
 
 
+@test("router: get_today_spend_structure")
 def test_get_today_spend_structure():
     """Returns dict with spent_usd, cap_usd, remaining_usd."""
+    from infra.model_router import get_today_spend
+    from unittest.mock import patch
+    
     with patch('infra.model_router._get_daily_spent', return_value=0.10):
         spend = get_today_spend()
         assert 'spent_usd' in spend
@@ -169,8 +210,10 @@ def test_get_today_spend_structure():
 
 # Agent step tests
 
+@test("agent_step: returns_decision")
 def test_agent_step_returns_decision():
     """Mock LLM returns valid JSON — payload has agent_decision."""
+    from infra.chain.steps import handle_agent_step
     step = {
         'id': 'step-1',
         'config': {
@@ -190,8 +233,10 @@ def test_agent_step_returns_decision():
     assert result['agent_decision']['action'] == 'complete'
 
 
+@test("agent_step: invalid_json")
 def test_agent_step_invalid_json():
     """Mock LLM returns garbage — raises StepError."""
+    from infra.chain.steps import handle_agent_step, StepError
     step = {
         'id': 'step-1',
         'config': {'role': 'reasoning', 'available_tools': [], 'context_fields': []}
@@ -201,12 +246,17 @@ def test_agent_step_invalid_json():
     def mock_call_fn(prompt, role):
         return "not json at all"
     
-    with pytest.raises(StepError):
+    try:
         handle_agent_step(step, payload, mock_call_fn)
+        assert False, "Expected StepError"
+    except StepError:
+        pass  # Expected
 
 
+@test("agent_step: invalid_action")
 def test_agent_step_invalid_action():
     """Mock LLM returns unknown action — raises StepError."""
+    from infra.chain.steps import handle_agent_step, StepError
     step = {
         'id': 'step-1',
         'config': {'role': 'reasoning', 'available_tools': [], 'context_fields': []}
@@ -216,12 +266,17 @@ def test_agent_step_invalid_action():
     def mock_call_fn(prompt, role):
         return '{"action": "invalid_action", "target": null, "args": {}, "reasoning": "test"}'
     
-    with pytest.raises(StepError):
+    try:
         handle_agent_step(step, payload, mock_call_fn)
+        assert False, "Expected StepError"
+    except StepError:
+        pass  # Expected
 
 
+@test("agent_step: with_markdown_fences")
 def test_agent_step_with_markdown_fences():
     """Mock LLM returns JSON in markdown fences — strips and parses."""
+    from infra.chain.steps import handle_agent_step
     step = {
         'id': 'step-1',
         'config': {'role': 'reasoning', 'available_tools': [], 'context_fields': []}
@@ -237,8 +292,10 @@ def test_agent_step_with_markdown_fences():
 
 # Loop back tests
 
+@test("loop_back: raises_step_loop_back")
 def test_loop_back_raises_step_loop_back():
     """Condition met — raises StepLoopBack with correct anchor."""
+    from infra.chain.steps import handle_loop_back, StepLoopBack
     step = {
         'id': 'step-1',
         'config': {
@@ -250,15 +307,18 @@ def test_loop_back_raises_step_loop_back():
     }
     payload = {'retry': True}
     
-    with pytest.raises(StepLoopBack) as exc_info:
+    try:
         handle_loop_back(step, payload)
-    
-    assert exc_info.value.anchor_step_name == 'research'
-    assert exc_info.value.iteration == 1
+        assert False, "Expected StepLoopBack"
+    except StepLoopBack as e:
+        assert e.anchor_step_name == 'research'
+        assert e.iteration == 1
 
 
+@test("loop_back: pass_through")
 def test_loop_back_pass_through():
     """Condition not met — returns payload with loop_skipped=True."""
+    from infra.chain.steps import handle_loop_back
     step = {
         'id': 'step-1',
         'config': {
@@ -273,8 +333,10 @@ def test_loop_back_pass_through():
     assert result.get('loop_skipped') is True
 
 
+@test("loop_back: exceeds_max")
 def test_loop_back_exceeds_max():
     """loop_count >= max_iterations — raises StepError."""
+    from infra.chain.steps import handle_loop_back, StepError
     step = {
         'id': 'step-1',
         'config': {
@@ -284,24 +346,33 @@ def test_loop_back_exceeds_max():
     }
     payload = {'_loop_count_research': 2}
     
-    with pytest.raises(StepError):
+    try:
         handle_loop_back(step, payload)
+        assert False, "Expected StepError"
+    except StepError:
+        pass  # Expected
 
 
+@test("loop_back: missing_anchor")
 def test_loop_back_missing_anchor():
     """No anchor_step_name — raises StepError."""
+    from infra.chain.steps import handle_loop_back, StepError
     step = {
         'id': 'step-1',
         'config': {}
     }
     payload = {}
     
-    with pytest.raises(StepError):
+    try:
         handle_loop_back(step, payload)
+        assert False, "Expected StepError"
+    except StepError:
+        pass  # Expected
 
 
-# Runner integration tests (simplified)
+# Integration tests
 
+@test("integration: model_registry_loads")
 def test_model_registry_loads():
     """model_registry.yaml loads without error."""
     import yaml
@@ -314,6 +385,7 @@ def test_model_registry_loads():
     assert 'budget' in registry
 
 
+@test("integration: model_registry_all_roles_covered")
 def test_model_registry_all_roles_covered():
     """All 8 roles have at least one model."""
     import yaml
@@ -333,41 +405,56 @@ def test_model_registry_all_roles_covered():
 
 # Payload validation integration tests
 
-@patch('infra.db.payloads._exec')
-def test_create_payload_validates(mock_exec):
+@test("payloads: create_payload_validates")
+def test_create_payload_validates():
     """create_payload with text/draft type — Pydantic validates."""
-    # Mock the DB operations
-    mock_exec.return_value.fetchone.return_value = {
-        'id': 'payload-1',
-        'data': '{"chain_id":"test","title":"Test"}'
-    }
+    from infra.db.payloads import create_payload
+    from infra.db.schema import _exec
     
-    # This should not raise an error
-    result = create_payload(
-        chain_id="test-chain",
-        payload_type="text/draft",
-        data={"title": "Test", "body": "Content", "layer": "technical"}
-    )
-    assert result is not None
+    # Mock the DB operations
+    original_exec = _exec
+    def mock_exec(sql, params=None, commit=False):
+        if "INSERT" in sql:
+            return type('obj', (object,), {'fetchone': lambda: {'id': 'payload-1', 'data': '{}', 'chain_id': 'test', 'type': 'text/draft', 'step_id': None, 'schema_version': 'v1', 'created_at': '2026-06-01T00:00:00Z'}})()
+        return original_exec(sql, params, commit)
+    
+    import infra.db.payloads as payloads_module
+    payloads_module._exec = mock_exec
+    
+    try:
+        result = create_payload(
+            chain_id="test-chain",
+            payload_type="text/draft",
+            data={"title": "Test", "body": "Content", "layer": "technical"}
+        )
+        assert result is not None
+    finally:
+        payloads_module._exec = original_exec
 
 
-@patch('infra.db.payloads._exec')
-def test_create_payload_fallback_on_error(mock_exec):
+@test("payloads: create_payload_fallback_on_error")
+def test_create_payload_fallback_on_error():
     """Invalid payload data — falls back gracefully, no crash."""
-    # Mock the DB operations
-    mock_exec.return_value.fetchone.return_value = {
-        'id': 'payload-1',
-        'data': '{"chain_id":"test"}'
-    }
+    from infra.db.payloads import create_payload
+    from infra.db.schema import _exec
     
-    # Missing required field should log warning but not crash
-    result = create_payload(
-        chain_id="test-chain",
-        payload_type="text/draft",
-        data={"body": "Content", "layer": "technical"}  # Missing title
-    )
-    assert result is not None
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    # Mock the DB operations
+    original_exec = _exec
+    def mock_exec(sql, params=None, commit=False):
+        if "INSERT" in sql:
+            return type('obj', (object,), {'fetchone': lambda: {'id': 'payload-1', 'data': '{}', 'chain_id': 'test', 'type': 'text/draft', 'step_id': None, 'schema_version': 'v1', 'created_at': '2026-06-01T00:00:00Z'}})()
+        return original_exec(sql, params, commit)
+    
+    import infra.db.payloads as payloads_module
+    payloads_module._exec = mock_exec
+    
+    try:
+        # Missing required field should log warning but not crash
+        result = create_payload(
+            chain_id="test-chain",
+            payload_type="text/draft",
+            data={"body": "Content", "layer": "technical"}  # Missing title
+        )
+        assert result is not None
+    finally:
+        payloads_module._exec = original_exec
