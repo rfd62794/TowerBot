@@ -411,6 +411,30 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch random Wikipedia article: {e}")
 
+    def spacex_latest_launch(self) -> dict:
+        """
+        Get the latest SpaceX launch data.
+
+        Returns:
+            Dict with launch name, date, success status, and details
+        """
+        try:
+            resp = httpx.get("https://api.spacexdata.com/v4/launches/latest", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return self.success({
+                "name": data.get("name", ""),
+                "date_utc": data.get("date_utc", ""),
+                "success": data.get("success", None),
+                "details": data.get("details", ""),
+                "rocket": data.get("rocket", ""),
+                "flight_number": data.get("flight_number", None)
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"SpaceX API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch SpaceX launch data: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -574,3 +598,13 @@ def wiki_random() -> dict:
         Dict with title, extract, and URL
     """
     return _search.wiki_random()
+
+
+def spacex_latest_launch() -> dict:
+    """
+    Get the latest SpaceX launch data.
+
+    Returns:
+        Dict with launch name, date, success status, and details
+    """
+    return _search.spacex_latest_launch()
