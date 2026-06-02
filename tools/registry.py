@@ -29,7 +29,7 @@ from .content.discovery import (
 )
 from .games.recommendations import get_content_recommendations
 from .games.metrics import get_game_metrics, get_installed_games, get_sale_info, get_itch_stats
-from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits, useless_fact, number_fact, random_quote, wiki_random, spacex_latest_launch, jina_read, country_info
+from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits, useless_fact, number_fact, random_quote, wiki_random, spacex_latest_launch, jina_read, country_info, cratesio_info
 from .productivity.goals import (
     save_commitment,
     get_goals_list,
@@ -674,6 +674,26 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": []
+                }
+            }
+        }
+    },
+    "cratesio_info": {
+        "fn": cratesio_info,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "cratesio_info",
+                "description": "Get Rust crate information from crates.io API including name, version, description, downloads, homepage, and repository. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "crate_name": {
+                            "type": "string",
+                            "description": "Name of the Rust crate"
+                        }
+                    },
+                    "required": ["crate_name"]
                 }
             }
         }

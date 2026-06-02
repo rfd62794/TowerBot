@@ -402,6 +402,26 @@ def test_country_info_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("cratesio_info: returns name, max_version, and downloads keys")
+def test_cratesio_info_success():
+    from tools.search.search_tools import cratesio_info
+    result = cratesio_info("serde")
+    if result.get("ok") == True:
+        assert "name" in result, "Expected 'name' key on success"
+        assert "max_version" in result, "Expected 'max_version' key on success"
+        assert "downloads" in result, "Expected 'downloads' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("cratesio_info: handles 404 for nonexistent crate")
+def test_cratesio_info_not_found():
+    from tools.search.search_tools import cratesio_info
+    result = cratesio_info("nonexistent-crate-xyz-999")
+    assert result.get("ok") == False, "Expected ok=False for nonexistent crate"
+    assert "error" in result, "Expected 'error' key for nonexistent crate"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
