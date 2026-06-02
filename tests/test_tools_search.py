@@ -265,6 +265,29 @@ def test_useless_fact_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("number_fact: returns fact, number, and type keys")
+def test_number_fact_success():
+    from tools.search.search_tools import number_fact
+    result = number_fact(42, "trivia")
+    if result.get("ok") == True:
+        assert "fact" in result, "Expected 'fact' key on success"
+        assert "number" in result, "Expected 'number' key on success"
+        assert "type" in result, "Expected 'type' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("number_fact: handles API error gracefully")
+def test_number_fact_error():
+    from tools.search.search_tools import number_fact
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = number_fact()
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

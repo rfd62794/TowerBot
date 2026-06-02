@@ -99,6 +99,7 @@ routes:
       - news_search
       - fetch_url
       - useless_fact
+      - number_fact
     description: "Web search, Wikipedia, news, URL fetch, random facts"
 
   steam:

@@ -339,6 +339,34 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch useless fact: {e}")
 
+    def number_fact(self, number: int = None, fact_type: str = "trivia") -> dict:
+        """
+        Get a fact about a number from Numbers API.
+
+        Args:
+            number: Number to get fact about (default: random)
+            fact_type: Type of fact — trivia, math, date, year (default: trivia)
+
+        Returns:
+            Dict with fact text, number, and type
+        """
+        try:
+            if number is None:
+                url = f"http://numbersapi.com/random/{fact_type}"
+            else:
+                url = f"http://numbersapi.com/{number}/{fact_type}"
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            return self.success({
+                "fact": resp.text,
+                "number": number,
+                "type": fact_type
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Numbers API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch number fact: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -468,3 +496,17 @@ def useless_fact() -> dict:
         Dict with fact text and source URL
     """
     return _search.useless_fact()
+
+
+def number_fact(number: int = None, fact_type: str = "trivia") -> dict:
+    """
+    Get a fact about a number from Numbers API.
+
+    Args:
+        number: Number to get fact about (default: random)
+        fact_type: Type of fact — trivia, math, date, year (default: trivia)
+
+    Returns:
+        Dict with fact text, number, and type
+    """
+    return _search.number_fact(number, fact_type)
