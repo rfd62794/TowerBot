@@ -92,7 +92,14 @@ routes:
       - update_task
       - get_upcoming_tasks
       - suggest_goal_progress
-    description: "Goals, tasks, milestones, weekly planning"
+      - list_google_tasks
+      - get_google_task
+      - create_google_task
+      - update_google_task
+      - complete_google_task
+      - delete_google_task
+      - sync_google_tasks
+    description: "Goals, tasks, milestones, weekly planning, Google Tasks sync"
 
   memory:
     model: openrouter/free
