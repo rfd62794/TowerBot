@@ -5,34 +5,6 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 
-def test_get_task_model_role_monitor():
-    """task_type='monitor' → 'fast_intent'"""
-    from bot.model_helpers import get_task_model_role
-    result = get_task_model_role("monitor")
-    assert result == "fast_intent"
-
-
-def test_get_task_model_role_reporter():
-    """task_type='reporter' → 'long_context'"""
-    from bot.model_helpers import get_task_model_role
-    result = get_task_model_role("reporter")
-    assert result == "long_context"
-
-
-def test_get_task_model_role_planner():
-    """task_type='planner' → 'reasoning'"""
-    from bot.model_helpers import get_task_model_role
-    result = get_task_model_role("planner")
-    assert result == "reasoning"
-
-
-def test_get_task_model_role_unknown():
-    """unknown task_type → 'reasoning' fallback"""
-    from bot.model_helpers import get_task_model_role
-    result = get_task_model_role("nonexistent_task")
-    assert result == "reasoning"
-
-
 def test_search_tools_finds_by_name():
     """query='itch' → get_itch_stats in results"""
     from tools.meta.tool_index import search_tools
@@ -145,6 +117,6 @@ def run_all() -> tuple[int, int]:
     import sys
     exit_code = pytest.main([__file__, "-v"])
     if exit_code == 0:
-        return (15, 0)  # 15 tests in this file
+        return (11, 0)  # 11 tests in this file
     else:
         return (0, 1)

@@ -151,14 +151,16 @@ def test_router_skips_paid_at_cap():
     from infra.model_router import route
     from unittest.mock import patch
     
-    with patch('infra.model_router._get_daily_spent', return_value=0.30):
+    with patch('infra.model_router._get_daily_spent', return_value=0.30), \
+         patch('bot.model_helpers.get_call_fn') as mock_get_call:
         def mock_call_fn(model, provider, prompt, **kwargs):
             # Free models will succeed, paid models should be skipped
             if provider == 'ollama':
                 return f"Response from {model}"
             raise Exception("Paid model should be skipped")
+        mock_get_call.return_value = mock_call_fn
         
-        result = route('offline', mock_call_fn, "test prompt")
+        result = route('offline', "test prompt")
         assert 'result' in result
         assert 'model_used' in result
 
@@ -169,12 +171,14 @@ def test_router_raises_if_all_fail():
     from infra.model_router import route
     from unittest.mock import patch
     
-    with patch('infra.model_router._get_daily_spent', return_value=0.0):
+    with patch('infra.model_router._get_daily_spent', return_value=0.0), \
+         patch('bot.model_helpers.get_call_fn') as mock_get_call:
         def failing_call_fn(model, provider, prompt, **kwargs):
             raise Exception("All failed")
+        mock_get_call.return_value = failing_call_fn
         
         try:
-            route('reasoning', failing_call_fn, "test prompt")
+            route('reasoning', "test prompt")
             assert False, "Expected RuntimeError"
         except RuntimeError:
             pass  # Expected
@@ -187,11 +191,13 @@ def test_router_records_spend():
     from unittest.mock import patch
     
     with patch('infra.model_router._get_daily_spent', return_value=0.0), \
-         patch('infra.model_router._record_spend') as mock_record:
+         patch('infra.model_router._record_spend') as mock_record, \
+         patch('bot.model_helpers.get_call_fn') as mock_get_call:
         def mock_call_fn(model, provider, prompt, **kwargs):
             return "Response"
+        mock_get_call.return_value = mock_call_fn
         
-        route('reasoning', mock_call_fn, "test prompt")
+        route('reasoning', "test prompt")
         assert mock_record.called
 
 
