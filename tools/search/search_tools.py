@@ -706,6 +706,41 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to search BoardGameGeek: {e}")
 
+    def lichess_user(self, username: str) -> dict:
+        """
+        Get Lichess user profile data.
+
+        Args:
+            username: Lichess username
+
+        Returns:
+            Dict with user data including rating, games played, and account info
+        """
+        try:
+            url = f"https://lichess.org/api/user/{username}"
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            perfs = data.get("perfs", {})
+            return self.success({
+                "username": data.get("id", ""),
+                "count": data.get("count", {}),
+                "perfs": {
+                    "bullet": perfs.get("bullet", {}).get("rating", 0),
+                    "blitz": perfs.get("blitz", {}).get("rating", 0),
+                    "rapid": perfs.get("rapid", {}).get("rating", 0),
+                    "classical": perfs.get("classical", {}).get("rating", 0)
+                },
+                "created_at": data.get("createdAt", ""),
+                "seen_at": data.get("seenAt", "")
+            })
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return self.error(f"User '{username}' not found on Lichess")
+            return self.error(f"Lichess API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch Lichess user data: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -984,3 +1019,16 @@ def boardgame_search(query: str, limit: int = 5) -> dict:
         Dict with game data including name, year, rating, and description
     """
     return _search.boardgame_search(query, limit)
+
+
+def lichess_user(username: str) -> dict:
+    """
+    Get Lichess user profile data.
+
+    Args:
+        username: Lichess username
+
+    Returns:
+        Dict with user data including rating, games played, and account info
+    """
+    return _search.lichess_user(username)

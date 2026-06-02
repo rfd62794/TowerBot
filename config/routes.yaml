@@ -25,6 +25,8 @@ triggers:
     phrases: [search books, book search, find book, open library, library search]
   boardgame_search:
     phrases: [board game, boardgame, bgg, board game search, find board game]
+  lichess_user:
+    phrases: [lichess, chess rating, lichess user, chess player, lichess profile]
 
 routes:
   chat:
@@ -135,11 +137,12 @@ routes:
       - iss_location
       - open_library_search
       - boardgame_search
+      - lichess_user
       - useless_fact
       - number_fact
       - random_quote
       - spacex_latest_launch
-    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, Hacker News, earthquakes, ISS, Open Library, BoardGameGeek, random facts, quotes, SpaceX"
+    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, Hacker News, earthquakes, ISS, Open Library, BoardGameGeek, Lichess, random facts, quotes, SpaceX"
 
   steam:
     model: openrouter/free

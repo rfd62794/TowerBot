@@ -536,6 +536,26 @@ def test_boardgame_search_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("lichess_user: returns username, perfs, and count keys")
+def test_lichess_user_success():
+    from tools.search.search_tools import lichess_user
+    result = lichess_user("drnykterstein")
+    if result.get("ok") == True:
+        assert "username" in result, "Expected 'username' key on success"
+        assert "perfs" in result, "Expected 'perfs' key on success"
+        assert "count" in result, "Expected 'count' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("lichess_user: handles 404 for nonexistent user")
+def test_lichess_user_not_found():
+    from tools.search.search_tools import lichess_user
+    result = lichess_user("nonexistent-user-xyz-999")
+    assert result.get("ok") == False, "Expected ok=False for nonexistent user"
+    assert "error" in result, "Expected 'error' key for nonexistent user"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
