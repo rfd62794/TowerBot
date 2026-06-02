@@ -15,6 +15,7 @@ from infra.db.system_metrics import record_system_snapshot
 from infra.db.bot_state import get_dev_mode
 from infra.db.task_queue import get_due_tasks, mark_running, mark_complete, mark_failed
 from scripts.update import check_for_updates
+from infra.chain.observer import observe_completed_chains
 
 logger = logging.getLogger("privy.autonomous")
 
@@ -316,3 +317,55 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         kwargs={"send_fn": send_fn}
     )
     logger.info("Registered auto-update check: every 30 minutes")
+
+    # Register chain observer job
+    scheduler.add_job(
+        observe_completed_chains,
+        "interval",
+        minutes=30,
+        id="chain_observer",
+        max_instances=1,
+        replace_existing=True
+    )
+    logger.info("Registered chain observer: every 30 minutes")
+
+    # Register weekly digest job
+    async def send_weekly_digest():
+        """Sunday morning digest of chain activity and promotion candidates."""
+        from infra.chain.observer import get_promotion_candidates
+        from infra.db.chains import list_chains
+
+        completed = list_chains(status='complete')
+        failed = list_chains(status='failed')
+        candidates = get_promotion_candidates()
+
+        lines = ["📊 <b>Weekly Chain Digest</b>\n"]
+        lines.append(f"Chains completed: {len(completed)}")
+        lines.append(f"Chains failed: {len(failed)}")
+
+        if candidates:
+            lines.append(f"\n🔁 <b>Promotion candidates ({len(candidates)}):</b>")
+            for c in candidates[:5]:
+                lines.append(
+                    f"  • {c['step_sequence_hash'][:8]} — "
+                    f"{c['observed_count']} uses, "
+                    f"{c['success_rate']:.0%} success"
+                )
+        else:
+            lines.append("\nNo promotion candidates yet.")
+
+        message = "\n".join(lines)
+        await send_fn(message)
+
+    scheduler.add_job(
+        send_weekly_digest,
+        "cron",
+        day_of_week='sun',
+        hour=8,
+        minute=0,
+        id='weekly_digest',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered weekly digest: Sunday 08:00")

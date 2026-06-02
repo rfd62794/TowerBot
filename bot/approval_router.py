@@ -29,6 +29,27 @@ def parse_callback(callback_data: str) -> tuple[str, str] | None:
     return parts[1], parts[2]
 
 
+def _build_resume_fn():
+    """Build the resume function for ChainRunner."""
+    def resume_chain(chain_id: str):
+        from infra.db.chains import get_chain
+        from infra.chain.runner import ChainRunner
+        from infra.chain.template_loader import load_template, TemplateError
+        from tools.registry import TOOL_REGISTRY
+
+        chain = get_chain(chain_id)
+        if not chain:
+            return
+        try:
+            template = load_template(chain['template_name'])
+        except TemplateError as e:
+            logger.error(f"Failed to load template {chain['template_name']}: {e}")
+            return
+        runner = ChainRunner(tool_registry=TOOL_REGISTRY)
+        runner.run(chain_id, template['steps'])
+    return resume_chain
+
+
 def handle_approval_callback(callback_data: str,
                               message_id: str = None,
                               resume_chain_fn=None) -> dict:
@@ -83,16 +104,17 @@ def handle_approval_callback(callback_data: str,
         logger.info(f"Approval granted for chain {chain_id} "
                     f"by listener {listener_id}")
 
-        if resume_chain_fn:
-            try:
-                resume_chain_fn(chain_id)
-            except Exception as e:
-                logger.error(f"Chain resume failed for {chain_id}: {e}")
-                return {
-                    "status": "resume_failed",
-                    "chain_id": chain_id,
-                    "message": f"Approved but resume failed: {e}"
-                }
+        if resume_chain_fn is None:
+            resume_chain_fn = _build_resume_fn()
+        try:
+            resume_chain_fn(chain_id)
+        except Exception as e:
+            logger.error(f"Chain resume failed for {chain_id}: {e}")
+            return {
+                "status": "resume_failed",
+                "chain_id": chain_id,
+                "message": f"Approved but resume failed: {e}"
+            }
 
         return {
             "status": "approved",

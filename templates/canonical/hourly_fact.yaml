@@ -1,0 +1,42 @@
+name: hourly_fact
+description: >
+  Delivers one thought-provoking fact to Telegram.
+  Checks memory for previously delivered facts to avoid repeats.
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 60
+  stop_after_hour: 22
+
+steps:
+  - name: fetch_fact
+    type: tool_call
+    config:
+      tool_name: get_memories
+      tool_args:
+        query: "hourly facts delivered today"
+      result_key: prior_facts
+
+  - name: pick_and_deliver
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        Prior facts delivered today: {tool_result}
+
+        Pick one genuinely surprising, counterintuitive fact that has NOT
+        been delivered today. Categories: science, history, psychology,
+        mathematics, nature, technology. Not trivia. Something that makes
+        a person stop and reconsider something they assumed was true.
+
+        Respond with ONLY the fact — no preamble, no "here's a fact",
+        just the fact itself in 2-4 sentences.
+
+  - name: save_and_send
+    type: tool_call
+    config:
+      tool_name: save_memory
+      tool_args:
+        key: "hourly_fact_{timestamp}"
+        content: "{llm_result}"
+        layer: personal
