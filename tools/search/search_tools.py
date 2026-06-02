@@ -458,6 +458,46 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to read URL with Jina: {e}")
 
+    def country_info(self, name: str = None) -> dict:
+        """
+        Get country information from REST Countries API.
+
+        Args:
+            name: Country name (optional, if not provided returns random country)
+
+        Returns:
+            Dict with country data including name, capital, region, population, etc.
+        """
+        try:
+            if name:
+                url = f"https://restcountries.com/v3.1/name/{name}"
+            else:
+                url = "https://restcountries.com/v3.1/all"
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            if not data:
+                return self.error(f"Country '{name}' not found" if name else "No countries found")
+            if not name:
+                data = [data[0]]  # Return just first country if all
+            country = data[0]
+            return self.success({
+                "name": country.get("name", {}).get("common", ""),
+                "official_name": country.get("name", {}).get("official", ""),
+                "capital": country.get("capital", []),
+                "region": country.get("region", ""),
+                "subregion": country.get("subregion", ""),
+                "population": country.get("population", 0),
+                "area": country.get("area", 0),
+                "languages": country.get("languages", {}),
+                "currencies": country.get("currencies", {}),
+                "flags": country.get("flags", {})
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"REST Countries API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch country info: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -644,3 +684,16 @@ def jina_read(url: str) -> dict:
         Dict with markdown content and URL
     """
     return _search.jina_read(url)
+
+
+def country_info(name: str = None) -> dict:
+    """
+    Get country information from REST Countries API.
+
+    Args:
+        name: Country name (optional, if not provided returns random country)
+
+    Returns:
+        Dict with country data including name, capital, region, population, etc.
+    """
+    return _search.country_info(name)
