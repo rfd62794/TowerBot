@@ -1,0 +1,99 @@
+# Model capability registry
+# All model calls route through infra/model_router.py
+# Never hardcode model names in templates or steps
+
+models:
+  groq_llama_3_1_70b:
+    provider: openrouter
+    model_id: groq/llama-3.1-70b-versatile
+    context_window: 131072
+    cost_per_1k_input: 0.0
+    cost_per_1k_output: 0.0
+    tier: free
+    strengths: [fast_intent, classification, short_generation]
+    fallback_to: gemini_flash
+
+  gemini_flash:
+    provider: openrouter
+    model_id: google/gemini-2.0-flash-001
+    context_window: 1048576
+    cost_per_1k_input: 0.0
+    cost_per_1k_output: 0.0
+    tier: free
+    strengths: [long_context, research, synthesis, multimodal]
+    fallback_to: deepseek_v3
+
+  mistral_small:
+    provider: openrouter
+    model_id: mistralai/mistral-small
+    context_window: 32768
+    cost_per_1k_input: 0.0
+    cost_per_1k_output: 0.0
+    tier: free
+    strengths: [structured, json_extraction, classification]
+    fallback_to: gemini_flash
+
+  deepseek_v3:
+    provider: openrouter
+    model_id: deepseek/deepseek-chat
+    context_window: 65536
+    cost_per_1k_input: 0.00014
+    cost_per_1k_output: 0.00028
+    tier: near_free
+    strengths: [reasoning, code, analysis]
+    fallback_to: claude_haiku
+
+  claude_haiku:
+    provider: openrouter
+    model_id: anthropic/claude-haiku-4-5
+    context_window: 200000
+    cost_per_1k_input: 0.0008
+    cost_per_1k_output: 0.004
+    tier: small
+    strengths: [reasoning, chat, structured, fast]
+    fallback_to: claude_sonnet
+
+  claude_sonnet:
+    provider: openrouter
+    model_id: anthropic/claude-sonnet-4-5
+    context_window: 200000
+    cost_per_1k_input: 0.003
+    cost_per_1k_output: 0.015
+    tier: medium
+    strengths: [reasoning, complex_analysis, quality]
+    fallback_to: null
+
+  gemini_pro:
+    provider: openrouter
+    model_id: google/gemini-2.5-pro
+    context_window: 1048576
+    cost_per_1k_input: 0.00125
+    cost_per_1k_output: 0.005
+    tier: small
+    strengths: [quality_gate, long_context, reasoning]
+    fallback_to: claude_sonnet
+
+  ollama_gemma3:
+    provider: ollama
+    model_id: gemma3:4b
+    context_window: 8192
+    cost_per_1k_input: 0.0
+    cost_per_1k_output: 0.0
+    tier: free
+    strengths: [offline, classification]
+    fallback_to: null
+
+role_routing:
+  reasoning:      [deepseek_v3, claude_haiku, claude_sonnet]
+  chat:           [gemini_flash, claude_haiku]
+  fast_intent:    [groq_llama_3_1_70b, mistral_small, gemini_flash]
+  structured:     [mistral_small, gemini_flash, deepseek_v3]
+  long_context:   [gemini_flash, deepseek_v3, claude_haiku]
+  quality_gate:   [gemini_pro, claude_sonnet]
+  cost_sensitive: [deepseek_v3, groq_llama_3_1_70b, gemini_flash]
+  offline:        [ollama_gemma3]
+
+budget:
+  daily_hard_cap_usd: 0.25
+  daily_warning_usd: 0.20
+  openrouter_low_balance_alert_usd: 5.00
