@@ -127,11 +127,26 @@ async def run_autonomous_task(task_name: str, send_fn):
     urgent = 0
 
     try:
-        result = await respond(
-            full_prompt,
-            thread_id=f"autonomous_{task_name}",
-            max_iter=task['max_iterations']
-        )
+        # Check if task has a model_role for routing
+        model_role = get_task_model_role(task_name)
+        
+        if model_role:
+            # Use model_router for tasks with defined model_role
+            logger.info(f"[autonomous] task {task_name} using model_router with role: {model_role}")
+            routed = route(
+                role=model_role,
+                call_fn=call_openrouter,
+                prompt=full_prompt
+            )
+            result = routed["result"]
+        else:
+            # Fall back to agent.respond() for tasks without model_role
+            logger.info(f"[autonomous] task {task_name} using agent.respond() (no model_role)")
+            result = await respond(
+                full_prompt,
+                thread_id=f"autonomous_{task_name}",
+                max_iter=task['max_iterations']
+            )
         duration_ms = int((time.time() - start) * 1000)
 
         # Check if result is urgent

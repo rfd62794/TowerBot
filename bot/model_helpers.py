@@ -3,6 +3,8 @@
 import httpx
 import os
 import logging
+from pathlib import Path
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -53,3 +55,24 @@ def call_openrouter(model: str, provider: str, prompt: str, **kwargs) -> str:
     except Exception as e:
         logger.error(f"OpenRouter call failed: {e}")
         raise
+
+
+def get_task_model_role(task_type: str) -> str:
+    """Get model role for a task type from task_types.yaml.
+    
+    Args:
+        task_type: Task type name (e.g., 'monitor', 'reporter', 'creator', 'planner')
+    
+    Returns:
+        Model role string (e.g., 'fast_intent', 'long_context', 'reasoning')
+        Returns 'reasoning' as fallback if task_type not found or error occurs
+    """
+    try:
+        config_path = (Path(__file__).parent.parent /
+                       "config" / "task_types.yaml")
+        with open(config_path) as f:
+            task_types = yaml.safe_load(f)
+        return task_types.get(task_type, {}).get("model_role", "reasoning")
+    except Exception as e:
+        logger.warning(f"Failed to get model_role for {task_type}: {e}, using 'reasoning' fallback")
+        return "reasoning"

@@ -75,6 +75,7 @@ TEST_FILES = [
     "tests/test_phase21.py",
     "tests/test_director_tools.py",
     "tests/test_tool_registry.py",
+    "tests/test_model_wiring.py",
 ]
 
 
