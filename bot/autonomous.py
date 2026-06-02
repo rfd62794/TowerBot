@@ -61,7 +61,7 @@ FALLBACK_TASKS = [
     (
         "Call advance_post_pipeline() to advance the most in-progress blog post "
         "by exactly one stage. Use the research, skeleton writing, and "
-        "create_blog_draft tools as instructed by the pipeline. "
+        "create_draft_from_pipeline tools as instructed by the pipeline. "
         "Report what stage was completed."
     ),
     # Variety fallbacks for when post is at stage 4 (waiting for Robert)

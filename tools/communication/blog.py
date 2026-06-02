@@ -266,7 +266,7 @@ class BlogTools(BaseTool):
             action = "Build 5-section skeleton (MOMENT, SURPRISE, STRUGGLE, LESSON, NEXT)"
             next_stage = "Build skeleton with prompts and research context"
         elif current_stage == 3:
-            action = "Create WordPress draft using create_blog_draft()"
+            action = "Create WordPress draft using create_blog_draft() with title from topic and content from skeleton field"
             next_stage = "Create draft and save wp_post_id and wp_edit_url"
         elif current_stage == 4:
             action = "Waiting for Robert to answer the 5 questions"
@@ -281,5 +281,97 @@ class BlogTools(BaseTool):
             "post_id": post_id,
             "action_taken": action,
             "next_stage": next_stage,
-            "next_stage_number": current_stage + 1 if current_stage < 5 else 5
+            "next_stage_number": current_stage + 1 if current_stage < 5 else 5,
+            "skeleton": post.get("skeleton"),
+            "research": post.get("research"),
+            "q1_prompt": post.get("q1_prompt")
+        })
+
+    def get_post_pipeline_state(self, topic: str = None) -> dict:
+        """
+        Get the current state of the blog post pipeline.
+
+        Args:
+            topic: Optional topic to get specific post. If not provided, returns most advanced.
+
+        Returns:
+            Dict with post data including stage, topic, skeleton, research, q1_prompt, wp_post_id, wp_edit_url.
+        """
+        if topic:
+            post = get_or_create_post(topic)
+        else:
+            post = get_most_advanced_post()
+            if not post:
+                return self.error("No posts in pipeline. Provide a topic to start.")
+
+        stage_names = {
+            0: "selected",
+            1: "Q1 prompt generated",
+            2: "research gathered",
+            3: "skeleton built",
+            4: "WordPress draft created",
+            5: "answered by Robert"
+        }
+
+        return self.success({
+            "post_id": post.get("id"),
+            "topic": post.get("topic"),
+            "stage": post.get("stage", 0),
+            "stage_name": stage_names.get(post.get("stage", 0), "unknown"),
+            "q1_prompt": post.get("q1_prompt"),
+            "research": post.get("research"),
+            "skeleton": post.get("skeleton"),
+            "wp_post_id": post.get("wp_post_id"),
+            "wp_edit_url": post.get("wp_edit_url"),
+            "created_at": post.get("created_at"),
+            "updated_at": post.get("updated_at")
+        })
+
+    def create_draft_from_pipeline(self, topic: str = None) -> dict:
+        """
+        Create a WordPress draft from the current pipeline state.
+        Uses the topic as title and skeleton as content.
+
+        Args:
+            topic: Optional topic to use. If not provided, uses most advanced post.
+
+        Returns:
+            Dict with post_id, edit_url, status, and updates pipeline state.
+        """
+        if topic:
+            post = get_or_create_post(topic)
+        else:
+            post = get_most_advanced_post()
+            if not post:
+                return self.error("No posts in pipeline. Provide a topic to start.")
+
+        current_stage = post.get("stage", 0)
+        post_topic = post.get("topic")
+        skeleton = post.get("skeleton")
+
+        if not skeleton:
+            return self.error(f"Post at stage {current_stage} has no skeleton. Build skeleton first.")
+
+        # Create the draft
+        handler = WordPressAPIHandler()
+        result = handler.create_draft(post_topic, skeleton)
+
+        if "error" in result:
+            return self.error(result["error"])
+
+        # Update pipeline state
+        from infra.db.pipeline import update_post_stage
+        update_post_stage(
+            post.get("id"),
+            4,
+            wp_post_id=result.get("id"),
+            wp_edit_url=result.get("link")
+        )
+
+        return self.success({
+            "post_id": result.get("id"),
+            "edit_url": result.get("link"),
+            "status": result.get("status"),
+            "topic": post_topic,
+            "pipeline_stage": 4
         })

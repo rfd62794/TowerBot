@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 20c — Complete
+Phase 21 — Complete
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -38,8 +38,21 @@ Phase 20c — Complete
   - 20 new tests in test_phase20c.py
   - Test floor: 437 passed, 0 failed
 
+- Phase 21: Model Roles + Pydantic + Reasoning
+  - infra/chain/schemas.py: Pydantic payload schemas (BasePayload, TextDraftPayload, DataStatsPayload, etc.)
+  - infra/db/payloads.py: Pydantic validation on create_payload with fallback to raw dict
+  - infra/db/budget_tracking.py: Added get_warning_sent_today() and mark_warning_sent()
+  - infra/db/budget_tracking.py: Made record_cost daily_cap_usd optional with registry fallback
+  - config/model_registry.yaml: Model capability registry with 8 models, 8 roles, budget caps
+  - infra/model_router.py: Role-based model router with budget awareness and spend tracking
+  - infra/chain/steps.py: Added StepLoopBack exception, handle_agent_step(), handle_loop_back()
+  - infra/chain/runner.py: Handle StepLoopBack with anchor step reset, route llm_call through model router
+  - bot/router.py: Added budget spend to /status output
+  - 24 new tests in test_phase21.py
+  - Test floor: 497 passed, 0 failed
+
 ## Next
-Phase 21: Promotion pipeline, n8n integration, model roles config
+Phase 22: TBD
 
 ---
 
