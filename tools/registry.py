@@ -78,6 +78,11 @@ from .meta.tool_registry import (
     list_experimental_tools,
     promote_tool,
 )
+from .meta.tool_index import (
+    search_tools,
+    list_all_tools,
+    get_tool_info,
+)
 from .meta.delegation import delegation_tools
 from .meta.director import (
     get_chains, get_chain, get_chain_payload,
@@ -2600,6 +2605,58 @@ TOOL_REGISTRY = {
                     "type": "object",
                     "properties": {
                         "name": {"type": "string", "description": "Tool name to promote"},
+                    },
+                    "required": ["name"],
+                },
+            },
+        },
+    },
+    "search_tools": {
+        "fn": search_tools,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "search_tools",
+                "description": "Search all registered tools by name and description. Fast fuzzy match — finds relevant tools for any task description. Use this when you need a tool but aren't sure of the exact name.\n\nRETURNS: dict with ok, count, tools (list with name, description, relevance_score).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "What you want to do (e.g. 'send email', 'get itch stats', 'search reddit', 'check calendar')"},
+                        "limit": {"type": "integer", "description": "Max results (default 10, max 25)"},
+                    },
+                    "required": ["query"],
+                },
+            },
+        },
+    },
+    "list_all_tools": {
+        "fn": list_all_tools,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_all_tools",
+                "description": "List all registered tools, optionally filtered by name prefix. Use to browse available capabilities by category.\n\nRETURNS: dict with ok, count, tools (list with name, description).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prefix": {"type": "string", "description": "Optional name prefix filter (e.g. 'get_', 'search_', 'youtube_', 'blog_')"},
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "get_tool_info": {
+        "fn": get_tool_info,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_tool_info",
+                "description": "Get full information about a specific tool by exact name.\n\nRETURNS: dict with ok, name, description, parameters (if available).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Exact tool name"},
                     },
                     "required": ["name"],
                 },
