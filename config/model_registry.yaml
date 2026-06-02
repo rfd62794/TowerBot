@@ -4,8 +4,8 @@
 
 models:
   groq_llama_3_1_70b:
-    provider: openrouter
-    model_id: groq/llama-3.1-70b-versatile
+    provider: groq
+    model_id: llama-3.1-70b-versatile
     context_window: 131072
     cost_per_1k_input: 0.0
     cost_per_1k_output: 0.0
@@ -14,8 +14,8 @@ models:
     fallback_to: gemini_flash
 
   gemini_flash:
-    provider: openrouter
-    model_id: google/gemini-2.0-flash-001
+    provider: google
+    model_id: gemini-2.0-flash
     context_window: 1048576
     cost_per_1k_input: 0.0
     cost_per_1k_output: 0.0

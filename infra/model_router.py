@@ -96,8 +96,7 @@ def _maybe_warn_budget() -> None:
         pass
 
 
-def route(role: str, call_fn: Callable, prompt: str,
-          **kwargs) -> dict:
+def route(role: str, prompt: str, **kwargs) -> dict:
     """
     Route an LLM call to the best available model for the role.
 
@@ -106,9 +105,13 @@ def route(role: str, call_fn: Callable, prompt: str,
     2. Near-free if free exhausted
     3. Paid only if budget permits and lower tiers failed
 
+    Uses provider-specific call functions (Groq, Google, OpenRouter) based on model config.
+
     Returns dict with keys: result (str), model_used (str), cost_usd (float)
     Raises RuntimeError if all models fail.
     """
+    from bot.model_helpers import get_call_fn
+    
     candidates = get_model_for_role(role)
 
     if not candidates:
@@ -125,6 +128,9 @@ def route(role: str, call_fn: Callable, prompt: str,
             continue
 
         try:
+            # Get provider-specific call function
+            call_fn = get_call_fn(provider)
+            
             result = call_fn(
                 model=model_id,
                 provider=provider,
@@ -141,7 +147,7 @@ def route(role: str, call_fn: Callable, prompt: str,
                 _record_spend(model_key, cost)
                 _maybe_warn_budget()
 
-            logger.info(f"Role '{role}' served by {model_key}")
+            logger.info(f"Role '{role}' served by {model_key} (provider: {provider})")
             return {
                 "result": result,
                 "model_used": model_key,
