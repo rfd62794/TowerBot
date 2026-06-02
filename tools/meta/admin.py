@@ -110,30 +110,30 @@ def run_diagnostic() -> dict:
 
     # Queue depth
     try:
-        rows = _exec(
+        row = _exec(
             "SELECT COUNT(*) as c FROM task_queue WHERE status='queued'"
-        )
-        result["queue_depth"] = rows[0]["c"] if rows else 0
+        ).fetchone()
+        result["queue_depth"] = row["c"] if row else 0
     except Exception as e:
         result["queue_depth"] = -1
         result["queue_error"] = str(e)
 
     # Null task count
     try:
-        rows = _exec(
+        row = _exec(
             """SELECT COUNT(*) as c FROM task_queue
                WHERE (prompt IS NULL OR prompt='') AND status='queued'"""
-        )
-        result["null_task_count"] = rows[0]["c"] if rows else 0
+        ).fetchone()
+        result["null_task_count"] = row["c"] if row else 0
     except Exception:
         result["null_task_count"] = -1
 
     # Memory count
     try:
-        rows = _exec(
+        row = _exec(
             "SELECT COUNT(*) as c FROM memory WHERE active=1"
-        )
-        result["memory_count"] = rows[0]["c"] if rows else 0
+        ).fetchone()
+        result["memory_count"] = row["c"] if row else 0
     except Exception:
         result["memory_count"] = -1
 

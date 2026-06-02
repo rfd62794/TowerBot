@@ -109,6 +109,66 @@ def test_tasks_dict():
     assert len(tasks) == 6, f"Expected 6 tasks, got {len(tasks)}"
 
 
+@test("autonomous: setup_template_scheduler registers template jobs")
+def test_template_scheduler_registers():
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from bot.autonomous import setup_template_scheduler
+    scheduler = AsyncIOScheduler()
+    async def mock_send(x):
+        pass
+    setup_template_scheduler(scheduler, mock_send)
+    jobs = scheduler.get_jobs()
+    # Should have at least the hourly_fact template job
+    template_jobs = [j for j in jobs if j.id.startswith("template_")]
+    assert len(template_jobs) >= 1, f"Expected at least 1 template job, got {len(template_jobs)}"
+
+
+@test("autonomous: setup_template_scheduler skips non-schedule templates")
+def test_template_scheduler_skips_non_schedule():
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from bot.autonomous import setup_template_scheduler
+    from unittest.mock import patch
+    scheduler = AsyncIOScheduler()
+    async def mock_send(x):
+        pass
+    # Mock list_templates to return a template without trigger.type=schedule
+    with patch("bot.autonomous.list_templates", return_value=[
+        {"name": "test_no_trigger", "source": "canonical", "version": "1.0", "description": ""}
+    ]):
+        with patch("bot.autonomous.load_template", return_value={
+            "name": "test_no_trigger",
+            "trigger": {"type": "manual"},
+            "steps": []
+        }):
+            setup_template_scheduler(scheduler, mock_send)
+    jobs = scheduler.get_jobs()
+    template_jobs = [j for j in jobs if j.id.startswith("template_")]
+    assert len(template_jobs) == 0, f"Expected 0 template jobs for non-schedule trigger, got {len(template_jobs)}"
+
+
+@test("autonomous: run_scheduled_template loads and creates chain")
+def test_run_scheduled_template_loads():
+    from bot.autonomous import run_scheduled_template
+    from unittest.mock import patch, AsyncMock
+    async def mock_send(x):
+        pass
+    # Mock template loading and chain creation
+    with patch("bot.autonomous.load_template", return_value={
+        "name": "test_template",
+        "trigger": {"type": "schedule", "interval_minutes": 60},
+        "steps": []
+    }):
+        with patch("bot.autonomous.create_chain", return_value="chain_123"):
+            with patch("bot.autonomous.ChainRunner") as mock_runner:
+                mock_runner_instance = mock_runner.return_value
+                mock_runner_instance.run.return_value = {"status": "complete"}
+                # Run the function
+                import asyncio
+                asyncio.run(run_scheduled_template("test_template", mock_send))
+                # Verify chain was created
+                assert mock_runner_instance.run.called, "ChainRunner.run should have been called"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

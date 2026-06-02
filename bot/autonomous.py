@@ -19,6 +19,9 @@ from infra.db.task_queue import get_due_tasks, mark_running, mark_complete, mark
 from scripts.update import check_for_updates
 from infra.chain.observer import observe_completed_chains
 from infra.memory_manager import memory_manager
+from infra.chain.template_loader import list_templates, load_template
+from infra.chain.runner import ChainRunner
+from infra.db.chains import create_chain
 
 logger = logging.getLogger("privy.autonomous")
 
@@ -414,6 +417,133 @@ Self-direction plan for {date_str}:
         await send_fn(f"❌ Self-direction failed: {str(e)}")
 
 
+async def run_scheduled_template(template_name: str, send_fn):
+    """
+    Execute a template triggered by scheduler.
+
+    Loads template, creates chain, runs via ChainRunner.
+    Sends result via Telegram if template has send_result flag.
+
+    Args:
+        template_name: Template name from templates/
+        send_fn: Async function to send Telegram messages
+    """
+    try:
+        logger.info(f"Running scheduled template: {template_name}")
+
+        # Load template
+        template = load_template(template_name)
+        trigger = template.get("trigger", {})
+
+        # Check stop_after_hour if present
+        if trigger.get("stop_after_hour"):
+            current_hour = datetime.now().hour
+            if current_hour >= trigger["stop_after_hour"]:
+                logger.info(f"Template {template_name} stopped (after {trigger['stop_after_hour']}:00)")
+                return
+
+        # Create chain
+        chain_id = create_chain(
+            template_name=template_name,
+            status="running"
+        )
+        logger.info(f"Created chain {chain_id} for template {template_name}")
+
+        # Run chain via ChainRunner
+        # Note: Need to inject tool_registry and call_model_fn
+        # For now, use minimal runner with no-op dependencies
+        from tools.registry import TOOL_REGISTRY
+        from infra.model_router import route as model_route
+
+        def call_model_fn(role: str, prompt: str) -> str:
+            routed = model_route(role=role, prompt=prompt)
+            return routed.get("result", "")
+
+        runner = ChainRunner(
+            tool_registry=TOOL_REGISTRY,
+            call_model_fn=call_model_fn,
+            create_chain_fn=create_chain
+        )
+
+        result = runner.run(chain_id, template["steps"])
+        logger.info(f"Chain {chain_id} completed: {result.get('status', 'unknown')}")
+
+        # Send result if template has send_result flag
+        if template.get("send_result", False):
+            await send_fn(f"📋 {template_name}:\n{result.get('message', 'Complete')}")
+
+    except Exception as e:
+        logger.error(f"Scheduled template {template_name} failed: {e}")
+        await send_fn(f"❌ Template {template_name} failed: {str(e)}")
+
+
+def setup_template_scheduler(scheduler: AsyncIOScheduler, send_fn):
+    """
+    Register template-based scheduled jobs with APScheduler.
+
+    Scans templates/ for trigger.schedule configs and registers jobs.
+    Supports interval (minutes) and cron (hour, minute, day_of_week) triggers.
+
+    Args:
+        scheduler: AsyncIOScheduler instance
+        send_fn: Async function to send Telegram messages
+    """
+    templates = list_templates(source="all")
+    scheduled_count = 0
+
+    for template_info in templates:
+        template_name = template_info["name"]
+        try:
+            template = load_template(template_name)
+            trigger = template.get("trigger", {})
+
+            if trigger.get("type") != "schedule":
+                continue
+
+            job_id = f"template_{template_name}"
+
+            if "interval_minutes" in trigger:
+                # Interval schedule
+                scheduler.add_job(
+                    run_scheduled_template,
+                    "interval",
+                    minutes=trigger["interval_minutes"],
+                    args=[template_name, send_fn],
+                    id=job_id,
+                    max_instances=1,
+                    replace_existing=True
+                )
+                logger.info(f"Registered template schedule: {template_name} every {trigger['interval_minutes']}min")
+                scheduled_count += 1
+
+            elif "hour" in trigger and "minute" in trigger:
+                # Cron schedule
+                job_kwargs = {
+                    "hour": trigger["hour"],
+                    "minute": trigger["minute"],
+                    "args": [template_name, send_fn],
+                    "id": job_id,
+                    "max_instances": 1,
+                    "replace_existing": True
+                }
+                if "day_of_week" in trigger:
+                    job_kwargs["day_of_week"] = trigger["day_of_week"]
+
+                scheduler.add_job(
+                    run_scheduled_template,
+                    "cron",
+                    **job_kwargs
+                )
+                day_str = f" day {trigger['day_of_week']}" if 'day_of_week' in trigger else ""
+                logger.info(f"Registered template schedule: {template_name} at {trigger['hour']:02d}:{trigger['minute']:02d}{day_str}")
+                scheduled_count += 1
+
+        except Exception as e:
+            logger.warning(f"Failed to register template schedule for {template_name}: {e}")
+
+    logger.info(f"Template scheduler registered {scheduled_count} jobs")
+
+
 def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     """
     Register autonomous tasks with APScheduler.
@@ -422,6 +552,9 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         scheduler: AsyncIOScheduler instance
         send_fn: Async function to send Telegram messages
     """
+    # Register template-based scheduled jobs first
+    setup_template_scheduler(scheduler, send_fn)
+
     for task in get_all_resolved_tasks():
         schedule = task['schedule']
         task_name = task['name']

@@ -106,6 +106,42 @@ def test_run_diagnostic_partial_failure():
                     assert result["memory_count"] == -1
 
 
+def test_run_diagnostic_queue_depth_numeric():
+    """Mock _exec to return cursor with .fetchone() returning {"c": 5}, assert queue_depth == 5."""
+    from tools.meta.admin import run_diagnostic
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = {"c": 5}
+    with patch("subprocess.run", return_value=MagicMock(stdout="abc1234", returncode=0)):
+        with patch("tools.meta.admin.get_logs", return_value={"ok": True, "lines": []}):
+            with patch("tools.meta.admin._exec", return_value=mock_cursor):
+                with patch("infra.memory_manager.memory_manager", MagicMock(collection=MagicMock())):
+                    result = run_diagnostic()
+                    assert result["queue_depth"] == 5, f"Expected queue_depth=5, got {result.get('queue_depth')}"
+                    # Verify .fetchone() was called (not direct indexing)
+                    assert mock_cursor.fetchone.called, "fetchone() should have been called"
+
+
+def test_query_db_created_at_not_blocked():
+    """Call query_db with 'SELECT id, created_at FROM tasks', assert not blocked."""
+    from tools.meta.director import query_db
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = [{"id": 1, "created_at": "2026-01-01"}]
+    with patch("infra.db.schema._exec", return_value=mock_cursor):
+        result = query_db("SELECT id, created_at FROM tasks LIMIT 1")
+        assert result["ok"] is True, f"Query with created_at should not be blocked, got {result}"
+        assert "error" not in result or "CREATE" not in result.get("error", "")
+
+
+def test_query_db_create_table_still_blocked():
+    """Call query_db with 'CREATE TABLE foo (id INT)', assert blocked."""
+    from tools.meta.director import query_db
+    result = query_db("CREATE TABLE foo (id INT)")
+    assert result["ok"] is False, "CREATE TABLE should be blocked"
+    # Either SELECT guard or keyword guard should block it
+    error = result.get("error", "")
+    assert "SELECT" in error or "CREATE" in error, f"Error should mention SELECT or CREATE, got {result}"
+
+
 # --- registry test ---
 
 def test_get_logs_and_run_diagnostic_in_registry():
@@ -125,6 +161,9 @@ TESTS = [
     ("get_logs_encoding_error", test_get_logs_encoding_error),
     ("run_diagnostic_returns_ok", test_run_diagnostic_returns_ok),
     ("run_diagnostic_partial_failure", test_run_diagnostic_partial_failure),
+    ("run_diagnostic_queue_depth_numeric", test_run_diagnostic_queue_depth_numeric),
+    ("query_db_created_at_not_blocked", test_query_db_created_at_not_blocked),
+    ("query_db_create_table_still_blocked", test_query_db_create_table_still_blocked),
     ("get_logs_and_run_diagnostic_in_registry", test_get_logs_and_run_diagnostic_in_registry),
 ]
 

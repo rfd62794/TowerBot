@@ -5,6 +5,7 @@ All writes to templates go to templates/experimental/ only.
 """
 import json
 import logging
+import re
 import subprocess
 import uuid
 from datetime import datetime, timezone
@@ -431,7 +432,7 @@ def query_db(sql: str, params: list = None) -> dict:
     forbidden = ["DROP", "DELETE", "UPDATE", "INSERT",
                  "ALTER", "CREATE", "TRUNCATE", "REPLACE"]
     for word in forbidden:
-        if word in normalized:
+        if re.search(r'\b' + re.escape(word) + r'\b', normalized, re.IGNORECASE):
             return {
                 "ok": False,
                 "error": f"Forbidden keyword in query: {word}"
