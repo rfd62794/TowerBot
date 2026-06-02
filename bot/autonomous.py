@@ -6,6 +6,7 @@ import logging
 import random
 import psutil
 import requests
+from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.agent import respond
@@ -17,6 +18,7 @@ from infra.db.bot_state import get_dev_mode
 from infra.db.task_queue import get_due_tasks, mark_running, mark_complete, mark_failed
 from scripts.update import check_for_updates
 from infra.chain.observer import observe_completed_chains
+from infra.memory_manager import memory_manager
 
 logger = logging.getLogger("privy.autonomous")
 
@@ -283,6 +285,135 @@ async def process_delegation_queue(send_fn) -> None:
             logger.error(f"[delegation] task {task['id']} failed: {e}")
 
 
+async def self_direction_loop(send_fn):
+    """
+    Daily self-direction loop — Tower reads its state and queues its own tasks.
+
+    Runs at 07:00 daily. Reads current state, uses reasoning model to prioritize
+    3 highest-value tasks, queues them, and saves the plan as memory.
+
+    Args:
+        send_fn: Async function to send Telegram messages
+    """
+    try:
+        from tools.repo.directive import read_current_state
+        from tools.productivity.goals import get_tasks_today, get_upcoming_tasks
+        from tools.communication.gmail import gmail_tools
+        from tools.games.metrics import _games
+        from tools.meta.delegation import delegation_tools
+
+        logger.info("Starting self-direction loop")
+
+        # Read current state
+        state = read_current_state()
+        if not state.get("ok"):
+            logger.error(f"Failed to read current state: {state.get('error')}")
+            return
+
+        # Read tasks
+        tasks_today = get_tasks_today()
+        upcoming_tasks = get_upcoming_tasks(hours=24)
+
+        # Read inbox summary
+        inbox_result = gmail_tools.get_inbox_summary(account="personal")
+
+        # Read itch stats
+        itch_result = _games.get_itch_stats()
+
+        # Read blog posts
+        from tools.communication.blog import blog_tools
+        blog_result = blog_tools.get_blog_posts(status="draft")
+
+        # Build state summary for reasoning model
+        state_summary = f"""
+CURRENT STATE (Phase {state.get('current_phase', 'Unknown')}):
+- Test floor: {state.get('test_floor', {}).get('passing', 0)}/{state.get('test_floor', {}).get('required', 0)}
+- What is built: {', '.join(state.get('what_is_built', [])[:3])}
+- What is next: {', '.join(state.get('what_is_next', [])[:3])}
+- Recent commits: {len(state.get('recent_commits', []))}
+
+TASKS:
+- Tasks due today: {tasks_today.get('count', 0)}
+- Upcoming tasks (24h): {upcoming_tasks.get('count', 0)}
+
+INBOX:
+- Unread count: {inbox_result.get('unread_count', 0)}
+
+ITCH.IO:
+- Games: {itch_result.get('count', 0)}
+
+BLOG:
+- Draft posts: {len(blog_result.get('posts', [])) if blog_result.get('ok') else 0}
+"""
+
+        # Use reasoning model to decide on 3 highest-value tasks
+        reasoning_prompt = f"""
+You are Tower, an autonomous agent. Review the current state below and identify the 3 highest-value tasks to queue for today.
+
+{state_summary}
+
+Respond with exactly 3 task descriptions, one per line. Each task should:
+- Be actionable and specific
+- Align with current phase priorities
+- Be achievable with available tools
+- Not require user input
+
+Format your response as:
+1. [Task description]
+2. [Task description]
+3. [Task description]
+"""
+
+        routed = route(role="reasoning", prompt=reasoning_prompt)
+        result = routed["result"]
+        logger.info(f"Reasoning model suggested: {result[:200]}")
+
+        # Parse the 3 tasks
+        task_lines = [line.strip() for line in result.split('\n') if line.strip() and line[0].isdigit()]
+        tasks_to_queue = task_lines[:3]
+
+        # Queue each task
+        queued_count = 0
+        for task_desc in tasks_to_queue:
+            try:
+                # Extract task description (remove number prefix)
+                clean_desc = task_desc.split('.', 1)[1].strip() if '.' in task_desc else task_desc
+                queue_result = delegation_tools.queue_task(
+                    prompt=clean_desc,
+                    task_name="self_direction",
+                    priority="normal",
+                    run_immediately=True
+                )
+                if queue_result.get("ok"):
+                    queued_count += 1
+                    logger.info(f"Queued task: {clean_desc[:50]}")
+                else:
+                    logger.warning(f"Failed to queue task: {queue_result.get('error')}")
+            except Exception as e:
+                logger.error(f"Error queuing task: {e}")
+
+        # Save plan as memory
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        plan_content = f"""
+Self-direction plan for {date_str}:
+- Tasks queued: {queued_count}/3
+- Tasks:
+{chr(10).join(f'  - {t}' for t in tasks_to_queue)}
+- Reasoning model used: {routed.get('model_used', 'unknown')}
+- Reasoning result: {result}
+"""
+        memory_key = f"autonomous_plan_{date_str}"
+        memory_manager.save(memory_key, plan_content, layer="project")
+        logger.info(f"Saved plan to memory: {memory_key}")
+
+        # Send notification
+        await send_fn(f"🤖 Self-direction complete: {queued_count} tasks queued for {date_str}")
+
+    except Exception as e:
+        logger.error(f"Self-direction loop failed: {e}")
+        await send_fn(f"❌ Self-direction failed: {str(e)}")
+
+
 def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     """
     Register autonomous tasks with APScheduler.
@@ -399,3 +530,16 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         replace_existing=True
     )
     logger.info("Registered weekly digest: Sunday 08:00")
+
+    # Register self-direction loop job
+    scheduler.add_job(
+        self_direction_loop,
+        "cron",
+        hour=7,
+        minute=0,
+        id='self_direction',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered self-direction loop: daily 07:00")

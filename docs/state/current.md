@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 24 — Complete
+Phase 26 — Complete
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -91,8 +91,18 @@ Phase 24 — Complete
   - 11 new tests in test_model_wiring.py
   - Test floor: 548 passed, 0 failed
 
+- Phase 25: Self-Direction Loop
+  - bot/autonomous.py: Added self_direction_loop() function for daily autonomous task planning
+  - Reads current state via read_current_state(), get_tasks_today(), get_upcoming_tasks(), get_inbox_summary(), get_itch_stats(), get_blog_posts()
+  - Uses model_router with reasoning role to identify 3 highest-value tasks for the day
+  - Queues each task via delegation_tools.queue_task() with task_name="self_direction"
+  - Saves plan as memory with key='autonomous_plan_{date}' in project layer
+  - APScheduler job registered to fire daily at 07:00 with id='self_direction'
+  - Sends Telegram notification on completion with task count
+  - Autonomous self-direction achieved — Tower now plans its own work
+
 ## Next
-Phase 25: TBD
+Phase 26: TBD
 
 ---
 
