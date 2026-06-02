@@ -199,7 +199,21 @@ routes:
       - get_ollama_model_sizes
       - get_privybot_memory
       - get_daily_cost
-    description: "System resources, Ollama status, budget tracking"
+      - get_chains
+      - get_chain
+      - get_chain_payload
+      - start_chain
+      - cancel_chain
+      - resume_chain
+      - list_templates
+      - get_template
+      - write_template
+      - delete_experimental_template
+      - list_memories
+      - delete_memory
+      - get_promotion_candidates
+      - query_db
+    description: "System resources, Ollama status, budget tracking, director access"
 
   tasks:
     model: openrouter/free
