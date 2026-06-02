@@ -72,6 +72,12 @@ from .productivity.personal import (
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .meta.sync import sync_db_status, sync_db_export, sync_db_import
 from .meta.admin import purge_null_tasks, get_logs, run_diagnostic
+from .meta.tool_registry import (
+    a2a_search,
+    register_tool_from_spec,
+    list_experimental_tools,
+    promote_tool,
+)
 from .meta.delegation import delegation_tools
 from .meta.director import (
     get_chains, get_chain, get_chain_payload,
@@ -2528,6 +2534,77 @@ TOOL_REGISTRY = {
                 }
             }
         }
+    },
+    "a2a_search": {
+        "fn": a2a_search,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "a2a_search",
+                "description": "Search a2asearch.com index for MCP tools and skills. Returns matching tools with name, description, source, and install command.\n\nRETURNS: dict with ok, count, results (list with name, description, source, install_command, tags).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search terms (e.g. 'weather forecast', 'github issues')"},
+                        "limit": {"type": "integer", "description": "Max results (default 10, max 25)"},
+                    },
+                    "required": ["query"],
+                },
+            },
+        },
+    },
+    "register_tool_from_spec": {
+        "fn": register_tool_from_spec,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "register_tool_from_spec",
+                "description": "Fetch an OpenAPI spec URL, generate PrivyBot tool definitions, and register them to the experimental_tools table. Each generated tool is registered as 'experimental' status and is callable immediately.\n\nRETURNS: dict with ok, registered (list of tool names), skipped, errors.\n\nDO NOT CALL: without a valid OpenAPI spec URL. Use a2a_search first to discover available tools.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "spec_url": {"type": "string", "description": "URL to OpenAPI/Swagger JSON spec"},
+                        "tool_prefix": {"type": "string", "description": "Optional prefix for generated tool names"},
+                        "max_tools": {"type": "integer", "description": "Max tools to generate from spec (default 5, max 20)"},
+                    },
+                    "required": ["spec_url"],
+                },
+            },
+        },
+    },
+    "list_experimental_tools": {
+        "fn": list_experimental_tools,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_experimental_tools",
+                "description": "List dynamically registered tools with their status. Filter by status: 'experimental', 'promoted', 'failed', or None for all.\n\nRETURNS: dict with ok, count, tools (list with name, description, status, use_count, error_count, created_at).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "string", "description": "Filter by status: 'experimental' | 'promoted' | 'failed' | None (all)"},
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "promote_tool": {
+        "fn": promote_tool,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "promote_tool",
+                "description": "Promote an experimental tool to promoted status. Explicit call required — never auto-promotes. Sends notification on promotion.\n\nRETURNS: dict with ok, name, previous_status, promoted_at.\n\nDO NOT CALL: without verifying the tool is safe and correct. This is a permanent promotion.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Tool name to promote"},
+                    },
+                    "required": ["name"],
+                },
+            },
+        },
     },
     "queue_task": {
         "fn": delegation_tools.queue_task,

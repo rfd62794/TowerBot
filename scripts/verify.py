@@ -74,6 +74,7 @@ TEST_FILES = [
     "tests/test_admin_tools.py",
     "tests/test_phase21.py",
     "tests/test_director_tools.py",
+    "tests/test_tool_registry.py",
 ]
 
 
