@@ -100,7 +100,8 @@ routes:
       - fetch_url
       - useless_fact
       - number_fact
-    description: "Web search, Wikipedia, news, URL fetch, random facts"
+      - random_quote
+    description: "Web search, Wikipedia, news, URL fetch, random facts, quotes"
 
   steam:
     model: openrouter/free

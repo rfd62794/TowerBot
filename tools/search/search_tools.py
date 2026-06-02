@@ -367,6 +367,28 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch number fact: {e}")
 
+    def random_quote(self) -> dict:
+        """
+        Get a random quote from Quotable API.
+
+        Returns:
+            Dict with quote content, author, and tags
+        """
+        try:
+            resp = httpx.get("https://api.quotable.io/random", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return self.success({
+                "content": data.get("content", ""),
+                "author": data.get("author", ""),
+                "tags": data.get("tags", []),
+                "authorSlug": data.get("authorSlug", "")
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Quotable API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch quote: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -510,3 +532,13 @@ def number_fact(number: int = None, fact_type: str = "trivia") -> dict:
         Dict with fact text, number, and type
     """
     return _search.number_fact(number, fact_type)
+
+
+def random_quote() -> dict:
+    """
+    Get a random quote from Quotable API.
+
+    Returns:
+        Dict with quote content, author, and tags
+    """
+    return _search.random_quote()

@@ -288,6 +288,29 @@ def test_number_fact_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("random_quote: returns content, author, and tags keys")
+def test_random_quote_success():
+    from tools.search.search_tools import random_quote
+    result = random_quote()
+    if result.get("ok") == True:
+        assert "content" in result, "Expected 'content' key on success"
+        assert "author" in result, "Expected 'author' key on success"
+        assert "tags" in result, "Expected 'tags' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("random_quote: handles API error gracefully")
+def test_random_quote_error():
+    from tools.search.search_tools import random_quote
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = random_quote()
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
