@@ -41,6 +41,15 @@ from .productivity.goals import (
     add_new_task,
     suggest_goal_progress,
 )
+from .productivity.google_tasks import (
+    list_google_tasks,
+    get_google_task,
+    create_google_task,
+    update_google_task,
+    complete_google_task,
+    delete_google_task,
+    sync_google_tasks,
+)
 from .productivity.calendar import get_today_schedule, get_upcoming_events, check_availability
 from .communication.gmail import (
     get_inbox_summary,
@@ -1346,6 +1355,130 @@ TOOL_REGISTRY = {
                         "task_id": {"type": "integer", "description": "ID of the task to delete"},
                     },
                     "required": ["task_id"],
+                },
+            },
+        },
+    },
+    "list_google_tasks": {
+        "fn": list_google_tasks,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_google_tasks",
+                "description": "List all tasks from Google Tasks. Optionally include completed tasks.\n\nRETURNS: list of tasks with id, title, notes, due_date, status, count.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "show_completed": {"type": "boolean", "description": "Include completed tasks (default: False)"},
+                    },
+                    "required": [],
+                },
+            },
+        },
+    },
+    "get_google_task": {
+        "fn": get_google_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_google_task",
+                "description": "Get a specific Google Task by ID.\n\nRETURNS: task details with id, title, notes, due_date, status.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "Google Task ID"},
+                    },
+                    "required": ["task_id"],
+                },
+            },
+        },
+    },
+    "create_google_task": {
+        "fn": create_google_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "create_google_task",
+                "description": "Create a new task in Google Tasks with duplicate prevention and date normalization. Past due dates are automatically pushed to today.\n\nRETURNS: created task with id, title, notes, due_date, status. Returns error if duplicate exists.\n\nDO NOT CALL: without checking for duplicates first if unsure.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string", "description": "Task title (required)"},
+                        "notes": {"type": "string", "description": "Optional notes/description"},
+                        "due_date": {"type": "string", "description": "Due date in YYYY-MM-DD format (optional)"},
+                        "check_duplicate": {"type": "boolean", "description": "Check for existing duplicates (default: True)"},
+                    },
+                    "required": ["title"],
+                },
+            },
+        },
+    },
+    "update_google_task": {
+        "fn": update_google_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "update_google_task",
+                "description": "Update an existing Google Task with date normalization. Past due dates are automatically pushed to today.\n\nRETURNS: updated task with id, title, notes, due_date, status.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "Google Task ID (required)"},
+                        "title": {"type": "string", "description": "New title (optional)"},
+                        "notes": {"type": "string", "description": "New notes (optional)"},
+                        "due_date": {"type": "string", "description": "New due date in YYYY-MM-DD format (optional)"},
+                        "status": {"type": "string", "description": "New status: 'needsAction' or 'completed' (optional)"},
+                    },
+                    "required": ["task_id"],
+                },
+            },
+        },
+    },
+    "complete_google_task": {
+        "fn": complete_google_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "complete_google_task",
+                "description": "Mark a Google Task as completed.\n\nRETURNS: success message.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "Google Task ID (required)"},
+                    },
+                    "required": ["task_id"],
+                },
+            },
+        },
+    },
+    "delete_google_task": {
+        "fn": delete_google_task,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "delete_google_task",
+                "description": "Delete a Google Task permanently.\n\nRETURNS: success message.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "Google Task ID (required)"},
+                    },
+                    "required": ["task_id"],
+                },
+            },
+        },
+    },
+    "sync_google_tasks": {
+        "fn": sync_google_tasks,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "sync_google_tasks",
+                "description": "Trigger full sync between local DB and Google Tasks. Pushes new tasks, completions, and updates, pulls new tasks from Google.\n\nRETURNS: sync status with counts (pushed_new, pushed_completions, pushed_updates, pulled_new).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
                 },
             },
         },
