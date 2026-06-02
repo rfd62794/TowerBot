@@ -221,6 +221,79 @@ class BlogTools(BaseTool):
 
         return self.success({"posts": posts})
 
+    def get_pages(self, status: str = "publish") -> dict:
+        """List all WordPress pages on rfditservices.com."""
+        handler = WordPressAPIHandler()
+        result = handler.get_pages(status=status)
+
+        if "error" in result:
+            return self.error(result["error"])
+
+        pages_data = result.get("pages", [])
+        pages = []
+        for page in pages_data:
+            pages.append({
+                "id": page.get("id"),
+                "title": page.get("title", {}).get("rendered"),
+                "status": page.get("status"),
+                "link": page.get("link"),
+                "modified": page.get("modified")
+            })
+
+        return self.success({"pages": pages})
+
+    def get_page(self, page_id: int) -> dict:
+        """Get full content of a WordPress page by ID."""
+        handler = WordPressAPIHandler()
+        result = handler.get_page(page_id)
+
+        if "error" in result:
+            return self.error(result["error"])
+
+        return self.success({
+            "id": result.get("id"),
+            "title": result.get("title", {}).get("rendered"),
+            "content": result.get("content", {}).get("rendered"),
+            "status": result.get("status"),
+            "link": result.get("link")
+        })
+
+    def update_page(self, page_id: int, title: str = None, content: str = None, status: str = None) -> dict:
+        """
+        Update a WordPress page content and/or title.
+        NEVER changes publish status unless status param explicitly provided.
+        Default: preserves current status.
+        DO NOT CALL: with status='publish' without prior approval_wait step.
+        """
+        handler = WordPressAPIHandler()
+        result = handler.update_page(page_id, title=title, content=content, status=status)
+
+        if "error" in result:
+            return self.error(result["error"])
+
+        return self.success({
+            "page_id": result.get("id"),
+            "link": result.get("link"),
+            "status": result.get("status")
+        })
+
+    def create_page(self, title: str, content: str, status: str = "draft") -> dict:
+        """
+        Create a new WordPress page. Default status: draft.
+        DO NOT CALL: with status='publish' without prior approval_wait step.
+        """
+        handler = WordPressAPIHandler()
+        result = handler.create_page(title, content, status=status)
+
+        if "error" in result:
+            return self.error(result["error"])
+
+        return self.success({
+            "page_id": result.get("id"),
+            "link": result.get("link"),
+            "status": result.get("status")
+        })
+
     def advance_post_pipeline(self, topic: str = None) -> dict:
         """
         Advance the most in-progress blog post by exactly one stage.
