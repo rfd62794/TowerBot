@@ -133,13 +133,66 @@ def handle_spawn_chain(step: dict, payload: dict,
     return {**payload, 'spawned_chain_id': child_chain['id']}
 
 
-def handle_approval_wait(step: dict, payload: dict) -> dict:
+def handle_approval_wait(step: dict, payload: dict,
+                         send_approval_fn: Callable = None) -> dict:
     """
-    Approval wait — NOT implemented in Phase 20a.
-    Raises StepSkipped to pause the chain at this step.
-    Phase 20b wires this to the Telegram router.
+    Pause the chain and send an approval request to Telegram.
+    Creates an approval_listeners row.
+    Calls send_approval_fn(message_dict, chat_id) to deliver the message.
+    Always raises StepSkipped — the chain resumes via the reply router.
+
+    step config requires:
+      telegram_chat_id: str — where to send the approval request
+      summary_field: str — payload field to use as the approval summary
+                           (defaults to showing payload keys)
+    send_approval_fn: callable(message_dict, chat_id) — injected by runner
     """
-    raise StepSkipped("approval_wait not yet implemented — Phase 20b")
+    from infra.chain.approval import create_listener, build_approval_message
+
+    config = step.get('config', {})
+    chat_id = config.get('telegram_chat_id')
+    summary_field = config.get('summary_field')
+
+    if not chat_id:
+        raise StepError(
+            f"approval_wait step missing telegram_chat_id: {step['id']}"
+        )
+
+    chain_id = step.get('chain_id', '')
+    step_id = step.get('id', '')
+    step_name = step.get('name', 'approval')
+
+    # Build summary from payload
+    if summary_field and summary_field in payload:
+        summary = str(payload[summary_field])[:500]
+    else:
+        summary = f"Payload keys: {', '.join(payload.keys())}"
+
+    listener = create_listener(
+        chain_id=chain_id,
+        step_id=step_id,
+        telegram_chat_id=chat_id
+    )
+
+    message = build_approval_message(
+        chain_id=chain_id,
+        step_name=step_name,
+        payload_summary=summary,
+        listener_id=listener['id']
+    )
+
+    if send_approval_fn:
+        try:
+            send_approval_fn(message, chat_id)
+        except Exception as e:
+            # Log but don't fail — listener is created, message may
+            # have been sent. Router can still resolve it.
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Approval message send failed: {e}"
+            )
+
+    raise StepSkipped(f"Waiting for approval: listener {listener['id']}")
 
 
 # --- Helpers ---
