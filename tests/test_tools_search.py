@@ -467,6 +467,29 @@ def test_usgs_earthquake_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("iss_location: returns latitude, longitude, and timestamp keys")
+def test_iss_location_success():
+    from tools.search.search_tools import iss_location
+    result = iss_location()
+    if result.get("ok") == True:
+        assert "latitude" in result, "Expected 'latitude' key on success"
+        assert "longitude" in result, "Expected 'longitude' key on success"
+        assert "timestamp" in result, "Expected 'timestamp' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("iss_location: handles API error gracefully")
+def test_iss_location_error():
+    from tools.search.search_tools import iss_location
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = iss_location()
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

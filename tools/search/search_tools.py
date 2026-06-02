@@ -609,6 +609,28 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch earthquake data: {e}")
 
+    def iss_location(self) -> dict:
+        """
+        Get current International Space Station location from Open Notify API.
+
+        Returns:
+            Dict with ISS latitude, longitude, and timestamp
+        """
+        try:
+            resp = httpx.get("http://api.open-notify.org/iss-now.json", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            pos = data.get("iss_position", {})
+            return self.success({
+                "latitude": pos.get("latitude", 0),
+                "longitude": pos.get("longitude", 0),
+                "timestamp": data.get("timestamp", 0)
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Open Notify API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch ISS location: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -849,3 +871,13 @@ def usgs_earthquake(magnitude: float = None, limit: int = 10) -> dict:
         Dict with earthquake data including magnitude, location, time, etc.
     """
     return _search.usgs_earthquake(magnitude, limit)
+
+
+def iss_location() -> dict:
+    """
+    Get current International Space Station location from Open Notify API.
+
+    Returns:
+        Dict with ISS latitude, longitude, and timestamp
+    """
+    return _search.iss_location()
