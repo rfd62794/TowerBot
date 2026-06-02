@@ -357,6 +357,28 @@ def test_spacex_latest_launch_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("jina_read: returns content and url keys")
+def test_jina_read_success():
+    from tools.search.search_tools import jina_read
+    result = jina_read("https://example.com")
+    if result.get("ok") == True:
+        assert "content" in result, "Expected 'content' key on success"
+        assert "url" in result, "Expected 'url' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("jina_read: handles API error gracefully")
+def test_jina_read_error():
+    from tools.search.search_tools import jina_read
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = jina_read("https://example.com")
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
