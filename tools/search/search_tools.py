@@ -435,6 +435,29 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch SpaceX launch data: {e}")
 
+    def jina_read(self, url: str) -> dict:
+        """
+        Read a URL and return clean markdown content via Jina Reader.
+
+        Args:
+            url: The URL to read
+
+        Returns:
+            Dict with markdown content and URL
+        """
+        try:
+            jina_url = f"https://r.jina.ai/{url}"
+            resp = httpx.get(jina_url, timeout=15)
+            resp.raise_for_status()
+            return self.success({
+                "content": resp.text,
+                "url": url
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Jina Reader error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to read URL with Jina: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -608,3 +631,16 @@ def spacex_latest_launch() -> dict:
         Dict with launch name, date, success status, and details
     """
     return _search.spacex_latest_launch()
+
+
+def jina_read(url: str) -> dict:
+    """
+    Read a URL and return clean markdown content via Jina Reader.
+
+    Args:
+        url: The URL to read
+
+    Returns:
+        Dict with markdown content and URL
+    """
+    return _search.jina_read(url)
