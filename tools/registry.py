@@ -981,6 +981,63 @@ TOOL_REGISTRY = {
             }
         }
     },
+    "advance_post_pipeline": {
+        "fn": blog_tools.advance_post_pipeline,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "advance_post_pipeline",
+                "description": "Advance the most in-progress blog post by exactly one stage. Returns current stage, action taken, and next step.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Optional topic to start new post. If not provided, uses most advanced in-progress post."
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "get_post_pipeline_state": {
+        "fn": blog_tools.get_post_pipeline_state,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_post_pipeline_state",
+                "description": "Get the current state of the blog post pipeline including stage, skeleton, research, and WordPress draft info.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Optional topic to get specific post. If not provided, returns most advanced post."
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "create_draft_from_pipeline": {
+        "fn": blog_tools.create_draft_from_pipeline,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "create_draft_from_pipeline",
+                "description": "Create a WordPress draft from the current blog pipeline state. Uses the topic as title and skeleton as content. Updates pipeline to stage 4.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string",
+                            "description": "Optional topic to use. If not provided, uses most advanced post in pipeline."
+                        }
+                    }
+                }
+            }
+        }
+    },
     "update_blog_post": {
         "fn": blog_tools.update_blog_post,
         "definition": {
