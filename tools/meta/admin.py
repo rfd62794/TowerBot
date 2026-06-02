@@ -131,7 +131,7 @@ def run_diagnostic() -> dict:
     # Memory count
     try:
         rows = _exec(
-            "SELECT COUNT(*) as c FROM memories WHERE active=1"
+            "SELECT COUNT(*) as c FROM memory WHERE active=1"
         )
         result["memory_count"] = rows[0]["c"] if rows else 0
     except Exception:
@@ -140,7 +140,8 @@ def run_diagnostic() -> dict:
     # Chroma status
     try:
         from infra.memory_manager import memory_manager
-        collection = memory_manager.collection
+        # Try to get collection - this will fail if Chroma is unavailable
+        collection = memory_manager._get_collection()
         if collection is None:
             result["chroma_status"] = "unavailable"
         else:
