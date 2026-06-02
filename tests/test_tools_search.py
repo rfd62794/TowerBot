@@ -311,6 +311,29 @@ def test_random_quote_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("wiki_random: returns title, extract, and url keys")
+def test_wiki_random_success():
+    from tools.search.search_tools import wiki_random
+    result = wiki_random()
+    if result.get("ok") == True:
+        assert "title" in result, "Expected 'title' key on success"
+        assert "extract" in result, "Expected 'extract' key on success"
+        assert "url" in result, "Expected 'url' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("wiki_random: handles API error gracefully")
+def test_wiki_random_error():
+    from tools.search.search_tools import wiki_random
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = wiki_random()
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
