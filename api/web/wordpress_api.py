@@ -220,3 +220,79 @@ class WordPressAPIHandler(BaseAPIHandler):
                 raise Exception(f"WordPress API error: {posts.get('message', 'Unknown error')}")
             return {"posts": posts}
         return self.call("search", self.hash(query), _live)
+
+    def get_pages(self, status: str = "publish") -> dict:
+        """GET /wp-json/wp/v2/pages"""
+        def _live():
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/pages"
+            params = {"per_page": 100, "_fields": "id,title,status,link,modified"}
+            if status != "any":
+                params["status"] = status
+            response = requests.get(url, auth=self._get_client(), params=params)
+            pages = response.json()
+            if isinstance(pages, dict) and "code" in pages:
+                raise Exception(f"WordPress API error: {pages.get('message', 'Unknown error')}")
+            return {"pages": pages}
+        return self.call("pages", self.hash(status), _live)
+
+    def get_page(self, page_id: int) -> dict:
+        """GET /wp-json/wp/v2/pages/{id}"""
+        def _live():
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/pages/{page_id}"
+            response = requests.get(url, auth=self._get_client())
+            return response.json()
+        return self.call(f"page_{page_id}", self.hash(page_id), _live)
+
+    def update_page(self, page_id: int, title: str = None, content: str = None, status: str = None) -> dict:
+        """PUT /wp-json/wp/v2/pages/{id}"""
+        # Write operation — bypass self.call() entirely
+        try:
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/pages/{page_id}"
+            data = {}
+            if title:
+                data["title"] = title
+            if content:
+                data["content"] = content
+            if status:
+                data["status"] = status
+            
+            if not data:
+                return {"error": "Nothing to update — no fields provided", "_live_failed": True}
+            
+            response = requests.put(url, auth=self._get_client(), json=data)
+            
+            if response.status_code >= 400:
+                try:
+                    error_data = response.json()
+                    return {"error": error_data.get("message", f"HTTP {response.status_code}"), "_live_failed": True}
+                except:
+                    return {"error": f"HTTP {response.status_code}", "_live_failed": True}
+            
+            result = response.json()
+            if not isinstance(result, dict) or "id" not in result:
+                return {"error": f"Invalid response from WordPress: {result}", "_live_failed": True}
+            
+            cache.invalidate(self.cache_key(f"page_{page_id}"))
+            return result
+        except Exception as e:
+            return {"error": str(e), "_live_failed": True}
+
+    def create_page(self, title: str, content: str, status: str = "draft") -> dict:
+        """POST /wp-json/wp/v2/pages with status=draft by default"""
+        # Write operation — bypass self.call() entirely
+        try:
+            url = f"{os.environ['WORDPRESS_URL']}/wp-json/wp/v2/pages"
+            data = {
+                "title": title,
+                "content": content,
+                "status": status
+            }
+            author_id = os.environ.get("WORDPRESS_AUTHOR_ID")
+            if author_id:
+                data["author"] = int(author_id)
+            response = requests.post(url, auth=self._get_client(), json=data)
+            result = response.json()
+            cache.invalidate(self.cache_key("pages"))
+            return result
+        except Exception as e:
+            return {"error": str(e), "_live_failed": True}

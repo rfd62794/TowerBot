@@ -1098,6 +1098,105 @@ TOOL_REGISTRY = {
             }
         }
     },
+    "get_pages": {
+        "fn": blog_tools.get_pages,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_pages",
+                "description": "List all WordPress pages on rfditservices.com.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "description": "Filter by status: publish, draft, or any (default: publish)"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "get_page": {
+        "fn": blog_tools.get_page,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_page",
+                "description": "Get full content of a WordPress page by ID.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "page_id": {
+                            "type": "integer",
+                            "description": "WordPress page ID"
+                        }
+                    },
+                    "required": ["page_id"]
+                }
+            }
+        }
+    },
+    "update_page": {
+        "fn": blog_tools.update_page,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "update_page",
+                "description": "Update a WordPress page content and/or title. NEVER changes publish status unless status param explicitly provided. Default: preserves current status. DO NOT CALL with status='publish' without prior approval_wait step.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "page_id": {
+                            "type": "integer",
+                            "description": "WordPress page ID"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Updated title (optional)"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Updated content (optional)"
+                        },
+                        "status": {
+                            "type": "string",
+                            "description": "New status: draft, publish, future (optional, preserves current if not provided)"
+                        }
+                    },
+                    "required": ["page_id"]
+                }
+            }
+        }
+    },
+    "create_page": {
+        "fn": blog_tools.create_page,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "create_page",
+                "description": "Create a new WordPress page. Default status: draft. DO NOT CALL with status='publish' without prior approval_wait step.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "Page title"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Page content (HTML)"
+                        },
+                        "status": {
+                            "type": "string",
+                            "description": "Page status: draft or publish (default: draft)"
+                        }
+                    },
+                    "required": ["title", "content"]
+                }
+            }
+        }
+    },
     "set_post_excerpt": {
         "fn": blog_tools.set_post_excerpt,
         "definition": {

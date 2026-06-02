@@ -200,6 +200,10 @@ routes:
       - advance_post_pipeline
       - get_post_pipeline_state
       - create_draft_from_pipeline
+      - get_pages
+      - get_page
+      - update_page
+      - create_page
     description: "Blog posts, drafts, publishing"
 
   utility:
