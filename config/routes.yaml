@@ -23,6 +23,8 @@ triggers:
     phrases: [iss location, space station, where is iss, iss position, international space station]
   open_library_search:
     phrases: [search books, book search, find book, open library, library search]
+  boardgame_search:
+    phrases: [board game, boardgame, bgg, board game search, find board game]
 
 routes:
   chat:
@@ -132,11 +134,12 @@ routes:
       - usgs_earthquake
       - iss_location
       - open_library_search
+      - boardgame_search
       - useless_fact
       - number_fact
       - random_quote
       - spacex_latest_launch
-    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, Hacker News, earthquakes, ISS, Open Library, random facts, quotes, SpaceX"
+    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, Hacker News, earthquakes, ISS, Open Library, BoardGameGeek, random facts, quotes, SpaceX"
 
   steam:
     model: openrouter/free

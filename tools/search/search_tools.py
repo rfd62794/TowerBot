@@ -668,6 +668,44 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to search Open Library: {e}")
 
+    def boardgame_search(self, query: str, limit: int = 5) -> dict:
+        """
+        Search for board games via BoardGameGeek API.
+
+        Args:
+            query: Search query (game name)
+            limit: Maximum results to return (default 5)
+
+        Returns:
+            Dict with game data including name, year, rating, and description
+        """
+        try:
+            url = f"https://boardgamegeek.com/xmlapi2/search"
+            params = {"query": query, "type": "boardgame"}
+            resp = httpx.get(url, params=params, timeout=15)
+            resp.raise_for_status()
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(resp.text)
+            items = root.findall("item")
+            results = []
+            for item in items[:limit]:
+                name_elem = item.find("name")
+                year_elem = item.find("yearpublished")
+                results.append({
+                    "id": item.get("id", ""),
+                    "name": name_elem.get("value", "") if name_elem is not None else "",
+                    "year": year_elem.get("value", "") if year_elem is not None else ""
+                })
+            return self.success({
+                "query": query,
+                "count": len(results),
+                "results": results
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"BoardGameGeek API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to search BoardGameGeek: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -932,3 +970,17 @@ def open_library_search(query: str, limit: int = 5) -> dict:
         Dict with book data including title, author, year, and cover URL
     """
     return _search.open_library_search(query, limit)
+
+
+def boardgame_search(query: str, limit: int = 5) -> dict:
+    """
+    Search for board games via BoardGameGeek API.
+
+    Args:
+        query: Search query (game name)
+        limit: Maximum results to return (default 5)
+
+    Returns:
+        Dict with game data including name, year, rating, and description
+    """
+    return _search.boardgame_search(query, limit)

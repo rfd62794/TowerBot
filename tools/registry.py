@@ -29,7 +29,7 @@ from .content.discovery import (
 )
 from .games.recommendations import get_content_recommendations
 from .games.metrics import get_game_metrics, get_installed_games, get_sale_info, get_itch_stats
-from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits, useless_fact, number_fact, random_quote, wiki_random, spacex_latest_launch, jina_read, country_info, cratesio_info, hackernews_search, usgs_earthquake, iss_location, open_library_search
+from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits, useless_fact, number_fact, random_quote, wiki_random, spacex_latest_launch, jina_read, country_info, cratesio_info, hackernews_search, usgs_earthquake, iss_location, open_library_search, boardgame_search
 from .productivity.goals import (
     save_commitment,
     get_goals_list,
@@ -770,6 +770,30 @@ TOOL_REGISTRY = {
                         "query": {
                             "type": "string",
                             "description": "Search query (title, author, or subject)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default 5)"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+    },
+    "boardgame_search": {
+        "fn": boardgame_search,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "boardgame_search",
+                "description": "Search for board games via BoardGameGeek API by name. Returns game ID, name, and year published. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query (game name)"
                         },
                         "limit": {
                             "type": "integer",
