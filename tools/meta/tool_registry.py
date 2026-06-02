@@ -199,7 +199,7 @@ def _generate_tools_from_spec(spec: dict, prefix: str,
 
             # Build tool name
             if op_id:
-                raw_name = op_id.lower().replace("-", "_").replace(" ", "_")
+                raw_name = op_id.replace("-", "_").replace(" ", "_")
             else:
                 clean_path = path.strip("/").replace("/", "_").replace(
                     "{", "").replace("}", "")
