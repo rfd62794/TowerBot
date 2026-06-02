@@ -330,7 +330,7 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     logger.info("Registered chain observer: every 30 minutes")
 
     # Register weekly digest job
-    async def send_weekly_digest():
+    async def send_weekly_digest(send_fn):
         """Sunday morning digest of chain activity and promotion candidates."""
         from infra.chain.observer import get_promotion_candidates
         from infra.db.chains import list_chains
