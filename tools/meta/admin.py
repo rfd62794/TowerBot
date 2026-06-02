@@ -138,9 +138,11 @@ def run_diagnostic() -> dict:
         result["memory_count"] = -1
 
     # Chroma status
+    # KNOWN COMPROMISE: MemoryManager has no public heartbeat method.
+    # Using private _get_collection() as best available signal.
+    # If Chroma init fails, this will catch the exception.
     try:
         from infra.memory_manager import memory_manager
-        # Try to get collection - this will fail if Chroma is unavailable
         collection = memory_manager._get_collection()
         if collection is None:
             result["chroma_status"] = "unavailable"
