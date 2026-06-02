@@ -498,6 +498,39 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch country info: {e}")
 
+    def cratesio_info(self, crate_name: str) -> dict:
+        """
+        Get Rust crate information from crates.io API.
+
+        Args:
+            crate_name: Name of the Rust crate
+
+        Returns:
+            Dict with crate data including name, version, description, downloads, etc.
+        """
+        try:
+            url = f"https://crates.io/api/v1/crates/{crate_name}"
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            crate = data.get("crate", {})
+            return self.success({
+                "name": crate.get("name", ""),
+                "description": crate.get("description", ""),
+                "max_version": crate.get("max_version", ""),
+                "downloads": crate.get("downloads", 0),
+                "recent_downloads": crate.get("recent_downloads", 0),
+                "homepage": crate.get("homepage", ""),
+                "repository": crate.get("repository", ""),
+                "updated_at": crate.get("updated_at", "")
+            })
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return self.error(f"Crate '{crate_name}' not found on crates.io")
+            return self.error(f"crates.io API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch crate info: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -697,3 +730,16 @@ def country_info(name: str = None) -> dict:
         Dict with country data including name, capital, region, population, etc.
     """
     return _search.country_info(name)
+
+
+def cratesio_info(crate_name: str) -> dict:
+    """
+    Get Rust crate information from crates.io API.
+
+    Args:
+        crate_name: Name of the Rust crate
+
+    Returns:
+        Dict with crate data including name, version, description, downloads, etc.
+    """
+    return _search.cratesio_info(crate_name)
