@@ -243,6 +243,28 @@ def test_github_structure():
                 assert "url" in commit, "Expected 'url' in commit"
 
 
+@test("useless_fact: returns fact and source keys")
+def test_useless_fact_success():
+    from tools.search.search_tools import useless_fact
+    result = useless_fact()
+    if result.get("ok") == True:
+        assert "fact" in result, "Expected 'fact' key on success"
+        assert "source" in result, "Expected 'source' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("useless_fact: handles API error gracefully")
+def test_useless_fact_error():
+    from tools.search.search_tools import useless_fact
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = useless_fact()
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
