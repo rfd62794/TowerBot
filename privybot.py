@@ -35,11 +35,11 @@ if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):
 
 from infra.db import init_db
 from bot.report import init_report
-from bot.transport import handle_message
+from bot.transport import handle_message, handle_callback_query
 from bot.scheduler import run_scheduler, check_missed_briefing
 from bot.autonomous import setup_autonomous_scheduler
 from infra.polling import polling_manager
-from telegram.ext import ApplicationBuilder, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters
 from telegram.request import HTTPXRequest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -180,6 +180,8 @@ if __name__ == "__main__":
 
     # Add message handler
     app.add_handler(MessageHandler(filters.TEXT, handle_message))
+    # Add callback query handler (approval buttons)
+    app.add_handler(CallbackQueryHandler(handle_callback_query))
 
     # Layer 3 — report (inject real send, HTML-safe)
     async def send_to_telegram(text: str) -> None:

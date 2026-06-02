@@ -11,6 +11,7 @@ from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
     MessageHandler,
+    CallbackQueryHandler,
     ContextTypes,
     filters,
 )
@@ -19,6 +20,7 @@ from telegram.constants import ParseMode
 from bot.router import route
 from bot.formatter import get_tool_display, format_response
 from bot.thinking import get_current_tool
+from bot.approval_router import is_approval_callback, handle_approval_callback
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
@@ -116,7 +118,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Format response for HTML parse mode
     response = format_response(response)
-    
+
     # Split oversized responses before sending (Telegram hard limit: 4096 chars).
     # Each chunk gets the same HTML → plain-text retry/fallback logic.
     for chunk in _chunk_message(response):
@@ -132,6 +134,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     if attempt == 3:
                         raise
                     await asyncio.sleep(1.5)
+
+
+async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle inline keyboard callback queries (approval buttons)."""
+    callback_query = update.callback_query
+    if not callback_query or not callback_query.data:
+        return
+
+    data = callback_query.data
+    if is_approval_callback(data):
+        message_id = str(callback_query.message.message_id) if callback_query.message else None
+        result = handle_approval_callback(
+            callback_data=data,
+            message_id=message_id,
+            resume_chain_fn=None  # Phase 20c wires real resume fn
+        )
+        await callback_query.answer(text=result.get('message', 'Done'))
 
 
 def build_app():
