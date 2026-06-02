@@ -569,6 +569,46 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to search Hacker News: {e}")
 
+    def usgs_earthquake(self, magnitude: float = None, limit: int = 10) -> dict:
+        """
+        Get recent earthquake data from USGS API.
+
+        Args:
+            magnitude: Minimum magnitude filter (optional)
+            limit: Maximum results to return (default 10)
+
+        Returns:
+            Dict with earthquake data including magnitude, location, time, etc.
+        """
+        try:
+            url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson"
+            resp = httpx.get(url, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            features = data.get("features", [])
+            results = []
+            for feature in features[:limit]:
+                props = feature.get("properties", {})
+                mag = props.get("mag", 0)
+                if magnitude and mag < magnitude:
+                    continue
+                results.append({
+                    "magnitude": mag,
+                    "place": props.get("place", ""),
+                    "time": props.get("time", 0),
+                    "url": props.get("url", ""),
+                    "type": props.get("type", ""),
+                    "depth": feature.get("geometry", {}).get("coordinates", [0, 0, 0])[2] if len(feature.get("geometry", {}).get("coordinates", [])) > 2 else 0
+                })
+            return self.success({
+                "count": len(results),
+                "results": results
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"USGS API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch earthquake data: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -795,3 +835,17 @@ def hackernews_search(query: str, limit: int = 10) -> dict:
         Dict with search results including title, url, points, author, etc.
     """
     return _search.hackernews_search(query, limit)
+
+
+def usgs_earthquake(magnitude: float = None, limit: int = 10) -> dict:
+    """
+    Get recent earthquake data from USGS API.
+
+    Args:
+        magnitude: Minimum magnitude filter (optional)
+        limit: Maximum results to return (default 10)
+
+    Returns:
+        Dict with earthquake data including magnitude, location, time, etc.
+    """
+    return _search.usgs_earthquake(magnitude, limit)

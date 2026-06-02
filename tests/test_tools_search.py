@@ -445,6 +445,28 @@ def test_hackernews_search_error():
         assert "error" in result, "Expected 'error' key on error"
 
 
+@test("usgs_earthquake: returns count and results keys")
+def test_usgs_earthquake_success():
+    from tools.search.search_tools import usgs_earthquake
+    result = usgs_earthquake()
+    if result.get("ok") == True:
+        assert "count" in result, "Expected 'count' key on success"
+        assert "results" in result, "Expected 'results' key on success"
+    else:
+        assert "error" in result, "Expected 'error' key on failure"
+
+
+@test("usgs_earthquake: handles API error gracefully")
+def test_usgs_earthquake_error():
+    from tools.search.search_tools import usgs_earthquake
+    from unittest.mock import patch
+    with patch("tools.search.search_tools.httpx.get") as mock_get:
+        mock_get.side_effect = Exception("API error")
+        result = usgs_earthquake()
+        assert result.get("ok") == False, "Expected ok=False on error"
+        assert "error" in result, "Expected 'error' key on error"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
