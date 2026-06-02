@@ -1928,7 +1928,7 @@ TOOL_REGISTRY = {
             "type": "function",
             "function": {
                 "name": "update_task",
-                "description": "WHEN: User says they completed a task, 'I finished X', 'done with Y', 'mark X complete', task status changed. Requires task_id — get it from get_tasks_today or get_upcoming_tasks first.\n\nRETURNS: status ('updated'), task_id, new_status, title.\n\nDO NOT CALL: without a valid task_id. Never guess a task_id. Always retrieve tasks first to get the ID.",
+                "description": "WHEN: User says they completed a task, 'I finished X', 'done with Y', 'mark X complete', task status changed, or wants to reschedule a task to a different date. Requires task_id — get it from get_tasks_today or get_upcoming_tasks first.\n\nRETURNS: status ('updated'), task_id, new_status, title, due_date.\n\nDO NOT CALL: without a valid task_id. Never guess a task_id. Always retrieve tasks first to get the ID.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -1937,6 +1937,7 @@ TOOL_REGISTRY = {
                             "type": "string",
                             "enum": ["pending", "in_progress", "complete", "cancelled"],
                         },
+                        "due_date": {"type": "string", "description": "Optional new due date (YYYY-MM-DD format)"},
                     },
                     "required": ["task_id", "status"],
                 },
