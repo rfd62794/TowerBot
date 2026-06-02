@@ -10,7 +10,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.agent import respond
 from bot.task_runner import resolve_task, get_all_resolved_tasks, get_task_model_role
-from bot.model_helpers import call_openrouter
 from infra.model_router import route
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.db.system_metrics import record_system_snapshot
@@ -135,7 +134,6 @@ async def run_autonomous_task(task_name: str, send_fn):
             logger.info(f"[autonomous] task {task_name} using model_router with role: {model_role}")
             routed = route(
                 role=model_role,
-                call_fn=call_openrouter,
                 prompt=full_prompt
             )
             result = routed["result"]
@@ -249,7 +247,6 @@ async def process_delegation_queue(send_fn) -> None:
                 logger.info(f"[delegation] task {task['id']} using model_router with role: {model_role}")
                 routed = route(
                     role=model_role,
-                    call_fn=call_openrouter,
                     prompt=full_prompt
                 )
                 result = routed["result"]
