@@ -107,7 +107,11 @@ class GitHubAPIHandler(BaseAPIHandler):
             except Exception as e:
                 return {"error": str(e)}
 
-        result = self.call("commits", self.hash(username, repo, limit), lambda: _live(username, repo, limit), stale_ok=True)
+        # Capture parameters before call to avoid scoping issues
+        _call_username = username
+        _call_repo = repo
+        _call_limit = limit
+        result = self.call("commits", self.hash(_call_username, _call_repo, _call_limit), _live, stale_ok=True)
 
         # Add stale_notice to result
         notice = cache.stale_notice(result)
