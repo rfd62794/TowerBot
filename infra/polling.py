@@ -89,7 +89,6 @@ class PollingManager:
         from tools.communication.gmail import get_inbox_summary
         from tools.productivity.calendar import get_today_schedule
         from tools.productivity.calendar import get_upcoming_events
-        from tools.productivity.sync import run_sync
         from tools.content.channel import get_channel_summary
         from tools.games.metrics import get_installed_games
         from tools.search.search_tools import get_weather
@@ -118,12 +117,6 @@ class PollingManager:
             "calendar_upcoming",
             get_upcoming_events,
             interval_seconds=900
-        )
-
-        self.register(
-            "google_tasks",
-            run_sync,
-            interval_seconds=300
         )
 
         self.register(

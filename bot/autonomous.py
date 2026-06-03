@@ -443,10 +443,7 @@ async def run_scheduled_template(template_name: str, send_fn):
                 return
 
         # Create chain
-        chain_id = create_chain(
-            template_name=template_name,
-            status="running"
-        )
+        chain_id = create_chain(template_name=template_name)
         logger.info(f"Created chain {chain_id} for template {template_name}")
 
         # Run chain via ChainRunner

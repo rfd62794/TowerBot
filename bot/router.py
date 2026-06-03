@@ -15,6 +15,7 @@ from bot.agent import respond, get_last_model
 from infra.db import (
     create_thread, list_memories, list_threads,
     get_last_stable_commit, get_last_deploy, get_deploy_history,
+    get_milestone,
 )
 from bot.report import report
 from bot.model_manager import get_status_report, get_throttled_models
@@ -24,10 +25,6 @@ from tools.productivity.goals import (
     get_goals_list,
     get_goal_detail,
     get_current_plan,
-    get_tasks_today,
-    update_task,
-    update_task_status,
-    get_milestone,
 )
 
 _current_threads: dict[int, str] = {}
@@ -232,38 +229,13 @@ def handle_goal(goal_id: str) -> str:
 
 
 def handle_tasks(filter_today: bool = False) -> str:
-    """Handle /tasks command — show tasks."""
-    if filter_today:
-        result = get_tasks_today()
-        header = "📋 Today's Tasks:"
-    else:
-        result = get_current_plan()
-        if "error" in result:
-            return result["error"]
-        header = f"📋 This Week's Tasks ({result['plan']['focus']}):"
-        result = {"tasks": result["tasks"]}
-    
-    if "error" in result:
-        return result["error"]
-    
-    lines = [header]
-    for task in result["tasks"]:
-        status_icon = "✓" if task["status"] == "complete" else "○"
-        lines.append(f"\n{status_icon} {task['title']}")
-        lines.append(f"  Due: {task['due_date']}")
-        if task.get("scheduled_at"):
-            lines.append(f"  Scheduled: {task['scheduled_at']}")
-    
-    return "\n".join(lines)
+    """Handle /tasks command — show tasks (deprecated per ADR-038)."""
+    return "⚠️ Local tasks deprecated per ADR-038. Use Google Tasks API tools instead: list_google_tasks, create_google_task, complete_google_task."
 
 
 def handle_task_done(task_id: str) -> str:
-    """Handle /task done [id] command — mark task complete."""
-    result = update_task(task_id, "complete")
-    if "error" in result:
-        return result["error"]
-    
-    return f"✓ Task marked complete: {result['title']}"
+    """Handle /task done [id] command — mark task complete (deprecated per ADR-038)."""
+    return "⚠️ Local tasks deprecated per ADR-038. Use Google Tasks API instead: complete_google_task."
 
 
 def handle_plan() -> str:
@@ -309,41 +281,8 @@ def handle_confirm(milestone_id: str) -> str:
 
 
 def handle_todo(sub: str, rest: str) -> str:
-    """Handle /todo subcommands — list, done. add is handled in route()."""
-    from tools.productivity.personal import list_personal_tasks, complete_personal_task
-
-    if sub == "list":
-        result = list_personal_tasks(filter="all")
-    elif sub == "week":
-        result = list_personal_tasks(filter="upcoming")
-    elif sub == "done" and rest:
-        try:
-            r = complete_personal_task(int(rest.strip()))
-            if "error" in r:
-                return r["error"]
-            out = f"\u2713 Done: {r['title']}"
-            if r.get("next_due"):
-                out += f"\n\u21bb Next: {r['next_due']}"
-            return out
-        except Exception as e:
-            return f"Error: {e}"
-    else:
-        result = list_personal_tasks(filter="today")
-
-    if result["count"] == 0:
-        return f"No personal tasks ({result['filter']})."
-
-    lines = [f"\U0001f4dd Personal tasks ({result['filter']}) \u2014 {result['count']}:"]
-    for t in result["tasks"]:
-        line = f"  [{t['id']}] {t['title']}"
-        if t.get("due_time"):
-            line += f" at {t['due_time']}"
-        elif t.get("due_date"):
-            line += f" ({t['due_date']})"
-        if t.get("recurrence"):
-            line += f" \u21bb"
-        lines.append(line)
-    return "\n".join(lines)
+    """Handle /todo subcommands — deprecated per ADR-038."""
+    return "⚠️ Personal tasks deprecated per ADR-038. Use Google Tasks API instead: list_google_tasks, create_google_task, complete_google_task."
 
 
 def handle_reject(milestone_id: str) -> str:
@@ -352,17 +291,8 @@ def handle_reject(milestone_id: str) -> str:
 
 
 def handle_sync() -> str:
-    """Handle /sync command — run Google Tasks sync manually."""
-    from tools.productivity.sync import run_sync
-    result = run_sync()
-    if result.get("status") == "error":
-        return f"Sync error: {result.get('error', 'unknown')}"
-    return (
-        f"\U0001f504 Synced \u2014 "
-        f"pulled {result['pulled_new']}, "
-        f"pushed {result['pushed_new']} new, "
-        f"{result['pushed_completions']} completions"
-    )
+    """Handle /sync command — deprecated per ADR-038."""
+    return "⚠️ Google Tasks sync deprecated per ADR-038. Use Google Tasks API directly: list_google_tasks, create_google_task, etc."
 
 
 def handle_mcp_token(expiry: str = "1h") -> str:
@@ -610,13 +540,7 @@ async def route(chat_id: int, text: str) -> str:
         expiry = parts[0] if parts else "1h"
         return handle_mcp_token(expiry)
     if text == "/todo" or text.startswith("/todo"):
-        parts = text[len("/todo"):].strip().split(None, 1)
-        sub = parts[0].lower() if parts else ""
-        rest = parts[1] if len(parts) > 1 else ""
-        if sub == "add" and rest:
-            thread_id = await _ensure_thread(chat_id)
-            return await respond(f"Add personal task: {rest}", thread_id)
-        return handle_todo(sub, rest)
+        return handle_todo("", "")
 
     if text.startswith("/think"):
         model_key, message = "think", text[len("/think"):].strip()

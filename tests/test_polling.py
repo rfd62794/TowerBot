@@ -148,11 +148,11 @@ def test_wait_for_timeout():
     assert result is False
 
 
-@test("polling: register_defaults() registers at least 5 keys")
+@test("polling: register_defaults() registers at least 4 keys")
 def test_register_defaults():
     polling_manager.register_defaults()
     count = len(polling_manager._registry)
-    assert count >= 5
+    assert count >= 4
 
 
 @test("polling: _is_due() returns True for key never polled")

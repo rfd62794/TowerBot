@@ -166,21 +166,6 @@ CREATE TABLE IF NOT EXISTS milestones (
     FOREIGN KEY (goal_id) REFERENCES goals(id)
 );
 
--- DEPRECATED (ADR-038): Use Google Tasks API instead.
--- This table will be dropped in Phase 2 of ADR-038 migration.
--- Do not add new columns or queries against this table.
-CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,
-    milestone_id TEXT,
-    title TEXT,
-    due_date TEXT,
-    scheduled_at DATETIME,
-    status TEXT DEFAULT 'pending',
-    recurrence TEXT,
-    reminder_minutes INTEGER DEFAULT 60,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    completed_at DATETIME
-);
 
 CREATE TABLE IF NOT EXISTS weekly_plans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,32 +185,20 @@ CREATE TABLE IF NOT EXISTS commitments (
     resolved_at DATETIME
 );
 
--- DEPRECATED (ADR-038): Use Google Tasks API instead.
--- This table will be dropped in Phase 2 of ADR-038 migration.
--- Do not add new columns or queries against this table.
-CREATE TABLE IF NOT EXISTS personal_tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    notes TEXT,
-    due_date TEXT,
-    due_time TEXT,
-    due_datetime DATETIME,
-    recurrence TEXT,
-    recurrence_days TEXT,
-    status TEXT DEFAULT 'pending',
-    reminder_minutes INTEGER DEFAULT 30,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    completed_at DATETIME,
-    next_due DATETIME,
-    google_task_id TEXT
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS ux_personal_tasks_title_date ON personal_tasks(title, due_date) WHERE status = 'pending';
 
 CREATE TABLE IF NOT EXISTS task_reminders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id INTEGER NOT NULL,
     reminded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notification deduplication for Google Tasks overdue alerts (ADR-038)
+CREATE TABLE IF NOT EXISTS task_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    google_task_id TEXT NOT NULL,
+    notification_type TEXT NOT NULL DEFAULT 'overdue',
+    last_notified_at TEXT NOT NULL,
+    UNIQUE(google_task_id, notification_type)
 );
 
 CREATE TABLE IF NOT EXISTS tasks_sync (
@@ -561,14 +534,6 @@ def _run_migrations() -> None:
     except Exception:
         pass
 
-    # Migration: add google_task_id to tasks table for Google Tasks sync
-    try:
-        cols = {row[1] for row in _conn.execute("PRAGMA table_info(tasks)").fetchall()}
-        if "google_task_id" not in cols:
-            _conn.execute("ALTER TABLE tasks ADD COLUMN google_task_id TEXT")
-            _conn.commit()
-    except Exception:
-        pass
 
 
 def _exec(sql: str, params=(), commit: bool = False) -> sqlite3.Cursor:

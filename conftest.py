@@ -7,7 +7,7 @@ the database to get full isolation from privy.db and from other tests.
 
 Usage in a test file:
     def test_something(test_db):
-        from infra.db.goals import add_commitment
+        from infra.db import init_db
         ...  # runs against :memory:, never touches privy.db
 
 The fixture is opt-in (not autouse). Tests that don't declare it continue to

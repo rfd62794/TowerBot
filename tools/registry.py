@@ -35,10 +35,6 @@ from .productivity.goals import (
     get_goals_list,
     get_goal_detail,
     get_current_plan,
-    get_tasks_today,
-    get_upcoming_tasks,
-    update_task,
-    add_new_task,
     suggest_goal_progress,
 )
 from .productivity.google_tasks import (
@@ -62,13 +58,6 @@ from .communication.gmail import (
 from .communication.blog import BlogTools
 
 blog_tools = BlogTools()
-from .productivity.personal import (
-    add_personal_task,
-    list_personal_tasks,
-    complete_personal_task,
-    snooze_personal_task,
-    delete_personal_task,
-)
 from .meta.meta import think, get_current_datetime, calculate, run_openagent
 from .meta.sync import sync_db_status, sync_db_export, sync_db_import
 from .meta.admin import purge_null_tasks, get_logs, run_diagnostic
@@ -1399,96 +1388,6 @@ TOOL_REGISTRY = {
             },
         },
     },
-    "add_personal_task": {
-        "fn": add_personal_task,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "add_personal_task",
-                "description": "WHEN: Robert wants to add a reminder, to-do, or personal task. Triggers: 'remind me to X', 'add X to my list', 'I need to do X', 'don't let me forget X', 'every Monday do X', 'pick up X at Y time'.\n\nDIFFERENT FROM add_task: add_task = project task in weekly plan. add_personal_task = personal reminder or to-do with no goal linkage needed.\n\nRETURNS: status ('added'), id, title, due, recurrence if set.\n\nDO NOT CALL: for project tasks that belong in the weekly plan — use add_task instead.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string", "description": "What to do"},
-                        "due": {"type": "string", "description": "When — natural language ok: 'tomorrow', 'Friday at 6PM', 'YYYY-MM-DD'. Optional."},
-                        "time": {"type": "string", "description": "Time of day as HH:MM. Optional — use if due doesn't include time."},
-                        "recurrence": {"type": "string", "description": "Recurrence pattern — natural language ok: 'every Monday', 'every day', 'every weekday'. Optional."},
-                        "notes": {"type": "string", "description": "Extra notes. Optional."},
-                    },
-                    "required": ["title"],
-                },
-            },
-        },
-    },
-    "list_personal_tasks": {
-        "fn": list_personal_tasks,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "list_personal_tasks",
-                "description": "WHEN: Robert asks what's on his list, personal reminders, 'what do I have today', to-do list, 'what am I forgetting', /todo command.\n\nRETURNS: filter, count, tasks list with id, title, due_date, due_time, recurrence, status.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "filter": {"type": "string", "enum": ["today", "upcoming", "overdue", "all"], "description": "Which tasks to show. Default: 'today'."},
-                    },
-                    "required": [],
-                },
-            },
-        },
-    },
-    "complete_personal_task": {
-        "fn": complete_personal_task,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "complete_personal_task",
-                "description": "WHEN: Robert says he did something, 'done with X', 'finished X', 'mark X done' for a personal task. If recurring, automatically creates next occurrence.\n\nRETURNS: status ('completed'), id, title, next_due if recurring.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "task_id": {"type": "integer", "description": "ID of the personal task to mark done"},
-                    },
-                    "required": ["task_id"],
-                },
-            },
-        },
-    },
-    "snooze_personal_task": {
-        "fn": snooze_personal_task,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "snooze_personal_task",
-                "description": "WHEN: Robert says 'remind me later', 'snooze that', 'not now but later' for a personal task.\n\nRETURNS: status ('snoozed'), id, new_due datetime.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "task_id": {"type": "integer", "description": "ID of the task to snooze"},
-                        "minutes": {"type": "integer", "description": "Minutes to push forward. Default: 60."},
-                    },
-                    "required": ["task_id"],
-                },
-            },
-        },
-    },
-    "delete_personal_task": {
-        "fn": delete_personal_task,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "delete_personal_task",
-                "description": "WHEN: Robert says 'remove X', 'delete X', 'cancel X' for a personal task.\n\nRETURNS: status ('deleted'), id.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "task_id": {"type": "integer", "description": "ID of the task to delete"},
-                    },
-                    "required": ["task_id"],
-                },
-            },
-        },
-    },
     "list_google_tasks": {
         "fn": list_google_tasks,
         "definition": {
@@ -2106,7 +2005,7 @@ TOOL_REGISTRY = {
             "type": "function",
             "function": {
                 "name": "get_goals",
-                "description": "WHEN: User asks about goals, long-term plans, 'what am I working toward', progress, 'Palm Beach', 'ReactReel', any goal by name. Also call when user asks 'what should I prioritize'.\n\nRETURNS: List of goals each with id, title, deadline, status, progress_pct, notes. Filter by status if needed.\n\nDO NOT CALL: for this week's tasks — use get_current_plan or get_tasks_today. Goals are long-term objectives only.",
+                "description": "WHEN: User asks about goals, long-term plans, 'what am I working toward', progress, 'Palm Beach', 'ReactReel', any goal by name. Also call when user asks 'what should I prioritize'.\n\nRETURNS: List of goals each with id, title, deadline, status, progress_pct, notes. Filter by status if needed.\n\nDO NOT CALL: for this week's tasks — use get_current_plan instead. Goals are long-term objectives only.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -2144,85 +2043,11 @@ TOOL_REGISTRY = {
             "type": "function",
             "function": {
                 "name": "get_current_plan",
-                "description": "WHEN: User asks what the plan is this week, 'what am I focused on', 'what's the weekly plan', or when giving context about current priorities.\n\nRETURNS: week_start, week_end, focus (string), notes, tasks list for this week.\n\nDO NOT CALL: for today's specific tasks — use get_tasks_today for that. This is the weekly overview.",
+                "description": "WHEN: User asks what the plan is this week, 'what am I focused on', 'what's the weekly plan', or when giving context about current priorities.\n\nRETURNS: week_start, week_end, focus (string), notes.\n\nDO NOT CALL: for task management — use Google Tasks API tools instead (list_google_tasks, create_google_task, etc.).",
                 "parameters": {
                     "type": "object",
                     "properties": {},
                     "required": [],
-                },
-            },
-        },
-    },
-    "get_tasks_today": {
-        "fn": get_tasks_today,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "get_tasks_today",
-                "description": "WHEN: User asks what to do today, today's tasks, 'what's on my list', morning planning, or any question about today's specific items.\n\nRETURNS: List of tasks each with id, title, due_date, status, scheduled_at. Filtered to today only.\n\nDO NOT CALL: for the weekly plan — use get_current_plan instead. Do not call for upcoming tasks beyond today — use get_upcoming_tasks.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
-            },
-        },
-    },
-    "get_upcoming_tasks": {
-        "fn": get_upcoming_tasks,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "get_upcoming_tasks",
-                "description": "WHEN: User asks what's coming up, tasks in the next few days, upcoming scheduled items, 'what do I have this week', forward-looking task questions.\n\nRETURNS: List of tasks due within specified hours, each with id, title, due_date, scheduled_at, status.\n\nDO NOT CALL: for today's tasks — use get_tasks_today instead. Default 24 hours covers tomorrow.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "hours": {"type": "integer", "description": "Hours to look ahead (default: 24)"},
-                    },
-                    "required": [],
-                },
-            },
-        },
-    },
-    "update_task": {
-        "fn": update_task,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "update_task",
-                "description": "WHEN: User says they completed a task, 'I finished X', 'done with Y', 'mark X complete', task status changed, or wants to reschedule a task to a different date. Requires task_id — get it from get_tasks_today or get_upcoming_tasks first.\n\nRETURNS: status ('updated'), task_id, new_status, title, due_date.\n\nDO NOT CALL: without a valid task_id. Never guess a task_id. Always retrieve tasks first to get the ID.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "task_id": {"type": "string", "description": "Task ID"},
-                        "status": {
-                            "type": "string",
-                            "enum": ["pending", "in_progress", "complete", "cancelled"],
-                        },
-                        "due_date": {"type": "string", "description": "Optional new due date (YYYY-MM-DD format)"},
-                    },
-                    "required": ["task_id", "status"],
-                },
-            },
-        },
-    },
-    "add_task": {
-        "fn": add_new_task,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "add_task",
-                "description": "WHEN: User wants to add something to their plan, 'add a task', 'remind me to', 'I need to do X by Y', creating a new to-do item.\n\nRETURNS: status ('created'), task_id, title, due_date.\n\nDO NOT CALL: for commitments with vague deadlines — save to memory instead. Use only when there's a clear title and due date to work with.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string", "description": "Task title"},
-                        "due_date": {"type": "string", "description": "Due date (YYYY-MM-DD)"},
-                        "scheduled_at": {"type": "string", "description": "Optional scheduled datetime (YYYY-MM-DD HH:MM)"},
-                        "milestone_id": {"type": "string", "description": "Optional milestone ID to link to"},
-                    },
-                    "required": ["title", "due_date"],
                 },
             },
         },

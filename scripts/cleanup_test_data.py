@@ -11,24 +11,11 @@ from infra.db import init_db
 from infra.db.schema import _exec
 init_db()
 
-test_titles = [
-    "Test dentist call", "Filter test task", "Dentist at 10am",
-    "Test task for snooze", "Due soon task",
-]
-for t in test_titles:
-    _exec("DELETE FROM personal_tasks WHERE title = ?", (t,))
-print("Removed test personal tasks.")
-
-_exec("DELETE FROM task_reminders WHERE task_id NOT IN (SELECT id FROM personal_tasks)")
-print("Removed orphan reminders.")
-
 test_hashes = ("abc1234", "def5678", "ghi9012", "jkl3456")
 placeholders = ",".join("?" * len(test_hashes))
 _exec(f"DELETE FROM deploy_history WHERE commit_hash IN ({placeholders})", test_hashes)
 print("Removed test deploy records.")
 
 from infra.db import get_last_deploy, get_last_stable_commit
-from infra.db.personal_tasks import get_personal_tasks
 print(f"last_deploy: {get_last_deploy()}")
 print(f"last_stable: {get_last_stable_commit()}")
-print(f"personal tasks today: {len(get_personal_tasks('today'))}")

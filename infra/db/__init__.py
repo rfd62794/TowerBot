@@ -85,39 +85,20 @@ from infra.db.queue import (
     flush_morning_queue,
 )
 
-from infra.db.goals import (
+from infra.db.goals_milestones import (
     upsert_goal,
     get_goals,
     get_goal,
     upsert_milestone,
     get_milestones,
     get_milestone,
-    upsert_task,
-    get_tasks,
-    get_task,
-    update_task_status,
-    get_tasks_due_today,
-    get_upcoming_scheduled,
-    upsert_weekly_plan,
-    get_current_weekly_plan,
-    add_commitment,
-    list_commitments,
 )
 
-from infra.db.personal_tasks import (
-    add_personal_task,
-    get_personal_tasks,
-    get_tasks_due_soon,
-    complete_personal_task,
-    snooze_personal_task,
-    delete_personal_task,
-    mark_reminded,
-    already_reminded,
-    set_google_task_id,
-    get_unsynced_tasks,
-    get_tasks_completed_since,
-    update_sync_record,
-    get_last_sync,
+from infra.db.commitments_weekly import (
+    add_commitment,
+    list_commitments,
+    upsert_weekly_plan,
+    get_current_weekly_plan,
 )
 
 from infra.db.deployments import (
@@ -164,15 +145,8 @@ __all__ = [
     "queue_observation", "get_pending_observations", "mark_sent", "flush_morning_queue",
     "upsert_goal", "get_goals", "get_goal",
     "upsert_milestone", "get_milestones", "get_milestone",
-    "upsert_task", "get_tasks", "get_task", "update_task_status",
-    "get_tasks_due_today", "get_upcoming_scheduled",
-    "upsert_weekly_plan", "get_current_weekly_plan",
     "add_commitment", "list_commitments",
-    "add_personal_task", "get_personal_tasks", "get_tasks_due_soon",
-    "complete_personal_task", "snooze_personal_task", "delete_personal_task",
-    "mark_reminded", "already_reminded",
-    "set_google_task_id", "get_unsynced_tasks", "get_tasks_completed_since",
-    "update_sync_record", "get_last_sync",
+    "upsert_weekly_plan", "get_current_weekly_plan",
     "record_deploy", "mark_verify_passed", "mark_stable", "mark_rolled_back",
     "get_last_stable_commit", "get_last_deploy", "get_deploy_history",
     "get_api_state", "upsert_api_state", "log_api_call", "get_call_log", "get_all_api_states",

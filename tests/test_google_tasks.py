@@ -179,29 +179,6 @@ def test_delete_google_task_not_found():
             assert "error" in result
 
 
-@test("sync_google_tasks_runs_without_error")
-def test_sync_google_tasks_runs_without_error():
-    """Mock all API calls. Assert function completes and returns a result dict."""
-    from tools.productivity.google_tasks import sync_google_tasks
-    with patch("tools.productivity.sync.run_sync", return_value={"status": "ok", "pushed_new": 0, "pulled_new": 0}):
-        result = sync_google_tasks()
-        assert result is not None
-        assert isinstance(result, dict)
-
-
-@test("sync_google_tasks_api_failure_handled")
-def test_sync_google_tasks_api_failure_handled():
-    """Mock API raises exception mid-sync. Tool propagates exception (flagged for future fix)."""
-    from tools.productivity.google_tasks import sync_google_tasks
-    with patch("tools.productivity.sync.run_sync", side_effect=Exception("Sync failed")):
-        # Tool currently propagates exception - flagged for future fix
-        try:
-            result = sync_google_tasks()
-            assert False, "Should have raised exception"
-        except Exception as e:
-            assert "Sync failed" in str(e)
-
-
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
