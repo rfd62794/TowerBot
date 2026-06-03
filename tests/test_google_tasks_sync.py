@@ -82,27 +82,8 @@ def test_tasks_sync_table():
     assert row is not None, "tasks_sync table missing"
 
 
-@test("sync: run_sync returns status ok")
-def test_run_sync():
-    from tools.productivity.sync import run_sync
-    result = run_sync()
-    assert isinstance(result, dict), f"Expected dict, got {type(result)}"
-    assert result.get("status") == "ok", \
-        f"Expected status='ok', got {result}"
-
-
-@test("sync: pull_from_google returns int")
-def test_pull_from_google():
-    from tools.productivity.sync import pull_from_google
-    result = pull_from_google()
-    assert isinstance(result, int), f"Expected int, got {type(result)}"
-
-
-@test("sync: push_new_tasks returns int")
-def test_push_new_tasks():
-    from tools.productivity.sync import push_new_tasks
-    result = push_new_tasks()
-    assert isinstance(result, int), f"Expected int, got {type(result)}"
+# Sync tests removed per ADR-038 Phase 2 - tools.productivity.sync module deleted
+# test_run_sync, test_pull_from_google, test_push_new_tasks depended on deleted sync module
 
 
 @test("sync: delete_google_task actually deletes and get_google_task confirms")
