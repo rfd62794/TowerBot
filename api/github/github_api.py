@@ -4,8 +4,6 @@ import os
 import httpx
 from api._handler import BaseAPIHandler
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-
 
 class GitHubAPIHandler(BaseAPIHandler):
     CACHE_PREFIX = "github"
@@ -27,17 +25,19 @@ class GitHubAPIHandler(BaseAPIHandler):
             Dict with commits array containing commit metadata
         """
         def _live() -> dict:
-            if not GITHUB_TOKEN:
+            token = os.getenv("GITHUB_TOKEN")
+            if not token:
                 return {"error": "GITHUB_TOKEN not set"}
 
             try:
                 headers = {
-                    "Authorization": f"token {GITHUB_TOKEN}",
+                    "Authorization": f"token {token}",
                     "Accept": "application/vnd.github.v3+json",
                 }
 
                 # If no username provided, get it from the authenticated user
-                if not username:
+                resolved_username = username if username else None
+                if not resolved_username:
                     user_resp = httpx.get(
                         "https://api.github.com/user",
                         headers=headers,
@@ -45,18 +45,18 @@ class GitHubAPIHandler(BaseAPIHandler):
                     )
                     user_resp.raise_for_status()
                     user_data = user_resp.json()
-                    username = user_data.get("login")
+                    resolved_username = user_data.get("login")
 
-                if not username:
+                if not resolved_username:
                     return {"error": "Could not determine username"}
 
                 # If specific repo provided, fetch commits from that repo
                 if repo:
-                    url = f"https://api.github.com/repos/{username}/{repo}/commits"
+                    url = f"https://api.github.com/repos/{resolved_username}/{repo}/commits"
                 else:
                     # Fetch from all user's repos (limit to 5 most recently updated)
                     repos_resp = httpx.get(
-                        f"https://api.github.com/users/{username}/repos?sort=updated&per_page=5",
+                        f"https://api.github.com/users/{resolved_username}/repos?sort=updated&per_page=5",
                         headers=headers,
                         timeout=10
                     )
@@ -69,7 +69,7 @@ class GitHubAPIHandler(BaseAPIHandler):
                         repo_name = repo_data.get("name")
                         if not repo_name:
                             continue
-                        commits_url = f"https://api.github.com/repos/{username}/{repo_name}/commits?per_page={limit}"
+                        commits_url = f"https://api.github.com/repos/{resolved_username}/{repo_name}/commits?per_page={limit}"
                         commits_resp = httpx.get(commits_url, headers=headers, timeout=10)
                         commits_resp.raise_for_status()
                         repo_commits = commits_resp.json()
@@ -100,7 +100,8 @@ class GitHubAPIHandler(BaseAPIHandler):
                 if e.response.status_code == 401:
                     return {"error": "Invalid GitHub token"}
                 if e.response.status_code == 404:
-                    return {"error": f"Repository {username}/{repo} not found"}
+                    user_display = resolved_username if 'resolved_username' in locals() else username
+                    return {"error": f"Repository {user_display}/{repo} not found" if repo else f"User {user_display} not found"}
                 return {"error": f"HTTP {e.response.status_code}: {e}"}
             except Exception as e:
                 return {"error": str(e)}
