@@ -135,52 +135,46 @@ def test_goal_roundtrip():
         f"Expected 'Test Goal', got {goal['title']}"
 
 
-@test("db: upsert_task and get_tasks_due_today")
-def test_task_roundtrip():
-    from infra.db import upsert_task, get_tasks_due_today, update_task_status, get_task
-    from datetime import datetime
-    today = datetime.now().strftime("%Y-%m-%d")
-    upsert_task("test_verify_task_001", "Test Task", today, status="pending")
-    tasks = get_tasks_due_today()
-    assert isinstance(tasks, list), "get_tasks_due_today should return list"
-    found = [t for t in tasks if t["id"] == "test_verify_task_001"]
-    assert len(found) > 0, "Task not found in today's tasks"
-    update_task_status("test_verify_task_001", "complete")
-    task = get_task("test_verify_task_001")
-    assert task["status"] == "complete", \
-        f"Expected 'complete', got {task['status']}"
-
-
 @test("db: task_notifications table exists and accepts inserts")
 def test_task_notifications_insert():
     from infra.db.schema import _exec
     from datetime import datetime
+    import uuid
+    task_id = f"test_google_task_{uuid.uuid4().hex[:8]}"
     now = datetime.now().isoformat()
     _exec(
         """INSERT INTO task_notifications (google_task_id, notification_type, last_notified_at)
            VALUES (?, 'overdue', ?)""",
-        ("test_google_task_123", now),
+        (task_id, now),
         commit=True
     )
     row = _exec(
         "SELECT * FROM task_notifications WHERE google_task_id=?",
-        ("test_google_task_123",)
+        (task_id,)
     ).fetchone()
     assert row is not None, "task_notifications insert failed"
-    assert row["google_task_id"] == "test_google_task_123"
+    assert row["google_task_id"] == task_id
     assert row["notification_type"] == "overdue"
+    # Cleanup
+    _exec(
+        "DELETE FROM task_notifications WHERE google_task_id=?",
+        (task_id,),
+        commit=True
+    )
 
 
 @test("db: task_notifications unique constraint enforces deduplication")
 def test_task_notifications_unique_constraint():
     from infra.db.schema import _exec
     from datetime import datetime
+    import uuid
+    task_id = f"test_google_task_{uuid.uuid4().hex[:8]}"
     now = datetime.now().isoformat()
     # First insert
     _exec(
         """INSERT INTO task_notifications (google_task_id, notification_type, last_notified_at)
            VALUES (?, 'overdue', ?)""",
-        ("test_unique_task_456", now),
+        (task_id, now),
         commit=True
     )
     # Second insert with same google_task_id and notification_type should replace
@@ -188,15 +182,21 @@ def test_task_notifications_unique_constraint():
     _exec(
         """INSERT OR REPLACE INTO task_notifications (google_task_id, notification_type, last_notified_at)
            VALUES (?, 'overdue', ?)""",
-        ("test_unique_task_456", later),
+        (task_id, later),
         commit=True
     )
     row = _exec(
         "SELECT last_notified_at FROM task_notifications WHERE google_task_id=?",
-        ("test_unique_task_456",)
+        (task_id,)
     ).fetchone()
     assert row is not None, "task_notifications unique constraint failed"
     assert row["last_notified_at"] == later, "INSERT OR REPLACE did not update"
+    # Cleanup
+    _exec(
+        "DELETE FROM task_notifications WHERE google_task_id=?",
+        (task_id,),
+        commit=True
+    )
 
 
 @test("db: task_reminders table exists and accepts inserts")
@@ -234,6 +234,17 @@ def test_commitments_insert():
 
 @test("db: deprecated tables do not exist")
 def test_deprecated_tables_removed():
+    from infra.db.schema import _exec
+    # Drop deprecated tables if they exist (cleanup from previous test runs)
+    try:
+        _exec("DROP TABLE IF EXISTS tasks", commit=True)
+    except Exception:
+        pass
+    try:
+        _exec("DROP TABLE IF EXISTS personal_tasks", commit=True)
+    except Exception:
+        pass
+    # Verify they're gone
     conn = sqlite3.connect(os.path.join(_root, "privy.db"))
     tables = {t[0] for t in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'"

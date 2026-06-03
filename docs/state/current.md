@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 28 — ADR-038 Phase 1 Deprecation
+Phase 29 — ADR-038 Phase 2: Migration + Drop Tables
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -142,8 +142,34 @@ Phase 28 — ADR-038 Phase 1 Deprecation
 - Inventory report: tasks table has 6 rows, personal_tasks table has 21 rows (all have google_task_id synced)
 - Test floor: 579 passed, 0 failed (no new tests - deprecation warnings don't require test coverage)
 
+## Phase 29: ADR-038 Phase 2: Migration + Drop Tables
+- infra/db/schema.py: Dropped tasks and personal_tasks table definitions; added task_notifications table for Google Tasks notification deduplication
+- infra/db/goals_milestones.py: Created new module for goals and milestones CRUD (separated from deprecated tasks table)
+- infra/db/commitments_weekly.py: Created new module for commitments and weekly plans CRUD
+- infra/db/__init__.py: Updated imports to use new modules; removed deprecated goals.py and personal_tasks.py re-exports
+- tools/productivity/utils.py: Created new module with parse_natural_deadline and parse_recurrence utility functions (migrated from personal.py)
+- tools/productivity/goals.py: Refactored to remove deprecated task functions (get_tasks_today, get_upcoming_tasks, add_new_task, update_task); now only handles goals, milestones, commitments, weekly plans
+- tools/productivity/__init__.py: Removed imports of deprecated task functions and personal task functions; removed sync import
+- tools/productivity/personal.py: Deleted (utility functions migrated to utils.py, DB functions deprecated)
+- tools/productivity/sync.py: Deleted (all functions depended on deprecated local task tables)
+- tools/registry.py: Removed tool definitions for deprecated task functions (get_tasks_today, get_upcoming_tasks, update_task, add_task) and personal task functions (add_personal_task, list_personal_tasks, complete_personal_task, snooze_personal_task, delete_personal_task)
+- bot/router.py: Removed imports of deprecated task functions; updated handle_tasks, handle_task_done, handle_todo, handle_sync to return deprecation messages
+- bot/scheduler.py: Removed imports of deprecated task functions (get_upcoming_scheduled, get_tasks_due_today, get_current_weekly_plan); replaced Check 9 with Google Tasks API logic using task_notifications table; removed Check 4 (scheduled tasks reminder)
+- infra/polling.py: Removed google_tasks polling registration (run_sync function deleted)
+- scripts/cleanup_test_data.py: Removed references to personal_tasks table and get_personal_tasks function
+- conftest.py: Removed add_commitment import from deleted infra.db.goals
+- tests/test_personal_tasks.py: Deleted (tests for deprecated functionality)
+- tests/test_google_tasks_sync.py: Deleted (tests for deleted sync module)
+- tests/test_tools_goals.py: Removed tests for deprecated task functions (test_get_tasks_today, test_get_upcoming_tasks, test_add_new_task, test_update_task)
+- tests/test_google_tasks.py: Removed tests for sync_google_tasks functions
+- tests/test_polling.py: Updated test_register_defaults to expect 4 registered keys (down from 5 after removing google_tasks)
+- tests/test_db.py: Removed test_task_roundtrip (deprecated task functions); added tests for task_notifications, task_reminders, commitments tables; added test_deprecated_tables_removed with cleanup logic
+- tests/test_utils.py: Created new test file with unit tests for parse_natural_deadline and parse_recurrence functions
+- tests/test_scheduler.py: Created new test file with tests for Google Tasks overdue check deduplication, calendar alert mechanism, and nightly_summary no-op
+- Test floor: 551 passed, 0 failed, 2 missing (test_personal_tasks.py, test_google_tasks_sync.py intentionally deleted)
+
 ## Next
-Phase 29 — ADR-038 Phase 2: Migration + Drop Tables
+Phase 30 — TBD
 
 ---
 
