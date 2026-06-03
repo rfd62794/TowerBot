@@ -100,7 +100,7 @@ class GitHubAPIHandler(BaseAPIHandler):
                 if e.response.status_code == 401:
                     return {"error": "Invalid GitHub token"}
                 if e.response.status_code == 404:
-                    user_display = resolved_username if 'resolved_username' in locals() else username
+                    user_display = resolved_username if 'resolved_username' in locals() else 'unknown'
                     return {"error": f"Repository {user_display}/{repo} not found" if repo else f"User {user_display} not found"}
                 return {"error": f"HTTP {e.response.status_code}: {e}"}
             except Exception as e:
