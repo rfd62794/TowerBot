@@ -38,11 +38,13 @@ def run_all() -> tuple[int, int]:
 def test_list_google_tasks_returns_tasks():
     """Mock API returns 2 task dicts. Assert result contains both. Assert no error key in result."""
     from tools.productivity.google_tasks import list_google_tasks
+    mock_client = MagicMock()
+    mock_client.tasks().list().execute.return_value = {"items": [
+        {"id": "1", "title": "Task 1", "status": "needsAction"},
+        {"id": "2", "title": "Task 2", "status": "needsAction"}
+    ]}
     with patch("tools.productivity.google_tasks.get_default_tasklist_id", return_value={"tasklist_id": "list123"}):
-        with patch("tools.productivity.google_tasks.pull_tasks", return_value={"tasks": [
-            {"id": "1", "title": "Task 1", "status": "needsAction"},
-            {"id": "2", "title": "Task 2", "status": "needsAction"}
-        ]}):
+        with patch("api.google.tasks_api._get_tasks_client", return_value=mock_client):
             result = list_google_tasks()
             assert result["ok"] is True
             assert result["count"] == 2
@@ -53,8 +55,10 @@ def test_list_google_tasks_returns_tasks():
 def test_list_google_tasks_empty_list():
     """Mock API returns empty list. Assert result is valid (no crash, no error)."""
     from tools.productivity.google_tasks import list_google_tasks
+    mock_client = MagicMock()
+    mock_client.tasks().list().execute.return_value = {"items": []}
     with patch("tools.productivity.google_tasks.get_default_tasklist_id", return_value={"tasklist_id": "list123"}):
-        with patch("tools.productivity.google_tasks.pull_tasks", return_value={"tasks": []}):
+        with patch("api.google.tasks_api._get_tasks_client", return_value=mock_client):
             result = list_google_tasks()
             assert result["ok"] is True
             assert result["count"] == 0
@@ -65,10 +69,10 @@ def test_list_google_tasks_empty_list():
 def test_get_google_task_returns_task():
     """Mock API returns single task dict with known id. Assert returned task id matches."""
     from tools.productivity.google_tasks import get_google_task
+    mock_client = MagicMock()
+    mock_client.tasks().get().execute.return_value = {"id": "task456", "title": "Specific Task", "status": "needsAction"}
     with patch("tools.productivity.google_tasks.get_default_tasklist_id", return_value={"tasklist_id": "list123"}):
-        with patch("tools.productivity.google_tasks.pull_tasks", return_value={"tasks": [
-            {"id": "task456", "title": "Specific Task", "status": "needsAction"}
-        ]}):
+        with patch("api.google.tasks_api._get_tasks_client", return_value=mock_client):
             result = get_google_task("task456")
             assert result["ok"] is True
             assert result["task"]["id"] == "task456"

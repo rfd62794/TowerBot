@@ -60,12 +60,21 @@ def list_google_tasks(show_completed: bool = False) -> dict:
     
     RETURNS: dict with ok, tasks (list), count
     """
+    from api.google.tasks_api import _get_tasks_client
+    
     tasklist_id = get_default_tasklist_id()
     if not tasklist_id or not tasklist_id.get("tasklist_id"):
         return {"ok": False, "error": "Could not get tasklist ID"}
     
-    raw = pull_tasks(tasklist_id["tasklist_id"], show_completed=show_completed)
-    tasks = raw.get("tasks", [])
+    # Call Google API directly, bypassing cache
+    client = _get_tasks_client()
+    result = client.tasks().list(
+        tasklist=tasklist_id["tasklist_id"],
+        showCompleted=show_completed,
+        showHidden=False,
+    ).execute()
+    
+    tasks = result.get("items", [])
     
     # Filter out deleted tasks (Google marks deleted tasks with deleted=true instead of removing them)
     tasks = [t for t in tasks if not t.get("deleted")]
@@ -93,25 +102,36 @@ def get_google_task(task_id: str) -> dict:
     
     RETURNS: dict with ok, task (dict) or error
     """
+    from api.google.tasks_api import _get_tasks_client
+    from googleapiclient.errors import HttpError
+    
     tasklist_id = get_default_tasklist_id()
     if not tasklist_id or not tasklist_id.get("tasklist_id"):
         return {"ok": False, "error": "Could not get tasklist ID"}
     
-    raw = pull_tasks(tasklist_id["tasklist_id"])
-    tasks = raw.get("tasks", [])
-    
-    # Filter out deleted tasks (Google marks deleted tasks with deleted=true instead of removing them)
-    tasks = [t for t in tasks if not t.get("deleted")]
-    
-    for task in tasks:
-        if task.get("id") == task_id:
-            if task.get("due"):
-                task["due_date"] = task["due"][:10]
-            else:
-                task["due_date"] = None
-            return {"ok": True, "task": task}
-    
-    return {"ok": False, "error": f"Task not found: {task_id}"}
+    # Call Google API directly, bypassing cache
+    try:
+        client = _get_tasks_client()
+        task = client.tasks().get(
+            tasklist=tasklist_id["tasklist_id"],
+            task=task_id,
+        ).execute()
+        
+        # Check if task is deleted
+        if task.get("deleted"):
+            return {"ok": False, "error": f"Task not found: {task_id}"}
+        
+        # Normalize date for display
+        if task.get("due"):
+            task["due_date"] = task["due"][:10]
+        else:
+            task["due_date"] = None
+        
+        return {"ok": True, "task": task}
+    except HttpError as e:
+        if e.resp.status == 404:
+            return {"ok": False, "error": f"Task not found: {task_id}"}
+        return {"ok": False, "error": f"API error: {e}"}
 
 
 def create_google_task(title: str, notes: str = None, due_date: str = None, check_duplicate: bool = True) -> dict:
