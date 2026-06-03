@@ -166,6 +166,9 @@ CREATE TABLE IF NOT EXISTS milestones (
     FOREIGN KEY (goal_id) REFERENCES goals(id)
 );
 
+-- DEPRECATED (ADR-038): Use Google Tasks API instead.
+-- This table will be dropped in Phase 2 of ADR-038 migration.
+-- Do not add new columns or queries against this table.
 CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
     milestone_id TEXT,
@@ -197,6 +200,9 @@ CREATE TABLE IF NOT EXISTS commitments (
     resolved_at DATETIME
 );
 
+-- DEPRECATED (ADR-038): Use Google Tasks API instead.
+-- This table will be dropped in Phase 2 of ADR-038 migration.
+-- Do not add new columns or queries against this table.
 CREATE TABLE IF NOT EXISTS personal_tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,

@@ -1,5 +1,6 @@
 """Goals, milestones, tasks, and weekly plans CRUD."""
 
+import warnings
 from datetime import datetime
 from infra.db.schema import _exec
 
@@ -65,6 +66,12 @@ def upsert_task(task_id: str, title: str, due_date: str, milestone_id: str = Non
 
 
 def get_tasks(status: str = None, due_date: str = None) -> list[dict]:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     if status and due_date:
         rows = _exec(
             "SELECT * FROM tasks WHERE status = ? AND due_date = ? ORDER BY due_date ASC",
@@ -86,6 +93,12 @@ def get_tasks(status: str = None, due_date: str = None) -> list[dict]:
 
 
 def get_task(task_id: str) -> dict | None:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     row = _exec("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
     return dict(row) if row else None
 
@@ -105,6 +118,12 @@ def update_task_status(task_id: str, status: str, due_date: str = None) -> None:
 
 
 def get_tasks_due_today() -> list[dict]:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     today = datetime.now().strftime("%Y-%m-%d")
     rows = _exec(
         "SELECT * FROM tasks WHERE due_date = ? AND status != 'complete' ORDER BY scheduled_at ASC",
@@ -114,6 +133,12 @@ def get_tasks_due_today() -> list[dict]:
 
 
 def get_upcoming_scheduled(hours: int = 24) -> list[dict]:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     rows = _exec(
         "SELECT * FROM tasks WHERE scheduled_at IS NOT NULL "
         "AND scheduled_at BETWEEN datetime('now') AND datetime('now', '+' || ? || ' hours') "
@@ -175,6 +200,12 @@ def list_commitments(status: str = None) -> list[dict]:
 
 def get_unsynced_tasks() -> list[dict]:
     """Get tasks without google_task_id."""
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     rows = _exec(
         "SELECT * FROM tasks WHERE google_task_id IS NULL AND status != 'complete' ORDER BY due_date ASC"
     ).fetchall()
@@ -192,6 +223,12 @@ def set_google_task_id(task_id: str, google_task_id: str) -> None:
 
 def get_tasks_completed_since(since: str) -> list[dict]:
     """Get tasks completed since timestamp that have google_task_id."""
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     rows = _exec(
         "SELECT * FROM tasks WHERE completed_at > ? AND google_task_id IS NOT NULL ORDER BY completed_at DESC",
         (since,),
@@ -201,6 +238,12 @@ def get_tasks_completed_since(since: str) -> list[dict]:
 
 def get_tasks_with_google_id() -> list[dict]:
     """Get all tasks that have a google_task_id."""
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     rows = _exec(
         "SELECT * FROM tasks WHERE google_task_id IS NOT NULL ORDER BY due_date ASC"
     ).fetchall()

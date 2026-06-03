@@ -1,7 +1,7 @@
 # PrivyBot — Current State
 
 ## Phase
-Phase 26 — Complete
+Phase 28 — ADR-038 Phase 1 Deprecation
 
 ## Completed
 - Phase 19: Chain System Foundation (ADR-037 + Schema)
@@ -133,8 +133,17 @@ Phase 26 — Complete
 - tests/test_autonomous.py: Added 3 tests for template scheduler (registers jobs, skips non-schedule, loads and creates chain)
 - Test floor: 579 passed, 0 failed (576 + 3)
 
+## Phase 28: ADR-038 Phase 1 Deprecation
+- docs/adr/ADR-038.md: Status changed from Proposed to Accepted
+- infra/db/schema.py: Added DEPRECATED comments above tasks and personal_tasks table definitions
+- infra/db/goals.py: Added deprecation warnings to 7 functions (get_tasks, get_task, get_tasks_due_today, get_upcoming_scheduled, get_unsynced_tasks, get_tasks_completed_since, get_tasks_with_google_id)
+- infra/db/personal_tasks.py: Added deprecation warnings to 6 functions (add_personal_task, get_personal_tasks, get_tasks_due_soon, complete_personal_task, snooze_personal_task, delete_personal_task)
+- .windsurf/rules.md: Added ADR-038 stop rule for deprecated task tables
+- Inventory report: tasks table has 6 rows, personal_tasks table has 21 rows (all have google_task_id synced)
+- Test floor: 579 passed, 0 failed (no new tests - deprecation warnings don't require test coverage)
+
 ## Next
-Phase 28: TBD
+Phase 29 — ADR-038 Phase 2: Migration + Drop Tables
 
 ---
 
