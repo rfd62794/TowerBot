@@ -25,7 +25,7 @@ class GitHubAPIHandler(BaseAPIHandler):
         Returns:
             Dict with commits array containing commit metadata
         """
-        def _live(username=username, repo=repo, limit=limit) -> dict:
+        def _live(username_param=username, repo_param=repo, limit_param=limit) -> dict:
             token = os.getenv("GITHUB_TOKEN")
             if not token:
                 return {"error": "GITHUB_TOKEN not set"}
@@ -37,7 +37,7 @@ class GitHubAPIHandler(BaseAPIHandler):
                 }
 
                 # If no username provided, get it from the authenticated user
-                resolved_username = username if username else None
+                resolved_username = username_param if username_param else None
                 if not resolved_username:
                     user_resp = httpx.get(
                         "https://api.github.com/user",
@@ -52,8 +52,8 @@ class GitHubAPIHandler(BaseAPIHandler):
                     return {"error": "Could not determine username"}
 
                 # If specific repo provided, fetch commits from that repo
-                if repo:
-                    url = f"https://api.github.com/repos/{resolved_username}/{repo}/commits"
+                if repo_param:
+                    url = f"https://api.github.com/repos/{resolved_username}/{repo_param}/commits"
                 else:
                     # Fetch from all user's repos (limit to 5 most recently updated)
                     repos_resp = httpx.get(
@@ -70,21 +70,21 @@ class GitHubAPIHandler(BaseAPIHandler):
                         repo_name = repo_data.get("name")
                         if not repo_name:
                             continue
-                        commits_url = f"https://api.github.com/repos/{resolved_username}/{repo_name}/commits?per_page={limit}"
+                        commits_url = f"https://api.github.com/repos/{resolved_username}/{repo_name}/commits?per_page={limit_param}"
                         commits_resp = httpx.get(commits_url, headers=headers, timeout=10)
                         commits_resp.raise_for_status()
                         repo_commits = commits_resp.json()
                         for commit in repo_commits:
                             commit["_repo"] = repo_name
                             commits.append(commit)
-                        if len(commits) >= limit:
+                        if len(commits) >= limit_param:
                             break
 
-                    return {"commits": commits[:limit]}
+                    return {"commits": commits[:limit_param]}
 
                 # Single repo case
                 response = httpx.get(
-                    f"{url}?per_page={limit}",
+                    f"{url}?per_page={limit_param}",
                     headers=headers,
                     timeout=10
                 )
@@ -93,7 +93,7 @@ class GitHubAPIHandler(BaseAPIHandler):
 
                 # Add repo name to each commit
                 for commit in commits:
-                    commit["_repo"] = repo
+                    commit["_repo"] = repo_param
 
                 return {"commits": commits}
 
@@ -102,12 +102,12 @@ class GitHubAPIHandler(BaseAPIHandler):
                     return {"error": "Invalid GitHub token"}
                 if e.response.status_code == 404:
                     user_display = resolved_username or 'unknown'
-                    return {"error": f"Repository {user_display}/{repo} not found" if repo else f"User {user_display} not found"}
+                    return {"error": f"Repository {user_display}/{repo_param} not found" if repo_param else f"User {user_display} not found"}
                 return {"error": f"HTTP {e.response.status_code}: {e}"}
             except Exception as e:
                 return {"error": str(e)}
 
-        result = self.call("commits", self.hash(username, repo, limit), _live, stale_ok=True)
+        result = self.call("commits", self.hash(username, repo, limit), lambda: _live(username, repo, limit), stale_ok=True)
 
         # Add stale_notice to result
         notice = cache.stale_notice(result)
