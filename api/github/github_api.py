@@ -25,7 +25,7 @@ class GitHubAPIHandler(BaseAPIHandler):
         Returns:
             Dict with commits array containing commit metadata
         """
-        def _live() -> dict:
+        def _live(username=username, repo=repo, limit=limit) -> dict:
             token = os.getenv("GITHUB_TOKEN")
             if not token:
                 return {"error": "GITHUB_TOKEN not set"}
