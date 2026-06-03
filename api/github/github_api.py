@@ -3,6 +3,7 @@
 import os
 import httpx
 from api._handler import BaseAPIHandler
+from infra.cache import cache
 
 
 class GitHubAPIHandler(BaseAPIHandler):
@@ -100,7 +101,7 @@ class GitHubAPIHandler(BaseAPIHandler):
                 if e.response.status_code == 401:
                     return {"error": "Invalid GitHub token"}
                 if e.response.status_code == 404:
-                    user_display = resolved_username if 'resolved_username' in locals() else 'unknown'
+                    user_display = resolved_username or 'unknown'
                     return {"error": f"Repository {user_display}/{repo} not found" if repo else f"User {user_display} not found"}
                 return {"error": f"HTTP {e.response.status_code}: {e}"}
             except Exception as e:
@@ -109,7 +110,6 @@ class GitHubAPIHandler(BaseAPIHandler):
         result = self.call("commits", self.hash(username, repo, limit), _live, stale_ok=True)
 
         # Add stale_notice to result
-        from infra.cache import cache
         notice = cache.stale_notice(result)
         result["stale_notice"] = notice
 
