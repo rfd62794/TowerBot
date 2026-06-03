@@ -1,6 +1,7 @@
 """Personal task DB operations — standalone to-dos, reminders, recurring tasks."""
 
 import calendar
+import warnings
 from datetime import datetime, timedelta
 
 from infra.db.schema import _exec
@@ -128,6 +129,12 @@ def add_personal_task(
     notes: str = None,
     reminder_minutes: int = 30,
 ) -> int:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'personal_tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     due_datetime = _compute_due_datetime(due_date, due_time)
     cur = _exec(
         "INSERT OR IGNORE INTO personal_tasks "
@@ -142,6 +149,12 @@ def add_personal_task(
 
 
 def get_personal_tasks(filter: str = "today") -> list[dict]:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'personal_tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     today = datetime.now().strftime("%Y-%m-%d")
     week_end = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
 
@@ -178,6 +191,12 @@ def get_personal_tasks(filter: str = "today") -> list[dict]:
 
 def get_tasks_due_soon(minutes: int = 90) -> list[dict]:
     """Return pending personal tasks with due_datetime within the next N minutes."""
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'personal_tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     rows = _exec(
         "SELECT * FROM personal_tasks "
         "WHERE due_datetime BETWEEN datetime('now', 'localtime') "
@@ -190,6 +209,12 @@ def get_tasks_due_soon(minutes: int = 90) -> list[dict]:
 
 
 def complete_personal_task(task_id: int) -> dict:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'personal_tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     row = _exec(
         "SELECT * FROM personal_tasks WHERE id = ?", (task_id,)
     ).fetchone()
@@ -232,6 +257,12 @@ def complete_personal_task(task_id: int) -> dict:
 
 
 def snooze_personal_task(task_id: int, minutes: int = 60) -> dict:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'personal_tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     row = _exec(
         "SELECT * FROM personal_tasks WHERE id = ?", (task_id,)
     ).fetchone()
@@ -262,6 +293,12 @@ def snooze_personal_task(task_id: int, minutes: int = 60) -> dict:
 
 
 def delete_personal_task(task_id: int) -> dict:
+    warnings.warn(
+        "DEPRECATED (ADR-038): Direct access to 'personal_tasks' table. "
+        "Use Google Tasks API tools instead. This will break in Phase 2.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     row = _exec(
         "SELECT * FROM personal_tasks WHERE id = ?", (task_id,)
     ).fetchone()

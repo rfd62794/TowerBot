@@ -57,3 +57,17 @@ Changes are only "deploy safe" when:
 - All tests pass
 - Spot checks verified
 - User explicitly approves main merge
+
+## ADR-038 Stop Rule (June 2026)
+
+Do NOT write new code that reads from or writes to the `tasks` or `personal_tasks`
+tables. These tables are deprecated per ADR-038 and will be dropped in Phase 2.
+
+If a task requires storing or retrieving user tasks:
+- Use Google Tasks API tools (`list_google_tasks`, `create_google_task`, etc.)
+
+If a task requires storing autonomous bot work:
+- Use the `task_queue` table (conceptually: job_queue)
+
+If you encounter existing code that queries these tables, add a deprecation
+warning per ADR-038 Phase 1 directive — do not silently extend or modify the query.

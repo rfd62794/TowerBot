@@ -105,6 +105,31 @@ def test_push_new_tasks():
     assert isinstance(result, int), f"Expected int, got {type(result)}"
 
 
+@test("sync: delete_google_task actually deletes and get_google_task confirms")
+def test_delete_google_task_live():
+    """Live integration test - create, delete, verify gone."""
+    from tools.productivity.google_tasks import (
+        create_google_task, delete_google_task, get_google_task
+    )
+    # Create a test task
+    created = create_google_task(
+        title="PrivyBot live delete test — delete me",
+        due_date="2026-12-31"
+    )
+    assert created.get("ok") is True, f"Failed to create test task: {created}"
+    task_id = created.get("task", {}).get("id")
+    assert task_id, "No task_id in created task"
+
+    # Delete the task
+    deleted = delete_google_task(task_id)
+    assert deleted.get("ok") is True, f"Failed to delete task: {deleted}"
+
+    # Verify it's gone
+    retrieved = get_google_task(task_id)
+    assert retrieved.get("ok") is False, f"Task still exists after delete: {retrieved}"
+    assert "error" in retrieved, "Expected error in response for deleted task"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io

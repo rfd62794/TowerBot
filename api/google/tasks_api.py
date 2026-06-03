@@ -3,6 +3,7 @@
 import logging
 
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from api.google.youtube_api import _get_credentials
 from api._handler import BaseAPIHandler
 
@@ -81,11 +82,16 @@ class TasksAPIHandler(BaseAPIHandler):
         """Direct write — no cache, no stale."""
         try:
             client = self._get_client()
-            client.tasks().delete(
-                tasklist=tasklist_id,
-                task=google_task_id,
-            ).execute()
-            return True
+            request = client.tasks().delete(tasklist=tasklist_id, task=google_task_id)
+            response = request.execute()
+            # Google Tasks DELETE returns 204 No Content on success
+            # execute() returns None or empty string for 204, raises HttpError for failures
+            # Both None and "" are success cases
+            return response is None or response == ""
+        except HttpError as e:
+            # HttpError is raised for non-2xx status codes
+            logger.warning(f"[tasks] delete_task failed with HTTP {e.resp.status}: {e}")
+            return False
         except Exception as e:
             logger.warning(f"[tasks] delete_task failed: {e}")
             return False

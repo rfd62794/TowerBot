@@ -67,6 +67,9 @@ def list_google_tasks(show_completed: bool = False) -> dict:
     raw = pull_tasks(tasklist_id["tasklist_id"], show_completed=show_completed)
     tasks = raw.get("tasks", [])
     
+    # Filter out deleted tasks (Google marks deleted tasks with deleted=true instead of removing them)
+    tasks = [t for t in tasks if not t.get("deleted")]
+    
     # Normalize dates for display
     for task in tasks:
         if task.get("due"):
@@ -96,6 +99,9 @@ def get_google_task(task_id: str) -> dict:
     
     raw = pull_tasks(tasklist_id["tasklist_id"])
     tasks = raw.get("tasks", [])
+    
+    # Filter out deleted tasks (Google marks deleted tasks with deleted=true instead of removing them)
+    tasks = [t for t in tasks if not t.get("deleted")]
     
     for task in tasks:
         if task.get("id") == task_id:
