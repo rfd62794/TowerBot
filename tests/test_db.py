@@ -39,7 +39,8 @@ def test_all_tables():
     for t in ("threads", "messages", "memory", "model_status", "kv_cache",
               "tool_cache", "channel_history", "video_history", "game_history",
               "weather_history", "video_metadata_cache", "scheduled_videos",
-              "task_queue", "goals", "milestones", "tasks", "weekly_plans"):
+              "task_queue", "goals", "milestones", "weekly_plans",
+              "commitments", "task_reminders", "task_notifications"):
         assert t in tables, f"Missing table: {t}"
 
 
@@ -148,6 +149,99 @@ def test_task_roundtrip():
     task = get_task("test_verify_task_001")
     assert task["status"] == "complete", \
         f"Expected 'complete', got {task['status']}"
+
+
+@test("db: task_notifications table exists and accepts inserts")
+def test_task_notifications_insert():
+    from infra.db.schema import _exec
+    from datetime import datetime
+    now = datetime.now().isoformat()
+    _exec(
+        """INSERT INTO task_notifications (google_task_id, notification_type, last_notified_at)
+           VALUES (?, 'overdue', ?)""",
+        ("test_google_task_123", now),
+        commit=True
+    )
+    row = _exec(
+        "SELECT * FROM task_notifications WHERE google_task_id=?",
+        ("test_google_task_123",)
+    ).fetchone()
+    assert row is not None, "task_notifications insert failed"
+    assert row["google_task_id"] == "test_google_task_123"
+    assert row["notification_type"] == "overdue"
+
+
+@test("db: task_notifications unique constraint enforces deduplication")
+def test_task_notifications_unique_constraint():
+    from infra.db.schema import _exec
+    from datetime import datetime
+    now = datetime.now().isoformat()
+    # First insert
+    _exec(
+        """INSERT INTO task_notifications (google_task_id, notification_type, last_notified_at)
+           VALUES (?, 'overdue', ?)""",
+        ("test_unique_task_456", now),
+        commit=True
+    )
+    # Second insert with same google_task_id and notification_type should replace
+    later = datetime.now().isoformat()
+    _exec(
+        """INSERT OR REPLACE INTO task_notifications (google_task_id, notification_type, last_notified_at)
+           VALUES (?, 'overdue', ?)""",
+        ("test_unique_task_456", later),
+        commit=True
+    )
+    row = _exec(
+        "SELECT last_notified_at FROM task_notifications WHERE google_task_id=?",
+        ("test_unique_task_456",)
+    ).fetchone()
+    assert row is not None, "task_notifications unique constraint failed"
+    assert row["last_notified_at"] == later, "INSERT OR REPLACE did not update"
+
+
+@test("db: task_reminders table exists and accepts inserts")
+def test_task_reminders_insert():
+    from infra.db.schema import _exec
+    _exec(
+        "INSERT INTO task_reminders (task_id, reminded_at) VALUES (?, CURRENT_TIMESTAMP)",
+        (999,),
+        commit=True
+    )
+    row = _exec(
+        "SELECT * FROM task_reminders WHERE task_id=?",
+        (999,)
+    ).fetchone()
+    assert row is not None, "task_reminders insert failed"
+    assert row["task_id"] == 999
+
+
+@test("db: commitments table exists and accepts inserts")
+def test_commitments_insert():
+    from infra.db.schema import _exec
+    _exec(
+        """INSERT INTO commitments (description, deadline, status)
+           VALUES (?, ?, ?)""",
+        ("Test commitment", "2099-12-31", "pending"),
+        commit=True
+    )
+    row = _exec(
+        "SELECT * FROM commitments WHERE description=?",
+        ("Test commitment",)
+    ).fetchone()
+    assert row is not None, "commitments insert failed"
+    assert row["description"] == "Test commitment"
+
+
+@test("db: deprecated tables do not exist")
+def test_deprecated_tables_removed():
+    conn = sqlite3.connect(os.path.join(_root, "privy.db"))
+    tables = {t[0] for t in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    ).fetchall()}
+    conn.close()
+    # These tables should NOT exist after Phase 2 migration
+    assert "tasks" not in tables, "Deprecated 'tasks' table still exists"
+    assert "personal_tasks" not in tables, "Deprecated 'personal_tasks' table still exists"
 
 
 if __name__ == "__main__":

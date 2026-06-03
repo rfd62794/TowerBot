@@ -15,10 +15,8 @@ from infra.polling import polling_manager
 from infra.db import (
     record_channel_day, get_game_history, get_scheduled_videos,
     queue_observation, get_pending_observations, mark_sent, flush_morning_queue,
-    get_upcoming_scheduled, get_tasks_due_today, get_current_weekly_plan,
-    get_channel_history, get_tasks,
+    get_channel_history,
     get_last_stable_commit, get_last_deploy, record_deploy, mark_verify_passed, mark_stable,
-    get_personal_tasks, get_tasks_due_soon, mark_reminded, already_reminded,
     get_overnight_actions,
 )
 
@@ -199,36 +197,6 @@ async def morning_briefing(send_fn) -> None:
         except Exception as e:
             logger.debug(f"Gmail check failed: {e}")
 
-        # Add today's tasks section
-        try:
-            tasks_today = get_tasks_due_today()
-            if tasks_today:
-                display_tasks = tasks_today[:5]
-                msg += f"\n\n📋 Today's Tasks ({len(tasks_today)}):"
-                for task in display_tasks:
-                    status_icon = "✓" if task["status"] == "complete" else "○"
-                    msg += f"\n{status_icon} {task['title']}"
-                    if task.get("scheduled_at"):
-                        msg += f" at {task['scheduled_at'][11:16]}"
-                if len(tasks_today) > 5:
-                    msg += f"\n...and {len(tasks_today) - 5} more"
-        except Exception as e:
-            logger.debug(f"Tasks check failed: {e}")
-
-        # Add personal tasks today
-        try:
-            personal_today = get_personal_tasks("today")
-            if personal_today:
-                display_personal = personal_today[:5]
-                task_lines = "\n".join(
-                    f"○ {t['title']}" + (f" at {t['due_time']}" if t.get("due_time") else "")
-                    for t in display_personal
-                )
-                msg += f"\n\n📝 Personal tasks today:\n{task_lines}"
-                if len(personal_today) > 5:
-                    msg += f"\n...and {len(personal_today) - 5} more"
-        except Exception as e:
-            logger.debug(f"Personal tasks check failed: {e}")
 
         # Add weather
         try:
@@ -292,26 +260,10 @@ async def check_missed_briefing(send_fn) -> None:
 
 async def nightly_summary(send_fn) -> None:
     """
-    Nightly job to push forward missed tasks and send nudges.
+    Nightly job placeholder.
     Runs at 23:59.
     """
-    try:
-        from infra.db.personal_tasks import push_missed_tasks
-        
-        pushed = push_missed_tasks()
-        
-        if pushed:
-            msg = "⚠️ Missed tasks pushed forward:\n"
-            for task in pushed:
-                msg += f"• {task['title']} (was due {task['old_date']}) → now due {task['new_date']}\n"
-            msg += "\nGet them done or remove them from your list."
-            await send_fn(msg)
-            logger.info(f"Nightly: pushed {len(pushed)} missed tasks")
-        else:
-            logger.info("Nightly: no missed tasks to push")
-            
-    except Exception as e:
-        logger.error(f"Nightly summary failed: {e}")
+    logger.info("Nightly summary: no-op (local tasks deprecated per ADR-038)")
 
 
 async def heartbeat_check(send_fn) -> None:
@@ -377,32 +329,8 @@ async def heartbeat_check(send_fn) -> None:
         except Exception as e:
             logger.debug(f"Game trend check failed: {e}")
         
-        # Check 4 — tasks scheduled in next 60 minutes
-        try:
-            upcoming = get_upcoming_scheduled(hours=1)
-            for task in upcoming:
-                if task.get("scheduled_at"):
-                    scheduled_time = datetime.fromisoformat(task["scheduled_at"])
-                    minutes_until = (scheduled_time - now).total_seconds() / 60
-                    if 0 < minutes_until <= 60:
-                        await send_fn(f"⏰ Reminder: {task['title']} in {int(minutes_until)} minutes")
-                        logger.info(f"Sent task reminder: {task['title']}")
-        except Exception as e:
-            logger.debug(f"Task reminder check failed: {e}")
-        
-        # Check 5 — overdue tasks
-        try:
-            today = now.strftime("%Y-%m-%d")
-            overdue = get_tasks(status="pending")
-            for task in overdue:
-                if task["due_date"] < today:
-                    queue_observation(
-                        "overdue_task",
-                        f"⚠️ Overdue: {task['title']} was due {task['due_date']}",
-                        priority="high"
-                    )
-        except Exception as e:
-            logger.debug(f"Overdue task check failed: {e}")
+        # Check 4 — tasks scheduled in next 60 minutes (deprecated per ADR-038)
+        # Local tasks table removed; use Google Tasks API instead
         
         # Check 6 — flush pending queue
         pending = get_pending_observations()
@@ -412,38 +340,24 @@ async def heartbeat_check(send_fn) -> None:
                 mark_sent(obs["id"])
                 logger.info(f"Sent queued observation: {obs['task_name']}")
 
-        # Check 7 — personal task reminders
-        try:
-            tasks_soon = get_tasks_due_soon(minutes=90)
-            now = datetime.now()
-            for task in tasks_soon:
-                if not already_reminded(task["id"]):
-                    if task.get("due_datetime"):
-                        try:
-                            due_dt = datetime.fromisoformat(
-                                task["due_datetime"].replace(" ", "T")
-                            )
-                            minutes_left = int((due_dt - now).total_seconds() / 60)
-                        except Exception:
-                            minutes_left = None
-                    else:
-                        minutes_left = None
-                    label = f"In ~{minutes_left}min: " if minutes_left is not None else ""
-                    await send_fn(f"\U0001f514 {label}{task['title']}")
-                    mark_reminded(task["id"])
-                    logger.info(f"Sent personal task reminder: {task['title']}")
-        except Exception as e:
-            logger.debug(f"Personal task reminder check failed: {e}")
 
         # Check 10 — pre-event calendar alerts
         try:
             import zlib
+            from infra.db.schema import _exec
             raw = get_events_soon(minutes=60)
             events_soon = raw.get("events", [])
             for event in events_soon:
                 alert_key = f"cal_{event['id']}_{event['start'][:10]}"
                 alert_id = zlib.adler32(alert_key.encode()) & 0x7FFFFFFF
-                if not already_reminded(alert_id):
+
+                # Check task_reminders table directly (replaces deprecated already_reminded)
+                row = _exec(
+                    "SELECT reminded_at FROM task_reminders WHERE task_id=?",
+                    (alert_id,)
+                ).fetchone()
+
+                if not row:
                     mins = event.get("minutes_until")
                     label = f"In ~{mins}min: " if mins is not None else ""
                     msg = f"\U0001f4c5 {label}{event['title']}"
@@ -451,41 +365,66 @@ async def heartbeat_check(send_fn) -> None:
                         msg += f"\n\U0001f4cd {event['location']}"
                     if should_send_now("high"):
                         await send_fn(msg)
-                        mark_reminded(alert_id)
+                        # Record reminder in task_reminders table
+                        _exec(
+                            "INSERT INTO task_reminders (task_id, reminded_at) VALUES (?, CURRENT_TIMESTAMP)",
+                            (alert_id,),
+                            commit=True
+                        )
                         logger.info(f"Sent calendar alert: {event['title']}")
         except Exception as e:
             logger.debug(f"Calendar alert check failed: {e}")
 
-        # Check 9 — overdue and pending personal task reminder (daily summary only)
+        # Check 9 — Google Tasks overdue check with notification deduplication
         try:
-            # Use a unique alert key for the daily summary
-            summary_alert_key = f"daily_task_summary_{now.strftime('%Y-%m-%d')}"
-            import zlib
-            summary_alert_id = zlib.adler32(summary_alert_key.encode()) & 0x7FFFFFFF
-            
-            if not already_reminded(summary_alert_id):
-                overdue_tasks = get_personal_tasks("overdue")
-                today_pending = get_personal_tasks("today")
+            from tools.productivity.google_tasks import list_google_tasks
+            from infra.db.schema import _exec
 
-                if overdue_tasks and should_send_now("normal"):
-                    lines = "\n".join(
-                        f"\u2022 {t['title']}" for t in overdue_tasks[:5]
-                    )
-                    await send_fn(f"\u26a0\ufe0f Overdue ({len(overdue_tasks)}):\n{lines}")
+            today = now.strftime("%Y-%m-%d")
+            tasks = list_google_tasks(max_results=100)
+            if tasks.get("ok"):
+                overdue = [
+                    t for t in tasks["tasks"]
+                    if t.get("due") and t["due"][:10] < today and t.get("status") != "completed"
+                ]
 
-                if today_pending and should_send_now("normal"):
-                    lines = "\n".join(
-                        f"\u2022 {t['title']}" + (f" at {t['due_time']}" if t.get("due_time") else "")
-                        for t in today_pending[:5]
-                    )
-                    await send_fn(
-                        f"\U0001f4dd Still pending today ({len(today_pending)}):\n{lines}"
-                    )
-                
-                # Mark this daily summary as sent
-                mark_reminded(summary_alert_id)
+                for task in overdue:
+                    google_task_id = task.get("id")
+                    if not google_task_id:
+                        continue
+
+                    # Check if we've already notified for this overdue task
+                    row = _exec(
+                        "SELECT last_notified_at FROM task_notifications WHERE google_task_id=? AND notification_type='overdue'",
+                        (google_task_id,)
+                    ).fetchone()
+
+                    # Only notify if not notified in the last 24 hours
+                    should_notify = True
+                    if row:
+                        last_notified = row["last_notified_at"]
+                        try:
+                            last_dt = datetime.fromisoformat(last_notified)
+                            hours_since = (now - last_dt).total_seconds() / 3600
+                            if hours_since < 24:
+                                should_notify = False
+                        except Exception:
+                            pass
+
+                    if should_notify and should_send_now("normal"):
+                        await send_fn(f"⚠️ Overdue: {task['title']} (was due {task['due'][:10]})")
+                        logger.info(f"Sent overdue notification for Google Task: {task['title']}")
+
+                        # Record notification in task_notifications table
+                        _exec(
+                            """INSERT OR REPLACE INTO task_notifications
+                               (google_task_id, notification_type, last_notified_at)
+                               VALUES (?, 'overdue', ?)""",
+                            (google_task_id, now.isoformat()),
+                            commit=True
+                        )
         except Exception as e:
-            logger.debug(f"Personal task reminder check failed: {e}")
+            logger.debug(f"Google Tasks overdue check failed: {e}")
 
         logger.info("Heartbeat check complete")
         
