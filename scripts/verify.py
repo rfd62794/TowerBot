@@ -77,6 +77,7 @@ TEST_FILES = [
     "tests/test_model_wiring.py",
     "tests/test_wordpress_pages.py",
     "tests/test_shell_execution.py",
+    "tests/test_content_seen.py",
 ]
 
 
