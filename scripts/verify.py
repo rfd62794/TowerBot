@@ -91,9 +91,9 @@ def run_all():
 
     print()
     total = total_passed + total_failed
-    sys.stderr.write(f"\n{total_passed} passed, {total_failed} failed, {total_skipped} skipped\n")
-    sys.stderr.write("Deploy safe.\n" if total_failed == 0 else "Deploy blocked.\n")
-    sys.stderr.flush()
+    sys.__stderr__.write(f"\n{total_passed} passed, {total_failed} failed, {total_skipped} skipped\n")
+    sys.__stderr__.write("Deploy safe.\n" if total_failed == 0 else "Deploy blocked.\n")
+    sys.__stderr__.flush()
 
     sys.exit(0 if total_failed == 0 else 1)
 
