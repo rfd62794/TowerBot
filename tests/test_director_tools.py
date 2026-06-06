@@ -199,7 +199,7 @@ def test_list_memories_all():
     """Returns memories list with preview."""
     from tools.meta.director import list_memories
     mock_rows = [{"key": "test", "layer": "technical", "content": "test content", "created_at": "2026-01-01"}]
-    with patch("infra.db.schema._exec", return_value=mock_rows):
+    with patch("tools.meta.director._exec", return_value=mock_rows):
         result = list_memories()
         assert result["ok"] is True
         assert "memories" in result
@@ -210,7 +210,7 @@ def test_list_memories_filtered():
     """layer='technical' — only technical layer."""
     from tools.meta.director import list_memories
     mock_rows = [{"key": "test", "layer": "technical", "content": "test", "created_at": "2026-01-01"}]
-    with patch("infra.db.schema._exec", return_value=mock_rows):
+    with patch("tools.meta.director._exec", return_value=mock_rows):
         result = list_memories(layer="technical")
         assert result["ok"] is True
         assert result["count"] == 1
@@ -220,8 +220,8 @@ def test_delete_memory_soft():
     """Sets active=0, not hard delete."""
     from tools.meta.director import delete_memory
     mock_rows = [{"id": 1}]
-    with patch("infra.db.schema._exec", return_value=mock_rows):
-        with patch("infra.db.schema._exec") as exec_mock:
+    with patch("tools.meta.director._exec", return_value=mock_rows):
+        with patch("tools.meta.director._exec") as exec_mock:
             result = delete_memory("test_key")
             assert result["ok"] is True
             # Check that UPDATE was called with active=0
@@ -235,7 +235,7 @@ def test_query_db_select():
     from tools.meta.director import query_db
     mock_cursor = MagicMock()
     mock_cursor.fetchall.return_value = [{"c": 5}]
-    with patch("infra.db.schema._exec", return_value=mock_cursor):
+    with patch("tools.meta.director._exec", return_value=mock_cursor):
         result = query_db("SELECT COUNT(*) as c FROM memories")
         assert result["ok"] is True
         assert "rows" in result
@@ -256,7 +256,7 @@ def test_get_promotion_candidates():
     """Returns candidates list."""
     from tools.meta.director import get_promotion_candidates
     mock_rows = [{"id": 1, "pattern": "test", "observed_count": 5}]
-    with patch("infra.db.schema._exec", return_value=mock_rows):
+    with patch("tools.meta.director._exec", return_value=mock_rows):
         result = get_promotion_candidates()
         assert result["ok"] is True
         assert "candidates" in result

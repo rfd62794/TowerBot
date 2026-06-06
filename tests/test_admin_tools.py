@@ -79,7 +79,7 @@ def test_run_diagnostic_returns_ok():
     from tools.meta.admin import run_diagnostic
     with patch("subprocess.run", return_value=MagicMock(stdout="abc1234", returncode=0)):
         with patch("tools.meta.admin.get_logs", return_value={"ok": True, "lines": []}):
-            with patch("infra.db.schema._exec", return_value=[{"c": 5}]):
+            with patch("tools.meta.admin._exec", return_value=[{"c": 5}]):
                 with patch("infra.memory_manager.memory_manager", MagicMock(collection=MagicMock())):
                     result = run_diagnostic()
                     assert result["ok"] is True
@@ -97,7 +97,7 @@ def test_run_diagnostic_partial_failure():
     from tools.meta.admin import run_diagnostic
     with patch("subprocess.run", return_value=MagicMock(stdout="abc1234", returncode=0)):
         with patch("tools.meta.admin.get_logs", return_value={"ok": True, "lines": []}):
-            with patch("infra.db.schema._exec", side_effect=Exception("DB gone")):
+            with patch("tools.meta.admin._exec", side_effect=Exception("DB gone")):
                 with patch("infra.memory_manager.memory_manager", MagicMock(collection=MagicMock())):
                     result = run_diagnostic()
                     assert result["ok"] is True
@@ -126,7 +126,7 @@ def test_query_db_created_at_not_blocked():
     from tools.meta.director import query_db
     mock_cursor = MagicMock()
     mock_cursor.fetchall.return_value = [{"id": 1, "created_at": "2026-01-01"}]
-    with patch("infra.db.schema._exec", return_value=mock_cursor):
+    with patch("tools.meta.director._exec", return_value=mock_cursor):
         result = query_db("SELECT id, created_at FROM tasks LIMIT 1")
         assert result["ok"] is True, f"Query with created_at should not be blocked, got {result}"
         assert "error" not in result or "CREATE" not in result.get("error", "")
