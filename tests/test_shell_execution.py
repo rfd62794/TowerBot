@@ -73,10 +73,11 @@ def test_named_command_resolves_and_executes():
         assert result["success"] is True
         assert result["command"] == "privy_tests"
         mock_run.assert_called_once()
+        call_args = mock_run.call_args[0]
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs["shell"] is True
         assert call_kwargs["cwd"] == "C:/Github/PrivyBot"
-        assert "uv run pytest" in call_kwargs[0]
+        assert "uv run pytest" in call_args[0]
 
 
 @test("shell: named command unknown returns available")
