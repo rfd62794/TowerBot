@@ -104,14 +104,11 @@ routes:
       - update_task
       - get_upcoming_tasks
       - suggest_goal_progress
-      - list_google_tasks
-      - get_google_task
-      - create_google_task
-      - update_google_task
-      - complete_google_task
-      - delete_google_task
-      - sync_google_tasks
-    description: "Goals, tasks, milestones, weekly planning, Google Tasks sync"
+      - queue_task
+      - cancel_task
+      - get_task_result
+      - list_pending_tasks
+    description: "Goals, tasks, milestones, weekly planning, task delegation"
 
   memory:
     model: openrouter/free
@@ -197,14 +194,12 @@ routes:
       - get_blog_post
       - create_blog_draft
       - update_blog_post
-      - advance_post_pipeline
-      - get_post_pipeline_state
-      - create_draft_from_pipeline
-      - get_pages
-      - get_page
-      - update_page
-      - create_page
-      - delete_page
+      - get_blog_categories
+      - search_blog_posts
+      - set_post_categories
+      - set_post_excerpt
+      - set_post_tags
+      - schedule_blog_post
     description: "Blog posts, drafts, publishing"
 
   utility:
@@ -218,56 +213,12 @@ routes:
   system:
     model: openrouter/free
     tools:
-      - get_system_resources
-      - get_ollama_loaded
-      - get_ollama_model_sizes
-      - get_privybot_memory
-      - get_daily_cost
-      - get_chains
-      - get_chain
-      - get_chain_payload
-      - start_chain
-      - cancel_chain
-      - resume_chain
-      - list_templates
-      - get_template
-      - write_template
-      - delete_experimental_template
-      - list_memories
-      - delete_memory
-      - get_promotion_candidates
-      - query_db
-      - a2a_search
-      - register_tool_from_spec
-      - list_experimental_tools
-      - promote_tool
-      - search_tools
-      - list_all_tools
-      - get_tool_info
-    description: "System resources, Ollama status, budget tracking, director access, tool discovery"
-
-  tasks:
-    model: openrouter/free
-    tools:
-      - queue_task
-      - get_task_result
-      - list_pending_tasks
-      - cancel_task
-      - purge_null_tasks
-      - get_logs
-      - run_diagnostic
+      - execute_shell
+      - run_named_command
+      - list_named_commands
       - sync_db_export
       - sync_db_import
       - sync_db_status
-    description: "Task queue management, DB sync operations, admin diagnostics"
-
-  wordpress:
-    model: openrouter/free
-    tools:
-      - schedule_blog_post
-      - search_blog_posts
-      - set_post_categories
-      - set_post_excerpt
-      - set_post_tags
-      - get_blog_categories
-    description: "WordPress post scheduling, search, and taxonomy"
+    # planned: get_system_resources, get_ollama_loaded, get_ollama_model_sizes,
+    #          check_ollama_health, get_daily_cost  (not yet in TOOL_REGISTRY)
+    description: "System resources, Ollama status, budget tracking, shell execution, database sync"

@@ -13,6 +13,7 @@ from infra.mcp.fast import get_state_summary, get_quick_opportunities
 MCP_EXCLUDED = {
     "name_thread",   # bot-internal state, meaningless externally
     "sync",          # Google Tasks sync managed by bot scheduler
+    "think",         # bot-internal reasoning tool, meaningless externally
 }
 
 # Expose all tools except internal plumbing
