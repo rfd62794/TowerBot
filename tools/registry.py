@@ -29,7 +29,7 @@ from .content.discovery import (
 )
 from .games.recommendations import get_content_recommendations
 from .games.metrics import get_game_metrics, get_installed_games, get_sale_info, get_itch_stats
-from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits, get_subreddit_feed, jina_read
+from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits, get_subreddit_feed, jina_read, useless_fact, number_fact, random_quote, wiki_random, spacex_latest_launch, country_info, cratesio_info, hackernews_search, usgs_earthquake, iss_location, open_library_search, boardgame_search, lichess_user
 from .productivity.goals import (
     save_commitment,
     get_goals_list,
@@ -639,6 +639,241 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": []
+                }
+            }
+        }
+    },
+    "useless_fact": {
+        "fn": useless_fact,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "useless_fact",
+                "description": "Get a random interesting fact from Useless Facts API. No authentication required.",
+                "parameters": {"type": "object", "properties": {}, "required": []}
+            }
+        }
+    },
+    "number_fact": {
+        "fn": number_fact,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "number_fact",
+                "description": "Get a fact about a number from Numbers API. Supports trivia, math, date, and year facts. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "number": {
+                            "type": "integer",
+                            "description": "Number to get fact about (default: random)"
+                        },
+                        "fact_type": {
+                            "type": "string",
+                            "description": "Type of fact — trivia, math, date, year (default: trivia)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "random_quote": {
+        "fn": random_quote,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "random_quote",
+                "description": "Get a random quote from Quotable API. No authentication required.",
+                "parameters": {"type": "object", "properties": {}, "required": []}
+            }
+        }
+    },
+    "wiki_random": {
+        "fn": wiki_random,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "wiki_random",
+                "description": "Get a random Wikipedia article summary. No authentication required.",
+                "parameters": {"type": "object", "properties": {}, "required": []}
+            }
+        }
+    },
+    "spacex_latest_launch": {
+        "fn": spacex_latest_launch,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "spacex_latest_launch",
+                "description": "Get the latest SpaceX launch data including name, date, success status, and details. No authentication required.",
+                "parameters": {"type": "object", "properties": {}, "required": []}
+            }
+        }
+    },
+    "country_info": {
+        "fn": country_info,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "country_info",
+                "description": "Get country information from REST Countries API including name, capital, region, population, languages, currencies, and flags. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Country name (optional, if not provided returns random country)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "cratesio_info": {
+        "fn": cratesio_info,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "cratesio_info",
+                "description": "Get Rust crate information from crates.io API including name, version, description, downloads, homepage, and repository. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "crate_name": {
+                            "type": "string",
+                            "description": "Name of the Rust crate"
+                        }
+                    },
+                    "required": ["crate_name"]
+                }
+            }
+        }
+    },
+    "hackernews_search": {
+        "fn": hackernews_search,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "hackernews_search",
+                "description": "Search Hacker News via Algolia API for stories matching a query. Returns title, url, points, author, and timestamp. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default 10)"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+    },
+    "usgs_earthquake": {
+        "fn": usgs_earthquake,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "usgs_earthquake",
+                "description": "Get recent earthquake data from USGS API including magnitude, location, time, depth, and URL. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "magnitude": {
+                            "type": "number",
+                            "description": "Minimum magnitude filter (optional)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default 10)"
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+    },
+    "iss_location": {
+        "fn": iss_location,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "iss_location",
+                "description": "Get current International Space Station location including latitude, longitude, and timestamp. No authentication required.",
+                "parameters": {"type": "object", "properties": {}, "required": []}
+            }
+        }
+    },
+    "open_library_search": {
+        "fn": open_library_search,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "open_library_search",
+                "description": "Search for books via Open Library API by title, author, or subject. Returns title, author, first publish year, cover ID, and key. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query (title, author, or subject)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default 5)"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+    },
+    "boardgame_search": {
+        "fn": boardgame_search,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "boardgame_search",
+                "description": "Search for board games via BoardGameGeek API by name. Returns game ID, name, and year published. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query (game name)"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return (default 5)"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+    },
+    "lichess_user": {
+        "fn": lichess_user,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "lichess_user",
+                "description": "Get Lichess user profile data including ratings for bullet, blitz, rapid, and classical chess, games played, and account timestamps. No authentication required.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "description": "Lichess username"
+                        }
+                    },
+                    "required": ["username"]
                 }
             }
         }
