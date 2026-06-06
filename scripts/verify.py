@@ -79,6 +79,7 @@ TEST_FILES = [
     "tests/test_wordpress_pages.py",
     "tests/test_shell_execution.py",
     "tests/test_content_seen.py",
+    "tests/test_playwright_base.py",
 ]
 
 
