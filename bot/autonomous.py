@@ -912,15 +912,14 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     # Register self-direction loop job
     scheduler.add_job(
         self_direction_loop,
-        "cron",
-        hour=7,
-        minute=0,
+        "interval",
+        minutes=30,
         id='self_direction',
         max_instances=1,
         args=[send_fn],
         replace_existing=True
     )
-    logger.info("Registered self-direction loop: daily 07:00")
+    logger.info("Registered self-direction loop: every 30 minutes")
 
     # Register comment_new_videos job
     scheduler.add_job(

@@ -64,6 +64,14 @@ steps:
         STRUGGLE: [2-3 sentences]
         LESSON: [2-3 sentences]
         NEXT: [1-2 sentences]
+      result_key: scaffold
+
+  - name: request_approval
+    type: approval_wait
+    config:
+      telegram_chat_id: "{TELEGRAM_CHAT_ID}"
+      summary_field: scaffold
+      summary_prefix: "📝 Blog draft ready:\n\n"
 
   - name: save_draft
     type: tool_call
@@ -71,5 +79,5 @@ steps:
       tool_name: save_memory
       tool_args:
         key: "Blog draft {date}"
-        content: "{llm_result}"
+        content: "{scaffold}"
         layer: content

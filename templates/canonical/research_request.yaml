@@ -74,6 +74,13 @@ steps:
         Maximum 300 words. Be specific, not general. Output ONLY the summary.
       result_key: summary
 
+  - name: request_approval
+    type: approval_wait
+    config:
+      telegram_chat_id: "{TELEGRAM_CHAT_ID}"
+      summary_field: summary
+      summary_prefix: "🔬 Research: {topic}\n\n"
+
   - name: send_to_telegram
     type: tool_call
     config:
