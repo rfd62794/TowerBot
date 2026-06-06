@@ -152,6 +152,33 @@ async def morning_briefing(send_fn) -> None:
         except Exception:
             pass
 
+        # Add itch.io stats
+        try:
+            from tools.games.metrics import get_itch_stats
+            itch_result = get_itch_stats()
+            if itch_result.get("ok") and itch_result.get("count", 0) > 0:
+                games = itch_result.get("games", [])
+                total_views = sum(g.get("views_count", 0) for g in games)
+                total_downloads = sum(g.get("downloads_count", 0) for g in games)
+                total_purchases = sum(g.get("purchases_count", 0) for g in games)
+                msg += f"\n\n🎮 itch.io — {itch_result['count']} games\n"
+                msg += f"Views: {total_views:,} | Downloads: {total_downloads:,} | Purchases: {total_purchases:,}"
+        except Exception as e:
+            logger.debug(f"itch.io check failed: {e}")
+
+        # Add top performing videos
+        try:
+            from tools.content.videos import get_top_videos
+            top_videos = get_top_videos(days=7, limit=3)
+            if top_videos.get("ok") and top_videos.get("videos"):
+                msg += f"\n\n📺 Top videos (7d):\n"
+                for vid in top_videos["videos"][:3]:
+                    views = vid.get("views", 0)
+                    title = vid.get("title", "Unknown")[:40]
+                    msg += f"  • {title}: {views:,} views\n"
+        except Exception as e:
+            logger.debug(f"Top videos check failed: {e}")
+
         # Check for scheduled videos today
         try:
             scheduled = get_scheduled_videos()
