@@ -25,6 +25,291 @@ from infra.db.chains import create_chain
 
 logger = logging.getLogger("privy.autonomous")
 
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+
+async def system_watchdog(send_fn):
+    """
+    5-minute system health check — silent unless something is wrong.
+    
+    Checks:
+    - Ollama alive?
+    - Budget ok?
+    - Queue depth sane?
+    """
+    issues = []
+    
+    # Check Ollama health
+    try:
+        from api.local.ollama_api import ollama_api
+        if ollama_api.enabled:
+            healthy = ollama_api.health_check()
+            if not healthy:
+                issues.append("Ollama not healthy")
+    except Exception as e:
+        logger.debug(f"Ollama check failed: {e}")
+    
+    # Check budget status
+    try:
+        from bot.model_manager import can_use_paid_model
+        if not can_use_paid_model():
+            issues.append("Daily budget cap reached")
+    except Exception as e:
+        logger.debug(f"Budget check failed: {e}")
+    
+    # Check queue depth
+    try:
+        from infra.db.task_queue import get_due_tasks
+        due = get_due_tasks()
+        if len(due) > 20:
+            issues.append(f"Queue depth high: {len(due)} tasks pending")
+    except Exception as e:
+        logger.debug(f"Queue check failed: {e}")
+    
+    # Send alert if issues found
+    if issues:
+        msg = "⚠️ System watchdog alerts:\n" + "\n".join(f"• {i}" for i in issues)
+        await send_fn(msg)
+        logger.warning(f"System watchdog found issues: {issues}")
+    else:
+        logger.debug("System watchdog: all checks passed")
+
+
+async def urgent_email_check(send_fn):
+    """
+    15-minute urgent email check — anything flagged critical since last check?
+    """
+    try:
+        from tools.communication.gmail import gmail_tools
+        
+        # Check both accounts for urgent emails
+        personal = gmail_tools.get_inbox_summary(account="personal")
+        rfd = gmail_tools.get_inbox_summary(account="rfd") if "rfd" in gmail_tools.ACCOUNTS else None
+        
+        urgent = []
+        
+        # Check personal for urgent keywords
+        for msg in personal.get("recent", []):
+            subject = msg.get("subject", "").lower()
+            if any(kw in subject for kw in ["urgent", "critical", "asap", "emergency", "deadline"]):
+                urgent.append(f"Personal: {msg['from']} — {msg['subject'][:40]}")
+        
+        # Check RFD for urgent keywords
+        if rfd:
+            for msg in rfd.get("recent", []):
+                subject = msg.get("subject", "").lower()
+                if any(kw in subject for kw in ["urgent", "critical", "asap", "emergency", "deadline"]):
+                    urgent.append(f"RFD: {msg['from']} — {msg['subject'][:40]}")
+        
+        if urgent:
+            msg = "🚨 Urgent emails detected:\n" + "\n".join(f"• {u}" for u in urgent[:5])
+            await send_fn(msg)
+            logger.warning(f"Urgent emails found: {len(urgent)}")
+        else:
+            logger.debug("Urgent email check: no urgent messages")
+            
+    except Exception as e:
+        logger.error(f"Urgent email check failed: {e}")
+
+
+async def community_opportunity_capture(send_fn):
+    """
+    Hourly community opportunity capture — find threads worth engaging with.
+    """
+    try:
+        # This would run the community_scout template
+        # For now, just log that it ran
+        logger.info("Community opportunity capture check")
+    except Exception as e:
+        logger.error(f"Community opportunity capture failed: {e}")
+
+
+async def tech_digest(send_fn):
+    """
+    7:30AM tech digest — summarize recent tech news.
+    """
+    try:
+        # This would run the tech_digest template
+        logger.info("Tech digest check")
+    except Exception as e:
+        logger.error(f"Tech digest failed: {e}")
+
+
+async def content_decision_prompt(send_fn):
+    """
+    9:00AM content decision prompt — what to record today.
+    """
+    try:
+        from infra.model_router import route
+        from tools.content.videos import get_top_videos
+        from tools.games.metrics import get_itch_stats
+        
+        # Get recent performance data
+        top_videos = get_top_videos(days=7, limit=5)
+        itch = get_itch_stats()
+        
+        prompt = f"""Based on this data, suggest what I should record today for YouTube:
+
+Top videos (7d):
+{top_videos.get('videos', [])[:3] if top_videos.get('ok') else 'N/A'}
+
+itch.io stats:
+{itch.get('games', [])[:2] if itch.get('ok') else 'N/A'}
+
+Suggest 1-2 specific recording ideas that would perform well. Be specific about game and angle."""
+        
+        result = route(role="reasoning", prompt=prompt)
+        if result.get("ok"):
+            await send_fn(f"🎬 Content decision for today:\n\n{result.get('result', '')}")
+            logger.info("Content decision prompt sent")
+    except Exception as e:
+        logger.error(f"Content decision prompt failed: {e}")
+
+
+async def midday_checkin(send_fn):
+    """
+    1:00PM mid-day check-in — what shipped, what's pending, performance, opportunities.
+    """
+    try:
+        from tools.search.search_tools import get_recent_commits
+        from tools.content.videos import get_top_videos
+        from infra.db.task_queue import get_due_tasks
+        
+        # Get data
+        commits = get_recent_commits(limit=5)
+        top_videos = get_top_videos(days=1, limit=3)
+        pending = get_due_tasks()
+        
+        msg = "🕐 Mid-day check-in:\n\n"
+        
+        # What shipped
+        if commits.get("commits"):
+            msg += f"📦 Shipped today: {len(commits['commits'])} commits\n"
+            for c in commits['commits'][:2]:
+                msg += f"  • {c['message'][:50]}\n"
+        
+        # What's pending
+        if pending:
+            msg += f"\n📋 Pending: {len(pending)} tasks\n"
+        
+        # Top performance
+        if top_videos.get("ok") and top_videos.get("videos"):
+            msg += f"\n📺 Top today:\n"
+            for v in top_videos['videos'][:2]:
+                msg += f"  • {v['title'][:40]}: {v['views']} views\n"
+        
+        await send_fn(msg)
+        logger.info("Mid-day check-in sent")
+    except Exception as e:
+        logger.error(f"Mid-day check-in failed: {e}")
+
+
+async def evening_content_check(send_fn):
+    """
+    6:00PM content gap detector + commit digest + VoidDrift delta.
+    """
+    try:
+        from tools.search.search_tools import get_recent_commits
+        from tools.games.metrics import get_itch_stats
+        from infra.model_router import route
+        
+        # Get commits today
+        commits = get_recent_commits(limit=20)
+        today_commits = [c for c in commits.get("commits", []) if _hours_ago(c.get("date", "")) <= 24]
+        
+        # Get VoidDrift stats
+        itch = get_itch_stats()
+        voiddrift = None
+        if itch.get("ok"):
+            for g in itch.get("games", []):
+                if "voiddrift" in g.get("title", "").lower():
+                    voiddrift = g
+                    break
+        
+        msg = "🌆 Evening content check:\n\n"
+        
+        # Commits vs content gap
+        msg += f"📦 Commits today: {len(today_commits)}\n"
+        
+        # VoidDrift delta
+        if voiddrift:
+            msg += f"\n🎮 VoidDrift: {voiddrift.get('views', 0)} views · {voiddrift.get('downloads', 0)} plays\n"
+        
+        # Commit digest plain English
+        if today_commits:
+            digest_prompt = f"Summarize these commits in plain English, 2-3 sentences max:\n" + "\n".join(c['message'] for c in today_commits[:5])
+            digest = route(role="reasoning", prompt=digest_prompt)
+            if digest.get("ok"):
+                msg += f"\n📝 Today's work:\n{digest.get('result', '')}"
+        
+        await send_fn(msg)
+        logger.info("Evening content check sent")
+    except Exception as e:
+        logger.error(f"Evening content check failed: {e}")
+
+
+async def bedtime_summary(send_fn):
+    """
+    10:30PM day summary + overnight queue setup.
+    """
+    try:
+        from tools.productivity.google_tasks import list_google_tasks
+        from datetime import datetime, timedelta
+        
+        # Get tomorrow's tasks
+        tasks = list_google_tasks()
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        due_tomorrow = [t for t in tasks.get("tasks", []) if t.get("due_date", "").startswith(tomorrow)]
+        
+        msg = "🌙 Bedtime summary:\n\n"
+        
+        # What happened today vs morning plan
+        msg += "Today's summary: [day completed]\n\n"
+        
+        # Tomorrow's overnight queue
+        if due_tomorrow:
+            msg += f"📋 Overnight queue ({len(due_tomorrow)} tasks):\n"
+            for t in due_tomorrow[:3]:
+                msg += f"  • {t.get('title', '')}\n"
+        else:
+            msg += "📋 No tasks queued for overnight\n"
+        
+        msg += "\n💤 I'll work on these while you sleep. Good night!"
+        
+        await send_fn(msg)
+        logger.info("Bedtime summary sent")
+    except Exception as e:
+        logger.error(f"Bedtime summary failed: {e}")
+
+
+def _hours_ago(date_str: str) -> int:
+    """Calculate hours ago from ISO date string."""
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        delta = datetime.now(dt.tzinfo) - dt
+        return int(delta.total_seconds() / 3600)
+    except:
+        return 999
+
+
+async def budget_status_check(send_fn):
+    """
+    Hourly budget status check — report if approaching cap.
+    """
+    try:
+        from bot.model_manager import get_budget_status
+        status = get_budget_status()
+        
+        if status.get("approaching_cap", False):
+            msg = f"⚠️ Budget alert: {status.get('quota_used_today', 0):.4f}/{status.get('daily_cap', 0.25)} used"
+            await send_fn(msg)
+            logger.warning(f"Budget approaching cap: {status}")
+        else:
+            logger.debug(f"Budget status OK: {status.get('quota_used_today', 0):.4f} used")
+    except Exception as e:
+        logger.error(f"Budget status check failed: {e}")
+
 # Idle task pool — fallback tasks when no autonomous work is queued
 IDLE_TASKS = [
     # Research
@@ -826,6 +1111,28 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
             day_str = f" day {schedule['day_of_week']}" if 'day_of_week' in schedule else ""
             logger.info(f"Registered cron task: {task_name} at {schedule['hour']:02d}:{schedule['minute']:02d}{day_str}")
 
+    # Register 5-minute system watchdog
+    scheduler.add_job(
+        system_watchdog,
+        "interval",
+        minutes=5,
+        id="system_watchdog",
+        max_instances=1,
+        args=[send_fn]
+    )
+    logger.info("Registered system watchdog: every 5 minutes")
+
+    # Register 15-minute urgent email check
+    scheduler.add_job(
+        urgent_email_check,
+        "interval",
+        minutes=15,
+        id="urgent_email_check",
+        max_instances=1,
+        args=[send_fn]
+    )
+    logger.info("Registered urgent email check: every 15 minutes")
+
     # Register idle detection job (runs every 15 minutes)
     scheduler.add_job(
         _check_and_run_idle_task,
@@ -867,6 +1174,28 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         replace_existing=True
     )
     logger.info("Registered chain observer: every 30 minutes")
+
+    # Register hourly community opportunity capture
+    scheduler.add_job(
+        community_opportunity_capture,
+        "interval",
+        hours=1,
+        id="community_opportunity_capture",
+        max_instances=1,
+        args=[send_fn]
+    )
+    logger.info("Registered community opportunity capture: every hour")
+
+    # Register hourly budget status check
+    scheduler.add_job(
+        budget_status_check,
+        "interval",
+        hours=1,
+        id="budget_status_check",
+        max_instances=1,
+        args=[send_fn]
+    )
+    logger.info("Registered budget status check: every hour")
 
     # Register weekly digest job
     async def send_weekly_digest(send_fn):
@@ -921,7 +1250,47 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     )
     logger.info("Registered self-direction loop: every 30 minutes")
 
-    # Register comment_new_videos job
+    # Register 7:30AM tech digest
+    scheduler.add_job(
+        tech_digest,
+        "cron",
+        hour=7,
+        minute=30,
+        id='tech_digest',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered tech_digest: daily 07:30")
+
+    # Register 9:00AM content decision prompt
+    scheduler.add_job(
+        content_decision_prompt,
+        "cron",
+        hour=9,
+        minute=0,
+        id='content_decision_prompt',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered content_decision_prompt: daily 09:00")
+
+    # Register 10:00AM debt followup (Mon/Wed/Fri)
+    scheduler.add_job(
+        comment_new_videos,
+        "cron",
+        hour=10,
+        minute=0,
+        day_of_week='mon,wed,fri',
+        id='debt_followup',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered debt_followup: Mon/Wed/Fri 10:00")
+
+    # Register 10:00AM comment_new_videos job
     scheduler.add_job(
         comment_new_videos,
         "cron",
@@ -933,3 +1302,42 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         replace_existing=True
     )
     logger.info("Registered comment_new_videos: daily 10:00")
+
+    # Register 1:00PM mid-day check-in
+    scheduler.add_job(
+        midday_checkin,
+        "cron",
+        hour=13,
+        minute=0,
+        id='midday_checkin',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered midday_checkin: daily 13:00")
+
+    # Register 6:00PM evening content check
+    scheduler.add_job(
+        evening_content_check,
+        "cron",
+        hour=18,
+        minute=0,
+        id='evening_content_check',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered evening_content_check: daily 18:00")
+
+    # Register 10:30PM bedtime summary
+    scheduler.add_job(
+        bedtime_summary,
+        "cron",
+        hour=22,
+        minute=30,
+        id='bedtime_summary',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered bedtime_summary: daily 22:30")
