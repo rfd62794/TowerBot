@@ -814,7 +814,6 @@ async def self_direction_loop(send_fn):
     try:
         from tools.repo.directive import read_current_state
         from tools.productivity.google_tasks import list_google_tasks
-        from tools.productivity.goals import get_upcoming_tasks
         from tools.communication.gmail import gmail_tools
         from tools.games.metrics import _games
         from tools.meta.delegation import delegation_tools
@@ -829,10 +828,11 @@ async def self_direction_loop(send_fn):
 
         # Read tasks
         all_tasks = list_google_tasks()
-        from datetime import datetime
+        from datetime import datetime, timedelta
         today = datetime.now().strftime("%Y-%m-%d")
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         tasks_today = [t for t in all_tasks if t.get("due_date") == today and t.get("status") != "completed"]
-        upcoming_tasks = get_upcoming_tasks(hours=24)
+        upcoming_tasks = [t for t in all_tasks if t.get("due_date") and t.get("due_date") >= today and t.get("due_date") <= tomorrow and t.get("status") != "completed"]
 
         # Check for Research: tasks and run research_request template
         research_tasks = [t for t in all_tasks if t.get("title", "").startswith("Research:") and t.get("status") != "completed"]
