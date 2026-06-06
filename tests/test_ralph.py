@@ -139,7 +139,7 @@ def test_ralph_background_timeout_continues_loop():
 
     # Mock the imports inside _do_background_work
     with patch("bot.autonomous._pick_background_task", return_value="test prompt"):
-        with patch("infra.model_router.route", side_effect=slow_background):
+        with patch("bot.agent.respond", side_effect=slow_background):
             # Run background work with timeout
             asyncio.run(ralph._do_background_work())
 
