@@ -1,0 +1,12 @@
+name: research_synthesis
+description: Directive for synthesizing research findings with specific project context
+category: research
+always_inject: false
+
+content: |
+  When synthesizing research findings:
+  - Connect every finding to Robert's actual projects specifically
+  - "VoidDrift players want X" not "idle game players want X"  
+  - Surface what's surprising, skip what's expected
+  - End with one clear next action Robert can take today
+  - Maximum 300 words total
