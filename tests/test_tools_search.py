@@ -104,6 +104,42 @@ def test_reddit_search_falls_back_to_ddg():
             assert result.get("ok") == True, "Expected DDG fallback to succeed"
 
 
+@test("search: get_subreddit_feed returns posts list")
+def test_get_subreddit_feed():
+    from unittest.mock import patch
+    from tools.search.search_tools import get_subreddit_feed
+
+    mock_response = {
+        "ok": True,
+        "subreddit": "test",
+        "feed": "hot",
+        "posts": [
+            {"title": "Test post", "url": "http://test.com", "score": 100, "comments": 5, "permalink": "http://reddit.com/test"}
+        ],
+        "count": 1
+    }
+
+    with patch('tools.search.search_tools.reddit_api.get_subreddit_posts', return_value=mock_response):
+        result = get_subreddit_feed("test", feed="hot", limit=5)
+        assert result.get("ok") == True, "Expected ok=True"
+        assert "posts" in result, "Expected 'posts' key"
+        assert result["count"] == 1, "Expected count=1"
+
+
+@test("search: jina_read returns content")
+def test_jina_read():
+    from unittest.mock import patch
+    from tools.search.search_tools import jina_read
+
+    mock_response = {"ok": True, "url": "http://test.com", "content": "Test content"}
+
+    with patch('api.web.jina_api.jina_reader_api.read_url', return_value=mock_response):
+        result = jina_read("http://test.com")
+        assert result.get("ok") == True, "Expected ok=True"
+        assert "content" in result, "Expected 'content' key"
+        assert result["url"] == "http://test.com", "Expected url to match"
+
+
 @test("search: get_weather returns temp_f")
 def test_weather():
     from tools.search.search_tools import get_weather

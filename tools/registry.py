@@ -29,7 +29,7 @@ from .content.discovery import (
 )
 from .games.recommendations import get_content_recommendations
 from .games.metrics import get_game_metrics, get_installed_games, get_sale_info, get_itch_stats
-from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits
+from .search.search_tools import web_search, news_search, wiki_lookup, reddit_search, get_weather, fetch_url, get_weather_forecast, get_pypi_stats, get_recent_commits, get_subreddit_feed, jina_read
 from .productivity.goals import (
     save_commitment,
     get_goals_list,
@@ -480,6 +480,61 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["query"],
+                },
+            },
+        },
+    },
+    "get_subreddit_feed": {
+        "fn": get_subreddit_feed,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "get_subreddit_feed",
+                "description": "WHEN: User asks for recent posts from a specific subreddit, 'what's hot on r/incremental_games', 'show me r/rust new posts'.\n\nRETURNS: posts list — each with title, url, score, comments, permalink. Also returns subreddit, feed type, count.\n\nDO NOT CALL: for searching across subreddits — use reddit_search instead.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "subreddit": {
+                            "type": "string",
+                            "description": "Subreddit name (without r/)",
+                        },
+                        "feed": {
+                            "type": "string",
+                            "description": "Feed type: 'hot' or 'new'",
+                            "default": "hot",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum posts to return (default: 10)",
+                            "default": 10,
+                        }
+                    },
+                    "required": ["subreddit"],
+                },
+            },
+        },
+    },
+    "jina_read": {
+        "fn": jina_read,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "jina_read",
+                "description": "WHEN: A previous search returned a URL that needs deeper reading, 'what does that article say', 'read that page', 'get more detail from that link'. A search snippet is clearly incomplete.\n\nRETURNS: url (str), content (str — first 8000 chars of page text), truncated (bool — more exists).\n\nDO NOT CALL: speculatively on every search result. Only when a specific URL's full content is needed. Never fetch login-required pages.\n\nCHAIN: Always call web_search or wiki_lookup first to find the URL. Then jina_read for full content.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "The full URL to fetch including https:// prefix",
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Request timeout in seconds (default: 30)",
+                            "default": 30,
+                        }
+                    },
+                    "required": ["url"],
                 },
             },
         },

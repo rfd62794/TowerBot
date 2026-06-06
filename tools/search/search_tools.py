@@ -334,6 +334,47 @@ class SearchTools(BaseTool):
             "truncated": raw.get("truncated", False)
         }, stale_result=raw)
 
+    def get_subreddit_feed(self, subreddit: str, feed: str = "hot", limit: int = 10) -> dict:
+        """
+        Fetch posts from subreddit hot/new feed.
+
+        Args:
+            subreddit: Subreddit name (without r/)
+            feed: 'hot' or 'new'
+            limit: Maximum posts to return
+
+        Returns:
+            Dict with posts list, subreddit, feed, count
+        """
+        try:
+            raw = reddit_api.get_subreddit_posts(subreddit, feed, limit)
+            if not raw.get("ok"):
+                return self.error(f"Failed to fetch subreddit feed: {raw.get('error', 'Unknown')}")
+            return self.success(raw)
+        except Exception as e:
+            return self.error(str(e), code="exception")
+
+    def jina_read(self, url: str, timeout: int = 30) -> dict:
+        """
+        Read a web page using Jina Reader API.
+
+        Args:
+            url: The full URL to fetch including https:// prefix
+            timeout: Request timeout in seconds (default 30)
+
+        Returns:
+            Dict with url, content
+        """
+        from api.web.jina_api import jina_reader_api
+
+        try:
+            raw = jina_reader_api.read_url(url, timeout)
+            if not raw.get("ok"):
+                return self.error(f"Jina Reader failed: {raw.get('error', 'Unknown')}")
+            return self.success(raw)
+        except Exception as e:
+            return self.error(str(e), code="exception")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -453,3 +494,32 @@ def fetch_url(url: str, max_chars: int = 3000) -> dict:
         Dict with url, title, content, char_count, truncated
     """
     return _search.fetch_url(url, max_chars)
+
+
+def get_subreddit_feed(subreddit: str, feed: str = "hot", limit: int = 10) -> dict:
+    """
+    Fetch posts from subreddit hot/new feed.
+
+    Args:
+        subreddit: Subreddit name (without r/)
+        feed: 'hot' or 'new'
+        limit: Maximum posts to return
+
+    Returns:
+        Dict with posts list, subreddit, feed, count
+    """
+    return _search.get_subreddit_feed(subreddit, feed, limit)
+
+
+def jina_read(url: str, timeout: int = 30) -> dict:
+    """
+    Read a web page using Jina Reader API.
+
+    Args:
+        url: The full URL to fetch including https:// prefix
+        timeout: Request timeout in seconds (default 30)
+
+    Returns:
+        Dict with url, content
+    """
+    return _search.jina_read(url, timeout)
