@@ -1,9 +1,90 @@
 # Current State
 
+## Phase 32b — Canonical System Templates for Output Quality ✅ DONE
+
+**Status**: Complete
+**Test Floor**: 599/0 (594 from Phase 32a + 5 new canonical template tests, clean floor)
+
+### What Was Built
+
+- **templates/canonical/system_base.yaml**: Base identity context injected into all LLM calls
+  - PrivyBot identity and Robert Floyd Dugger context
+  - Project list: VoidDrift, PrivyBot, OpenAgent, ContentEngine, TeleseroAdmin2026
+  - Content pillars: Everything is Crab (~58%), Dune: Awakening (~28%)
+  - Identity transformation title guidance
+
+- **templates/canonical/signal_over_noise.yaml**: Output quality directive
+  - Lead with what CHANGED or MATTERS, not what you found
+  - One recommended action, not a list of options
+  - Stay silent if nothing actionable
+
+- **templates/canonical/rfd_content_frame.yaml**: Content generation frame
+  - Identity transformation title pattern: "[Game] — [what the game made you into/realize/become]"
+  - Blog draft structure: MOMENT → SURPRISE → STRUGGLE → LESSON → NEXT
+  - One specific scene, not a summary
+
+- **templates/canonical/one_thing_decision.yaml**: Single-action decision directive
+  - Answer with ONE thing only when asked what to focus on
+  - Must be: specific, actionable, data-backed, time-bounded
+
+- **templates/canonical/tool_priority.yaml**: Tool selection order to reduce API calls
+  - Memory and local state first
+  - Lightweight APIs before browser automation
+  - Check content_seen before surfacing content
+  - Never call the same tool twice in one task
+
+- **templates/canonical/approval_gate.yaml**: Safety directive for external actions
+  - Draft action explicitly before execution
+  - Send for YES/NO approval via request_approval()
+  - Execute only after YES received
+  - Report what was done after execution
+
+- **templates/canonical/research_synthesis.yaml**: Research synthesis directive
+  - Connect findings to Robert's actual projects specifically
+  - Surface what's surprising, skip what's expected
+  - End with one clear next action
+  - Maximum 300 words total
+
+- **bot/task_runner.py**: Template injection system
+  - Added `load_canonical_templates()` to load templates from `templates/canonical/`
+  - Added `_inject_canonical_templates()` to inject relevant templates based on task type
+  - Injection logic:
+    - `system_base`: always injected for all task types
+    - `planner`/`reporter`: signal_over_noise + one_thing_decision
+    - `creator`: rfd_content_frame
+    - `planner`: tool_priority + research_synthesis
+    - `creator`/`planner`: approval_gate
+  - UTF-8 encoding support for template files
+
+- **tests/test_canonical_templates.py**: New test file with 5 tests
+  - `test_system_base_always_injected`: Verifies base identity in all tasks
+  - `test_planner_gets_research_templates`: Verifies tool_priority and research_synthesis for planner
+  - `test_reporter_gets_output_templates`: Verifies signal_over_noise and one_thing for reporter
+  - `test_creator_gets_content_frame`: Verifies rfd_content_frame for creator
+  - `test_approval_gate_injected`: Verifies approval_gate for action tasks
+
+- **scripts/verify.py**: Added `test_canonical_templates.py` to test suite
+
+### Impact
+
+All autonomous tasks now have consistent identity context and output quality directives. The system_base template ensures PrivyBot always knows who it's talking about and Robert's current projects. Task-type-specific templates guide the LLM toward appropriate behavior (e.g., planners get research synthesis directives, creators get content frame).
+
+### Manual Testing
+
+No manual testing required — templates are injected automatically by task_runner.py during task resolution. Test coverage verifies injection works correctly for all task types.
+
+### Future Enhancements
+
+- Add more canonical templates as patterns emerge (e.g., error handling, debugging)
+- Consider template versioning for A/B testing different prompt strategies
+- Add template-specific tests for each new canonical template
+
+---
+
 ## Phase 32a — Playwright Browser Automation + Smart Profile Management ✅ DONE
 
 **Status**: Complete
-**Test Floor**: 593/1 (584 from Phase 31e + 9 new Playwright tests, 1 pre-existing failure)
+**Test Floor**: 594/0 (584 from Phase 31e + 10 new tests, clean floor after fixing pre-existing failures)
 
 ### What Was Built
 
