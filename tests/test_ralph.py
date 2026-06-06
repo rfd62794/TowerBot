@@ -5,7 +5,6 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
 
-@test("ralph: processes high priority first")
 def test_ralph_processes_high_priority_first():
     """Push priority 3 then priority 1 → priority 1 handled first."""
     from bot.ralph import Ralph, PRIORITY_SCHEDULED, PRIORITY_URGENT
@@ -33,7 +32,6 @@ def test_ralph_processes_high_priority_first():
     assert handled_events[1][0] == PRIORITY_SCHEDULED
 
 
-@test("ralph: interrupts background on urgent")
 def test_ralph_interrupts_background_on_urgent():
     """Mock background task running → push priority 2 → background task cancelled."""
     from bot.ralph import Ralph, PRIORITY_URGENT
@@ -62,7 +60,6 @@ def test_ralph_interrupts_background_on_urgent():
     assert background_cancelled
 
 
-@test("ralph: deep dive triggered after threshold")
 def test_ralph_deep_dive_triggered_after_threshold():
     """Mock 2 high-interest results → deep_dive event appears in queue."""
     from bot.ralph import Ralph, PRIORITY_BACKGROUND
@@ -94,7 +91,6 @@ def test_ralph_deep_dive_triggered_after_threshold():
     assert not queue_empty or len(ralph._deep_dive_candidates) >= 2
 
 
-@test("ralph: handles event error gracefully")
 def test_ralph_handles_event_error_gracefully():
     """Event handler raises exception → loop continues, no crash."""
     from bot.ralph import Ralph
@@ -118,7 +114,6 @@ def test_ralph_handles_event_error_gracefully():
     assert error_caught
 
 
-@test("ralph: background timeout continues loop")
 def test_ralph_background_timeout_continues_loop():
     """Background task times out → loop continues to next iteration."""
     from bot.ralph import Ralph
@@ -145,12 +140,3 @@ def test_ralph_background_timeout_continues_loop():
     assert timeout_occurred or True  # Test passes if no crash
 
 
-if __name__ == "__main__":
-    import sys
-    if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
-        import io
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
-    p, f = run_all()
-    print(f"\n{p}/{p+f} passed.")
-    sys.exit(0 if f == 0 else 1)
