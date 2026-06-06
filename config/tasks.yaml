@@ -7,7 +7,7 @@ email_triage:
 
 itch_reddit_check:
   template: reddit_monitor
-  schedule: {type: interval, minutes: 30}
+  schedule: {type: interval, minutes: 60}
   enabled: true
   params:
     keywords: [VoidDrift]
@@ -16,7 +16,7 @@ itch_reddit_check:
 
 nightly_snapshot:
   template: metric_snapshot
-  schedule: {type: cron, hour: 23, minute: 30}
+  schedule: {type: cron, hour: 22, minute: 30}
   enabled: true
   params:
     data_sources: [youtube, itch]
@@ -45,7 +45,7 @@ blog_structure_generator:
 
 community_opportunity_scout:
   template: community_scout
-  schedule: {type: interval, minutes: 180}
+  schedule: {type: interval, minutes: 60}
   enabled: true
 
 comment_new_videos:
@@ -70,7 +70,7 @@ debt_followup:
 # --- OPPORTUNITY CAPTURE ---
 opportunity_capture:
   template: opportunity_capture
-  schedule: {type: interval, minutes: 180}
+  schedule: {type: interval, minutes: 60}
   enabled: true
   description: "Find Reddit and HN threads where VoidDrift, OpenAgent, or Bevy expertise adds value"
 
@@ -84,7 +84,7 @@ tech_digest:
 # --- CONTENT GAP DETECTION ---
 content_gap_detector:
   template: content_gap_detector
-  schedule: {type: cron, hour: 17, minute: 0}
+  schedule: {type: cron, hour: 18, minute: 0}
   enabled: true
   description: "Find commits or game milestones from the last 48 hours with no corresponding YouTube Short"
 
