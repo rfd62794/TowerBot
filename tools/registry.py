@@ -87,6 +87,9 @@ from .repo.analysis import analyze_code_quality, analyze_dependencies, find_oppo
 from .repo.synthesis import inspect_repo, generate_strategic_analysis
 from .repo.directive import read_current_state, elaborate_task, generate_directive
 from .system.shell import run_named_command, execute_shell, list_named_commands
+from .browser.playwright_base import browser_navigate, browser_get_text, browser_screenshot, setup_profile
+from .browser.itch_tools import itch_post_devlog, itch_get_game_page
+from .browser.youtube_studio import pin_youtube_comment
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -2817,6 +2820,174 @@ TOOL_REGISTRY = {
                     "type": "object",
                     "properties": {},
                     "required": []
+                }
+            }
+        }
+    },
+    "browser_navigate": {
+        "fn": browser_navigate,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "browser_navigate",
+                "description": "Navigate browser to URL with optional site profile. Returns page title and current URL.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "URL to navigate to"
+                        },
+                        "site": {
+                            "type": "string",
+                            "description": "Optional site profile name (e.g., 'itch', 'youtube_studio')"
+                        }
+                    },
+                    "required": ["url"]
+                }
+            }
+        }
+    },
+    "browser_get_text": {
+        "fn": browser_get_text,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "browser_get_text",
+                "description": "Get text content of a page element by CSS selector.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "URL to navigate to"
+                        },
+                        "selector": {
+                            "type": "string",
+                            "description": "CSS selector for the element"
+                        },
+                        "site": {
+                            "type": "string",
+                            "description": "Optional site profile name"
+                        }
+                    },
+                    "required": ["url", "selector"]
+                }
+            }
+        }
+    },
+    "browser_screenshot": {
+        "fn": browser_screenshot,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "browser_screenshot",
+                "description": "Screenshot a URL, returns base64 encoded image.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "URL to screenshot"
+                        },
+                        "site": {
+                            "type": "string",
+                            "description": "Optional site profile name"
+                        }
+                    },
+                    "required": ["url"]
+                }
+            }
+        }
+    },
+    "setup_profile": {
+        "fn": setup_profile,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "setup_profile",
+                "description": "Interactive browser login to save site session profile. Run this manually — not via autonomous tasks.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "site": {
+                            "type": "string",
+                            "description": "Site profile name (e.g., 'itch', 'youtube_studio')"
+                        }
+                    },
+                    "required": ["site"]
+                }
+            }
+        }
+    },
+    "itch_post_devlog": {
+        "fn": itch_post_devlog,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "itch_post_devlog",
+                "description": "Post a devlog on itch.io for a game. Requires itch profile — run setup_profile('itch') first.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "game_id": {
+                            "type": "integer",
+                            "description": "itch.io game ID"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Devlog title"
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Devlog content/body"
+                        }
+                    },
+                    "required": ["game_id", "title", "content"]
+                }
+            }
+        }
+    },
+    "itch_get_game_page": {
+        "fn": itch_get_game_page,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "itch_get_game_page",
+                "description": "Get text content of a game's itch.io page description.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "game_id": {
+                            "type": "integer",
+                            "description": "itch.io game ID"
+                        }
+                    },
+                    "required": ["game_id"]
+                }
+            }
+        }
+    },
+    "pin_youtube_comment": {
+        "fn": pin_youtube_comment,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "pin_youtube_comment",
+                "description": "Pin a comment on a YouTube video via YouTube Studio. Requires youtube_studio profile — run setup_profile('youtube_studio') first.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "video_id": {
+                            "type": "string",
+                            "description": "YouTube video ID"
+                        },
+                        "comment_id": {
+                            "type": "string",
+                            "description": "Comment ID to pin"
+                        }
+                    },
+                    "required": ["video_id", "comment_id"]
                 }
             }
         }

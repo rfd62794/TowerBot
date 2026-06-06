@@ -204,6 +204,18 @@ routes:
       - schedule_blog_post
     description: "Blog posts, drafts, publishing"
 
+  browser:
+    model: openrouter/free
+    tools:
+      - browser_navigate
+      - browser_get_text
+      - browser_screenshot
+      - setup_profile
+      - itch_post_devlog
+      - itch_get_game_page
+      - pin_youtube_comment
+    description: "Browser automation and web interaction"
+
   utility:
     model: openrouter/free
     tools:
