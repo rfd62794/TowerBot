@@ -250,11 +250,10 @@ async def morning_briefing(send_fn) -> None:
         # Add Google Tasks due today
         try:
             from tools.productivity.google_tasks import list_google_tasks
-            from datetime import date
             tasks = list_google_tasks()
-            today = date.today().isoformat()
+            today_date = datetime.now().strftime("%Y-%m-%d")
             due_today = [t for t in tasks.get("tasks", [])
-                         if t.get("due_date", "").startswith(today)
+                         if t.get("due_date", "").startswith(today_date)
                          and t.get("status") != "completed"]
             if due_today:
                 msg += "\n\n📋 *Tasks due today:*"
