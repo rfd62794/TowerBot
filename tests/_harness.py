@@ -1,6 +1,7 @@
 """Test harness — @test decorator and run_all() shared by every test file."""
 
 import sys
+import inspect
 
 TESTS = []
 
@@ -32,3 +33,15 @@ def run_all(tests=None) -> tuple[int, int]:
             print(f"  {type(e).__name__}: {e}")
             failed += 1
     return passed, failed
+
+
+def auto_run(module=None) -> tuple[int, int]:
+    """Auto-discover test_* functions from calling module and run them."""
+    if module is None:
+        frame = inspect.stack()[1]
+        module = sys.modules[frame[0].f_globals['__name__']]
+    tests = [
+        (obj.__name__, obj) for name, obj in inspect.getmembers(module, inspect.isfunction)
+        if name.startswith('test_') and not name.startswith('test_decorator')
+    ]
+    return run_all(tests)

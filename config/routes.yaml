@@ -145,6 +145,8 @@ routes:
       - wiki_random
       - news_search
       - fetch_url
+      - reddit_search
+      - get_subreddit_feed
       - jina_read
       - country_info
       - cratesio_info
@@ -158,7 +160,7 @@ routes:
       - number_fact
       - random_quote
       - spacex_latest_launch
-    description: "Web search, Wikipedia, news, URL fetch, Jina Reader, country data, crates.io, Hacker News, earthquakes, ISS, Open Library, BoardGameGeek, Lichess, random facts, quotes, SpaceX"
+    description: "Web search, Wikipedia, news, URL fetch, Reddit, Jina Reader, country data, crates.io, Hacker News, earthquakes, ISS, Open Library, BoardGameGeek, Lichess, random facts, quotes, SpaceX"
 
   steam:
     model: openrouter/free
