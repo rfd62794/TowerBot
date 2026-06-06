@@ -92,20 +92,14 @@ def test_mcp_tool_execution_calls_correct_fn():
     asyncio.run(run_test())
 
 
-@test("mcp: tool not in exposed set raises")
-def test_mcp_tool_not_in_exposed_set_raises():
-    """call_tool() raises ValueError for non-exposed tools."""
-    from infra.mcp.server import call_tool
-    import asyncio
+@test("mcp: all tools are exposed")
+def test_mcp_all_tools_exposed():
+    """All tools in TOOL_REGISTRY are exposed via MCP."""
+    from tools.registry import TOOL_REGISTRY
 
-    async def run_test():
-        try:
-            await call_tool("name_thread", {})
-            assert False, "Expected ValueError for non-exposed tool"
-        except ValueError as e:
-            assert "not exposed via MCP" in str(e)
-
-    asyncio.run(run_test())
+    # Every tool in the registry should be exposed
+    for tool_name in TOOL_REGISTRY.keys():
+        assert tool_name in MCP_EXPOSED_TOOLS, f"Tool {tool_name} not in MCP_EXPOSED_TOOLS"
 
 
 @test("mcp: jwt generate and validate")
