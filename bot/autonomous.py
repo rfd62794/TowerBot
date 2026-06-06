@@ -16,7 +16,6 @@ from infra.prompts import get_prompts_for_task
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.utils import safe_serialize, notify, get_task_type
 from infra.db.system_metrics import record_system_snapshot
-from bot.ralph import ralph, PRIORITY_SCHEDULED
 from infra.db.bot_state import get_dev_mode
 from infra.db.task_queue import get_due_tasks, mark_running, mark_complete, mark_failed
 from scripts.update import check_for_updates
@@ -37,6 +36,8 @@ async def _ralph_scheduled_wrapper(template_name: str, send_fn):
     Ralph handles priority ordering; this wrapper ensures scheduled tasks
     are visible to Ralph's event loop.
     """
+    from bot.ralph import ralph, PRIORITY_SCHEDULED
+
     await ralph.push(PRIORITY_SCHEDULED, {
         "type": "scheduled_task",
         "task_name": template_name

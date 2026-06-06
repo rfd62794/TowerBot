@@ -9,7 +9,6 @@ from asyncio import PriorityQueue
 from typing import Optional
 
 from infra.utils import notify, safe_serialize, get_task_type
-from bot.autonomous import _pick_background_task
 
 logger = logging.getLogger("privy.ralph")
 
@@ -78,6 +77,8 @@ class Ralph:
         Pick and run one background task.
         Interruptible by higher-priority events via push().
         """
+        from bot.autonomous import _pick_background_task
+
         task_prompt = _pick_background_task()
         logger.info(f"[ralph] Starting background work")
 
