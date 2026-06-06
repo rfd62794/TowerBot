@@ -20,6 +20,9 @@ with open(_routes_path) as _f:
 
 VALID_ROUTES: set[str] = set(ROUTES.keys())
 
+# Delegation tools that require explicit parameters - never route via keyword fallback
+DELEGATION_TOOLS = {"queue_task", "cancel_task", "get_task_result", "list_pending_tasks"}
+
 # Classification model and timeout (separate from chat model for CPU optimization)
 CLASSIFY_MODEL = os.environ.get("OLLAMA_CLASSIFY_MODEL") or "qwen2.5:1.5b"
 CLASSIFY_TIMEOUT = float(os.environ.get("OLLAMA_CLASSIFY_TIMEOUT") or "15.0")
@@ -57,6 +60,11 @@ def _keyword_fallback(message: str) -> list[str]:
     msg = message.lower()
     for keyword, route in KEYWORD_ROUTE_MAP.items():
         if keyword in msg:
+            # Check if this route contains delegation tools
+            route_tools = ROUTES.get(route, {}).get("tools") or []
+            if any(tool in DELEGATION_TOOLS for tool in route_tools):
+                logger.warning(f"[router_ai] keyword fallback blocked delegation tools for route '{route}'")
+                return ["chat"]  # refuse to delegate without parameters
             return [route]
     return ["chat"]
 
