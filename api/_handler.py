@@ -96,7 +96,11 @@ class BaseAPIHandler:
 
                 rate_limits.record_limit(self.CACHE_PREFIX, retry_after)
 
-            logger.warning(f"[handler] {self.CACHE_PREFIX} live failed: {e}")
+            # Log expected errors (403, 429) at DEBUG level to reduce noise
+            if "403" in err_str or "429" in err_str:
+                logger.debug(f"[handler] {self.CACHE_PREFIX} live failed (expected): {e}")
+            else:
+                logger.warning(f"[handler] {self.CACHE_PREFIX} live failed: {e}")
 
             if stale_ok:
                 stale = cache.get_or_stale(key, params_hash)

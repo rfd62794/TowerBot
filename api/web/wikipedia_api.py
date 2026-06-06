@@ -4,6 +4,9 @@ import requests
 from api._handler import BaseAPIHandler
 
 WIKIPEDIA_API = "https://en.wikipedia.org/api/rest_v1"
+HEADERS = {
+    "User-Agent": "PrivyBot/1.0 (rfditservices@gmail.com; https://rfditservices.com)"
+}
 
 
 class WikipediaAPIHandler(BaseAPIHandler):
@@ -27,7 +30,7 @@ class WikipediaAPIHandler(BaseAPIHandler):
 
         def _live() -> dict:
             url = f"{WIKIPEDIA_API}/page/summary/{topic}"
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, headers=HEADERS, timeout=10)
 
             if response.status_code == 404:
                 return {
