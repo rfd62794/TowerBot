@@ -98,24 +98,10 @@ class Ralph:
 
             # Run background task via autonomous task runner
             async def run_background_task():
-                from bot.autonomous import run_autonomous_task
-                from bot.task_runner import resolve_task
+                from bot.agent import respond
 
-                # Use a dummy send_fn that logs instead of sending
-                async def dummy_send(message):
-                    logger.info(f"[ralph] Background task output: {message[:200]}...")
-
-                # Create a temporary task definition
-                # We'll use the prompt directly since this is ad-hoc background work
-                from infra.model_router import route
-                from infra.prompts import get_prompts_for_task
-
-                # Simple execution: route the prompt to the model
-                result = await route(
-                    prompt=full_prompt,
-                    model_role="autonomous",
-                    tools_enabled=True
-                )
+                # Simple execution: respond to the prompt
+                result = await respond(full_prompt, "ralph_background")
 
                 return result
 
@@ -196,11 +182,11 @@ class Ralph:
             elif event_type == "deep_dive":
                 topic = event.get("topic", "")
                 if topic:
-                    from infra.model_router import route
+                    from bot.agent import respond
                     logger.info(f"[ralph] Autonomous deep dive: {topic[:40]}...")
                     prompt = f"Deep dive analysis on: {topic}\n\nExplore this topic thoroughly. Surface key insights, patterns, and actionable findings."
                     await asyncio.wait_for(
-                        route(prompt=prompt, model_role="autonomous", tools_enabled=True),
+                        respond(prompt, "ralph_deep_dive"),
                         timeout=300
                     )
 
