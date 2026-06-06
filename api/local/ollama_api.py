@@ -168,6 +168,7 @@ class OllamaSwapManager:
     async def warmup(self) -> None:
         """Pre-load model into VRAM to reduce first-request latency."""
         try:
+            logger.info(f"[Ollama] Starting warmup for {self.model}...")
             await self._inference(
                 self.model,
                 [{"role": "user", "content": "ready"}],
@@ -175,9 +176,10 @@ class OllamaSwapManager:
                 0,
             )
             self._loaded_model = self.model
-            logger.info(f"[Ollama] {self.model} warmed")
-        except Exception:
-            pass
+            logger.info(f"[Ollama] {self.model} warmed successfully")
+        except Exception as e:
+            logger.warning(f"[Ollama] Warmup failed for {self.model}: {e}")
+            raise
 
     async def chat(self, model_id: str, messages: list, tools: list = None) -> dict:
         """
