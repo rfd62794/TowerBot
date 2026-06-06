@@ -9,11 +9,6 @@ import sys
 import os
 import importlib.util
 
-if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
-
 _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
     sys.path.insert(0, _root)
@@ -76,7 +71,9 @@ def _load_and_run(path: str) -> tuple[int, int]:
     import io
     buf = io.StringIO()
     old_stdout = sys.stdout
+    old_stderr = sys.stderr
     sys.stdout = buf
+    sys.stderr = buf
 
     try:
         spec = importlib.util.spec_from_file_location("_test_module", full_path)
@@ -85,6 +82,7 @@ def _load_and_run(path: str) -> tuple[int, int]:
         passed, failed = mod.run_all()
     finally:
         sys.stdout = old_stdout
+        sys.stderr = old_stderr
 
     if failed:
         print(buf.getvalue())  # only show output when something failed
