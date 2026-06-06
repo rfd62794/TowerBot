@@ -1,5 +1,146 @@
 # Current State
 
+## Phase 33 — RALPH: Persistent Always-On Overseer ✅ DONE
+
+**Status**: Complete
+**Test Floor**: 604/0 (599 from Phase 32d + 5 new Ralph tests, clean floor)
+
+### What Was Built
+
+- **config/timeouts.yaml**: Centralized timeout configuration
+  - Ollama request timeout: 180s (was 60s)
+  - Background task timeout: 90s
+  - Deep dive timeout: 300s (5 minutes)
+  - Jina read timeout: 60s (was 30s)
+  - Ralph queue check interval: 1s
+  - Deep dive threshold: 0.7 (interest score)
+
+- **bot/ralph.py**: New persistent async overseer
+  - `Ralph` class with priority queue (PriorityQueue)
+  - Priority levels: MESSAGE (1), URGENT (2), SCHEDULED (3), BACKGROUND (10)
+  - `_main_loop()`: Core loop checking queue and handling events
+  - `_do_background_work()`: Picks and runs background tasks, interruptible
+  - `_evaluate_for_deep_dive()`: Evaluates results for autonomous deep dive triggers
+  - `_handle_event()`: Routes events to correct handlers
+  - Global `ralph` instance for import across bot
+  - Never replaces APScheduler or Telegram handler — runs alongside
+
+- **templates/canonical/ralph_overseer.yaml**: Ralph's operating mindset prompt
+  - Injected into all background work
+  - Directs Ralph to ask: what changed, what to learn, what opportunities to miss
+  - Rules: surface only interesting findings, stay silent if nothing, check content_seen
+  - Emphasizes proactive colleague mindset vs assistant waiting to be asked
+
+- **privybot.py**: Wired Ralph into bot startup
+  - Import `ralph` from `bot.ralph`
+  - Start Ralph coroutine after APScheduler and Telegram initialization
+  - Ralph runs as concurrent task via `asyncio.create_task(ralph.start())`
+
+- **bot/autonomous.py**: Push scheduled tasks to Ralph's queue
+  - Import `ralph` and `PRIORITY_SCHEDULED` from `bot.ralph`
+  - Added `_ralph_scheduled_wrapper()` function
+  - Wrapper pushes scheduled task to Ralph's queue before execution
+  - Updated both interval and cron job registrations to use wrapper
+  - Existing APScheduler timing remains source of truth
+
+- **Timeout updates across codebase**:
+  - `api/local/ollama_api.py`: timeout 60 → 180
+  - `tools/search/search_tools.py`: jina_read timeout 30 → 60 (2 locations)
+  - `api/web/jina_api.py`: read_url timeout 30 → 60 (2 locations)
+
+- **tests/test_ralph.py**: New test file with 5 test anchors
+  - `test_ralph_processes_high_priority_first` — verifies priority ordering
+  - `test_ralph_interrupts_background_on_urgent` — verifies background interruption
+  - `test_ralph_deep_dive_triggered_after_threshold` — verifies autonomous deep dive
+  - `test_ralph_handles_event_error_gracefully` — verifies loop continues on error
+  - `test_ralph_background_timeout_continues_loop` — verifies timeout handling
+
+### Implementation Details
+
+**Ralph Architecture:**
+- Persistent async loop that treats background work as default state
+- Everything else (user messages, urgent alerts, scheduled tasks) interrupts background
+- Uses asyncio.PriorityQueue for event ordering
+- Background tasks interruptible via `CancelledError` handling
+- Deep dive candidates accumulated until threshold (2+ candidates) triggers autonomous dive
+
+**Priority Queue:**
+- Lower number = higher priority
+- Priority 1: User messages (immediate interrupt)
+- Priority 2: Urgent alerts (immediate interrupt)
+- Priority 3: Scheduled tasks (fire on time)
+- Priority 10: Background work (default state)
+
+**Background Work:**
+- Picks task via `_pick_background_task()` from existing weighted pools
+- Loads `ralph_overseer.yaml` prompt and injects before task execution
+- 90-second timeout per task
+- Evaluates result for interest signals (worth exploring, surprising, unexpected, etc.)
+- Records to agent_actions with task_name="ralph_background"
+
+**Deep Dive Triggering:**
+- Interest signals: "worth exploring", "surprising", "unexpected", "counterintuitive", "interesting pattern", "deep dive"
+- Score = count of signals in result text
+- Normalized score = min(score / 3.0, 1.0)
+- Threshold = 0.7 (2 of 3 signals)
+- Accumulates candidates until 2+, then triggers autonomous deep dive
+
+**Event Routing:**
+- `scheduled_task`: Calls `run_scheduled_task()`
+- `urgent_notify`: Calls `notify()` with urgent=True
+- `deep_dive`: Calls `run_template_task("deep_dive", context={"topic": topic})`
+- `background`: Calls `_do_background_work()` immediately
+
+**Scheduler Integration:**
+- `_ralph_scheduled_wrapper()` pushes to Ralph's queue before execution
+- Both interval and cron jobs use wrapper
+- APScheduler remains timing source of truth
+- Ralph provides visibility and priority ordering
+
+**Test Coverage:**
+- All tests use mocked event queues and task runners
+- Tests verify priority ordering, interruption, deep dive triggering, error handling, timeout handling
+- No real async loops in tests (use asyncio.run() for single operations)
+
+### Test Floor
+
+- **Previous**: 599/0 (Phase 32d)
+- **Current**: 604/0
+- **New Tests**: 5 (test_ralph.py)
+- **Status**: All new tests passing, deploy safe
+
+### Completion Criteria
+
+- [x] `verify_result.txt` shows target floor (604/0), 0 new failures
+- [x] `config/timeouts.yaml` created with all timeout values
+- [x] `bot/ralph.py` created with Ralph class and priority queue
+- [x] `templates/canonical/ralph_overseer.yaml` created with operating mindset
+- [x] Ralph wired into privybot.py startup (after APScheduler and Telegram)
+- [x] Scheduled tasks push to Ralph's queue via wrapper
+- [x] Timeout constants updated (Ollama 180s, Jina 60s)
+- [x] `tests/test_ralph.py` created with 5 test anchors
+- [x] `docs/state/current.md` updated
+- [ ] Committed to main, Tower auto-updates
+
+### Next Steps
+
+**Manual Testing Required:**
+1. Verify Ralph starts in bot startup logs: "[startup] RALPH started — persistent loop active"
+2. Check agent_actions table for entries with task_name="ralph_background"
+3. Trigger urgent event and verify background interruption
+4. Verify deep dive triggers after 2+ high-interest background results
+
+**Future Enhancements:**
+- Add user message routing to Ralph's queue (currently only scheduled tasks)
+- Add Ralph metrics (queue depth, background task success rate, deep dive count)
+- Add Ralph status command to check current state
+- Consider adaptive deep dive threshold based on historical success rate
+- Add Ralph pause/resume functionality for maintenance
+
+Phase 33 delivers RALPH — a persistent always-on overseer that treats background work as the default state. Ralph uses a priority queue to handle user messages, urgent alerts, and scheduled tasks as interrupts to background work. The system includes autonomous deep dive triggering when background tasks surface high-interest findings. Extended timeouts accommodate complex reasoning tasks. Ralph runs alongside existing APScheduler and Telegram systems, never replacing them.
+
+---
+
 ## Phase 32d — Proactive All-Day Research & Study ✅ DONE
 
 **Status**: Complete
