@@ -102,7 +102,10 @@ routes:
       - wiki_lookup
       - news_search
       - fetch_url
-    description: "Web search, Wikipedia, news, URL fetch"
+      - reddit_search
+      - get_subreddit_feed
+      - jina_read
+    description: "Web search, Wikipedia, news, URL fetch, Reddit"
 
   steam:
     model: openrouter/free
