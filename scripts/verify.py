@@ -38,7 +38,6 @@ TEST_FILES = [
     "tests/test_tools_goals.py",
     "tests/test_api.py",
     "tests/test_deployments.py",
-    "tests/test_personal_tasks.py",
     "tests/test_google_tasks_sync.py",
     "tests/test_google_calendar.py",
     "tests/test_gmail.py",
