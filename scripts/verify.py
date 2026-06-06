@@ -93,6 +93,7 @@ def run_all():
     print()
     total = total_passed + total_failed
     print(f"{total_passed} passed, {total_failed} failed, {total_skipped} skipped")
+    print(f"{total_passed}/{total} passed.", end=" ")
 
     if total_failed == 0:
         print("Deploy safe.")
