@@ -21,7 +21,7 @@ BLOCKED_PATTERNS = [
 ]
 
 NAMED_COMMANDS = {
-    "privy_tests":     {"command": "uv run pytest",            "cwd": "C:/Github/PrivyBot", "description": "Run PrivyBot test suite"},
+    "privy_tests":     {"command": "uv run python scripts/verify.py", "cwd": "C:/Github/PrivyBot", "description": "Run PrivyBot test suite", "timeout": 300},
     "list_services":   {"command": "nssm list",                "cwd": None,                 "description": "List NSSM services"},
     "restart_privy":   {"command": "nssm restart PrivyBot",    "cwd": None,                 "description": "Restart PrivyBot service"},
     "restart_mcp":     {"command": "nssm restart PrivybotMCP", "cwd": None,                 "description": "Restart PrivyBot MCP service"},
@@ -52,11 +52,12 @@ def run_named_command(name: str) -> dict:
             "error": "unknown command",
             "available": list(NAMED_COMMANDS.keys())
         }
-    
+
     cmd_info = NAMED_COMMANDS[name]
     command = cmd_info["command"]
     cwd = cmd_info["cwd"]
-    
+    timeout = cmd_info.get("timeout", 30)  # use command-specific timeout if set
+
     try:
         result = subprocess.run(
             command,
@@ -64,7 +65,7 @@ def run_named_command(name: str) -> dict:
             cwd=cwd,
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=timeout
         )
         
         # Parse pytest output if this is the test command
