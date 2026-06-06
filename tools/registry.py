@@ -68,6 +68,7 @@ from .repo.audit import audit_repo_compliance
 from .repo.analysis import analyze_code_quality, analyze_dependencies, find_opportunities, analyze_documentation_alignment
 from .repo.synthesis import inspect_repo, generate_strategic_analysis
 from .repo.directive import read_current_state, elaborate_task, generate_directive
+from .system.shell import run_named_command, execute_shell, list_named_commands
 
 # Memory tools — defined in bot/memory.py, imported here
 from bot.memory import (
@@ -1816,6 +1817,70 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["task_id"]
+                }
+            }
+        }
+    },
+    "run_named_command": {
+        "fn": run_named_command,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "run_named_command",
+                "description": "Run a pre-approved named command from the shell registry. Commands are resolved from NAMED_COMMANDS dict only. No runtime command construction. Returns success status, returncode, stdout, stderr. For pytest output, returns parsed passed/failed/skipped counts.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the command to run (e.g., 'privy_tests', 'list_services', 'restart_privy')"
+                        }
+                    },
+                    "required": ["name"]
+                }
+            }
+        }
+    },
+    "execute_shell": {
+        "fn": execute_shell,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "execute_shell",
+                "description": "Run a filtered shell command. Two-stage security filter: (1) verb whitelist (nssm, uv, git, python, pytest, etc.), (2) pattern blocklist (rm, del, format, &&, ||, ;, etc.). Both stages must pass before execution. Blocked attempts are logged and never reach subprocess. Timeout enforcement prevents hanging commands.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "Shell command to execute"
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Timeout in seconds (default: 30)",
+                            "default": 30
+                        },
+                        "working_dir": {
+                            "type": "string",
+                            "description": "Working directory for the command (optional)"
+                        }
+                    },
+                    "required": ["command"]
+                }
+            }
+        }
+    },
+    "list_named_commands": {
+        "fn": list_named_commands,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_named_commands",
+                "description": "Return all registered named commands and their descriptions. Shows the command string, description, and working directory for each named command in the registry.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
                 }
             }
         }
