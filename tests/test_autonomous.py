@@ -169,6 +169,124 @@ def test_run_scheduled_template_loads():
                 assert mock_runner_instance.run.called, "ChainRunner.run should have been called"
 
 
+@test("autonomous: _notify sends message with correct prefix")
+def test_notify_sends_message():
+    from bot.autonomous import _notify
+    from unittest.mock import patch, AsyncMock
+    async def mock_send(x):
+        pass
+    with patch("bot.transport.send_message", new_callable=AsyncMock) as mock_send_message:
+        import asyncio
+        asyncio.run(_notify("Test message"))
+        assert mock_send_message.called, "send_message should have been called"
+        call_args = mock_send_message.call_args[0][0]
+        assert call_args.startswith("💡 "), f"Expected 💡 prefix, got: {call_args}"
+
+
+@test("autonomous: _notify urgent uses red prefix")
+def test_notify_urgent_uses_red_prefix():
+    from bot.autonomous import _notify
+    from unittest.mock import patch, AsyncMock
+    async def mock_send(x):
+        pass
+    with patch("bot.transport.send_message", new_callable=AsyncMock) as mock_send_message:
+        import asyncio
+        asyncio.run(_notify("Urgent message", urgent=True))
+        assert mock_send_message.called, "send_message should have been called"
+        call_args = mock_send_message.call_args[0][0]
+        assert call_args.startswith("🔴 "), f"Expected 🔴 prefix, got: {call_args}"
+
+
+@test("autonomous: _notify failure does not crash")
+def test_notify_failure_does_not_crash():
+    from bot.autonomous import _notify
+    from unittest.mock import patch, AsyncMock
+    async def mock_send(x):
+        raise Exception("Send failed")
+    with patch("bot.transport.send_message", new_callable=AsyncMock, side_effect=Exception("Send failed")):
+        import asyncio
+        # Should not raise
+        asyncio.run(_notify("Test message"))
+
+
+@test("autonomous: community_scout notifies above threshold")
+def test_community_scout_notifies_above_threshold():
+    from bot.autonomous import run_scheduled_template
+    from unittest.mock import patch, AsyncMock
+    async def mock_send(x):
+        pass
+    with patch("bot.autonomous.load_template", return_value={
+        "name": "community_scout",
+        "trigger": {"type": "schedule", "interval_minutes": 60},
+        "steps": []
+    }):
+        with patch("bot.autonomous.create_chain", return_value="chain_123"):
+            with patch("bot.autonomous.ChainRunner") as mock_runner:
+                mock_runner_instance = mock_runner.return_value
+                mock_runner_instance.run.return_value = {
+                    "status": "complete",
+                    "upvotes": 25,
+                    "title": "Test thread",
+                    "url": "https://example.com"
+                }
+                with patch("bot.autonomous._notify", new_callable=AsyncMock) as mock_notify:
+                    import asyncio
+                    asyncio.run(run_scheduled_template("community_scout", mock_send))
+                    assert mock_notify.called, "_notify should have been called for upvotes >= 20"
+
+
+@test("autonomous: community_scout silent below threshold")
+def test_community_scout_silent_below_threshold():
+    from bot.autonomous import run_scheduled_template
+    from unittest.mock import patch, AsyncMock
+    async def mock_send(x):
+        pass
+    with patch("bot.autonomous.load_template", return_value={
+        "name": "community_scout",
+        "trigger": {"type": "schedule", "interval_minutes": 60},
+        "steps": []
+    }):
+        with patch("bot.autonomous.create_chain", return_value="chain_123"):
+            with patch("bot.autonomous.ChainRunner") as mock_runner:
+                mock_runner_instance = mock_runner.return_value
+                mock_runner_instance.run.return_value = {
+                    "status": "complete",
+                    "upvotes": 10,
+                    "title": "Test thread",
+                    "url": "https://example.com"
+                }
+                with patch("bot.autonomous._notify", new_callable=AsyncMock) as mock_notify:
+                    import asyncio
+                    asyncio.run(run_scheduled_template("community_scout", mock_send))
+                    assert not mock_notify.called, "_notify should not have been called for upvotes < 20"
+
+
+@test("autonomous: blog draft notifies on completion")
+def test_blog_draft_notifies_on_completion():
+    from bot.autonomous import run_scheduled_template
+    from unittest.mock import patch, AsyncMock
+    async def mock_send(x):
+        pass
+    with patch("bot.autonomous.load_template", return_value={
+        "name": "blog_scaffold",
+        "trigger": {"type": "schedule", "interval_minutes": 60},
+        "steps": []
+    }):
+        with patch("bot.autonomous.create_chain", return_value="chain_123"):
+            with patch("bot.autonomous.ChainRunner") as mock_runner:
+                mock_runner_instance = mock_runner.return_value
+                mock_runner_instance.run.return_value = {
+                    "status": "complete",
+                    "title": "Test Draft"
+                }
+                with patch("bot.autonomous._notify", new_callable=AsyncMock) as mock_notify:
+                    import asyncio
+                    asyncio.run(run_scheduled_template("blog_scaffold", mock_send))
+                    assert mock_notify.called, "_notify should have been called for blog draft"
+                    call_args = mock_notify.call_args[0][0]
+                    assert "Blog draft ready" in call_args, f"Expected 'Blog draft ready' in message, got: {call_args}"
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
