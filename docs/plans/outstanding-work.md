@@ -167,14 +167,13 @@
 
 ---
 
-## BUDGET TRACKING (Not Implemented)
+## BUDGET TRACKING (Implemented)
 
-### Not Implemented (budget-tracking-mcp-expansion.md)
-- [ ] openrouter_usage table (task_context, model, is_free, prompt_tokens, completion_tokens, estimated_cost_usd, called_at)
-- [ ] model_manager.py changes (MAX_DAILY_PAID_USD = 0.10, can_use_paid_model())
-- [ ] Every model call logged to DB
-- [ ] Paid calls trigger immediate Telegram alert
-- [ ] /status shows today's cost, this week's cost, free vs paid ratio
+### Implemented (bot/model_manager.py)
+- [x] Daily paid cap: $0.25 (production) / $1.00 (dev)
+- [x] can_use_paid_model() checks OpenRouter quota_used_today
+- [x] should_skip_model() enforces budget via get_budget_status()
+- [x] Free models prioritized, paid fallback only when free pool exhausted
 
 ---
 
