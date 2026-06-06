@@ -322,6 +322,28 @@ async def morning_briefing(send_fn) -> None:
         except Exception as e:
             logger.debug(f"Weekly plan check failed: {e}")
 
+        # Add decision ranking (3 highest-leverage actions today)
+        try:
+            from infra.model_router import route
+            ranking_prompt = f"""Given this briefing context, rank the 3 highest-leverage things I could do today. Be specific and direct.
+
+{msg}
+
+Respond with exactly 3 actions, one per line:
+1. [Action]
+2. [Action]
+3. [Action]"""
+            ranking_result = route(role="reasoning", prompt=ranking_prompt)
+            if ranking_result.get("ok"):
+                ranking = ranking_result.get("result", "")
+                lines = [line.strip() for line in ranking.split('\n') if line.strip() and line[0].isdigit()]
+                if lines:
+                    msg += f"\n\n🧠 Today's top 3:\n"
+                    for line in lines[:3]:
+                        msg += f"{line}\n"
+        except Exception as e:
+            logger.debug(f"Decision ranking failed: {e}")
+
         await send_fn(msg)
         logger.info("Morning briefing sent successfully")
 
