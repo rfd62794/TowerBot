@@ -13,7 +13,6 @@ if str(_root) not in sys.path:
 
 _task_types: dict = {}
 _templates: dict = {}
-_canonical_templates: dict = {}
 _tasks: dict = {}
 
 
@@ -39,23 +38,6 @@ def load_templates() -> dict:
     with open(path, "r") as f:
         _templates = yaml.safe_load(f)
     return _templates
-
-
-def load_canonical_templates() -> dict:
-    """Load canonical system templates from templates/canonical/."""
-    global _canonical_templates
-    if _canonical_templates:
-        return _canonical_templates
-
-    canonical_dir = _root / "templates" / "canonical"
-    _canonical_templates = {}
-    for yaml_file in canonical_dir.glob("*.yaml"):
-        if yaml_file.name == ".gitkeep":
-            continue
-        with open(yaml_file, "r", encoding="utf-8") as f:
-            template = yaml.safe_load(f)
-            _canonical_templates[template["name"]] = template
-    return _canonical_templates
 
 
 def load_tasks() -> dict:

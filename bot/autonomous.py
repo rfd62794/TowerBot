@@ -12,6 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bot.agent import respond
 from bot.task_runner import resolve_task, get_all_resolved_tasks, get_task_model_role
 from infra.model_router import route
+from infra.prompts import get_prompts_for_task
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.db.system_metrics import record_system_snapshot
 from infra.db.bot_state import get_dev_mode
@@ -26,6 +27,27 @@ from infra.db.chains import create_chain
 logger = logging.getLogger("privy.autonomous")
 
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+
+def _get_task_type(task_name: str) -> str:
+    """Map task name to prompt type for context injection."""
+    type_map = {
+        "morning_briefing":         "briefing",
+        "mid_day_checkin":          "briefing",
+        "bedtime_summary":          "briefing",
+        "content_decision_prompt":  "content",
+        "content_gap_detector":     "content",
+        "blog_structure_generator": "content",
+        "research_request":         "research",
+        "tech_digest":              "research",
+        "hn_monitor":               "monitoring",
+        "community_opportunity_scout": "monitoring",
+        "opportunity_capture":      "monitoring",
+        "debt_followup":            "planning",
+        "weekly_accountability":    "planning",
+        "skill_review":             "skill_review",
+    }
+    return type_map.get(task_name, "default")
 
 
 async def system_watchdog(send_fn):
@@ -604,7 +626,18 @@ async def run_autonomous_task(task_name: str, send_fn):
         "Never delete data, never send emails. "
         "Begin summary with URGENT: or DONE:]\n\n"
     )
-    full_prompt = f"{prefix}{task['persona']}\n\n{task['prompt']}"
+    
+    # Inject base prompts based on task type
+    try:
+        task_type = _get_task_type(task_name)
+        context = get_prompts_for_task(task_type)
+        if context:
+            full_prompt = f"{context}\n\n---\n\n{prefix}{task['persona']}\n\n{task['prompt']}"
+        else:
+            full_prompt = f"{prefix}{task['persona']}\n\n{task['prompt']}"
+    except Exception as e:
+        logger.warning(f"[autonomous] failed to inject prompts for {task_name}: {e}")
+        full_prompt = f"{prefix}{task['persona']}\n\n{task['prompt']}"
 
     start = time.time()
     result = ""
