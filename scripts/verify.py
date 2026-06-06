@@ -76,9 +76,7 @@ def _load_and_run(path: str) -> tuple[int, int]:
     import io
     buf = io.StringIO()
     old_stdout = sys.stdout
-    old_stderr = sys.stderr
     sys.stdout = buf
-    sys.stderr = buf
 
     try:
         spec = importlib.util.spec_from_file_location("_test_module", full_path)
@@ -87,7 +85,6 @@ def _load_and_run(path: str) -> tuple[int, int]:
         passed, failed = mod.run_all()
     finally:
         sys.stdout = old_stdout
-        sys.stderr = old_stderr
 
     if failed:
         print(buf.getvalue())  # only show output when something failed
