@@ -81,6 +81,7 @@ TEST_FILES = [
     "tests/test_content_seen.py",
     "tests/test_playwright_base.py",
     "tests/test_prompts_system.py",
+    "tests/test_ralph.py",
 ]
 
 
