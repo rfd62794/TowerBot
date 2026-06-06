@@ -1,9 +1,145 @@
 # Current State
 
-## Phase 31d — Content Deduplication + Idle Work Pool ✅ DONE
+## Phase 31e — Approval Gate System ✅ DONE
 
 **Status**: Complete
-**Test Floor**: 578/1 (573 from Phase 31b + 5 new content_seen tests, 1 pre-existing failure)
+**Test Floor**: 584/1 (578 from Phase 31d + 6 new approval gate tests, 1 pre-existing failure)
+
+### What Was Built
+
+- **infra/db/schema.py**: Added `action_approvals` table:
+  - Tracks pending YES/NO approval requests for autonomous actions
+  - Columns: id, action_type, summary, payload (JSON), status (pending/approved/rejected/expired), created_at, expires_at, resolved_at
+  - Supports 30-minute timeout window
+  - Maximum one pending approval at a time
+
+- **infra/db/approvals.py**: New file with approval CRUD helpers:
+  - `create_approval(action_type, summary, payload, timeout_minutes)`: Creates pending approval, returns ID
+  - `get_pending_approval(approval_id)`: Retrieves pending approval by ID
+  - `resolve_approval(approval_id, status)`: Marks as approved or rejected
+  - `expire_stale_approvals()`: Marks expired pending approvals, returns count
+  - `get_latest_pending()`: Gets most recent pending approval (for reply handler)
+  - All functions handle database errors silently (log WARNING, never raise)
+
+- **bot/autonomous.py**: Added `request_approval()` helper:
+  - Sends approval request to Telegram with YES/NO prompt
+  - Checks for existing pending approval (max one at a time)
+  - Returns True if approval created, False if skipped
+  - Never blocks — sends message and returns immediately
+  - Reply handler executes action asynchronously when YES arrives
+
+- **bot/router.py**: Added YES/NO reply handler:
+  - `_handle_approval_reply(message_text)`: Checks if message is YES/NO approval reply
+  - Checked BEFORE normal message routing (highest priority)
+  - Returns True if handled, False if not an approval reply
+  - `_execute_approved_action(action_type, payload)`: Routes approved action to execution function
+  - Wired action types: post_video_comment, publish_blog_draft (stubs for update_video_description, send_email, community_reply)
+  - All execution wrapped in try/except (never raises)
+
+- **bot/autonomous.py**: Wired approval gate to community opportunity scout:
+  - When community_scout finds thread with upvotes >= 20, requests approval instead of just notifying
+  - Action type: "community_reply"
+  - Payload includes url, title, subreddit
+  - Summary shows upvotes and draft reply context
+
+- **tests/test_approval_gate.py**: New test file with 6 test anchors:
+  - `test_create_approval_returns_id` — verifies non-None integer ID returned
+  - `test_get_pending_approval_finds_record` — verifies record retrieval after create
+  - `test_resolve_approval_approved` — verifies status changes to approved
+  - `test_resolve_approval_rejected` — verifies status changes to rejected
+  - `test_expire_stale_approvals` — verifies past expiration marks as expired
+  - `test_yes_reply_resolves_latest_pending` — verifies YES reply calls resolve_approval
+
+### Implementation Details
+
+**`action_approvals` Table:**
+- Uses TIMESTAMP DEFAULT CURRENT_TIMESTAMP for created_at (SQLite compatible)
+- `expires_at` is NOT NULL (required for timeout logic)
+- `payload` stores JSON string of action details
+- `status` enum: pending, approved, rejected, expired
+- `resolved_at` set when status changes from pending
+
+**Approval CRUD Helpers:**
+- `create_approval()`: Returns None on DB error (safe default)
+- `get_pending_approval()`: Returns None on DB error or if not found
+- `resolve_approval()`: Logs warning on failure, never raises
+- `expire_stale_approvals()`: Uses SQLite CURRENT_TIMESTAMP comparison
+- `get_latest_pending()`: Orders by created_at DESC, LIMIT 1
+
+**`request_approval()` Helper:**
+- Checks `get_latest_pending()` before creating new approval
+- If pending exists, logs warning and returns False (skips)
+- Uses 30-minute default timeout (configurable)
+- Telegram message format: 🔔 *Action requested:* [type] + summary + YES/NO prompt + ID
+- Returns immediately after sending (non-blocking)
+
+**YES/NO Reply Handler:**
+- Strips and uppercases message text
+- Only responds to exact "YES" or "NO"
+- Checks for pending approval before processing
+- On YES: resolves as approved, executes action, sends confirmation
+- On NO: resolves as rejected, sends skip confirmation
+- Returns True to skip normal routing if handled
+
+**Action Execution Routing:**
+- `post_video_comment`: Calls tools.content.videos.post_video_comment
+- `publish_blog_draft`: Calls tools.communication.blog.schedule_blog_post
+- `update_video_description`: Stub (not yet implemented)
+- `send_email`: Stub (not yet implemented)
+- `community_reply`: Stub (not yet implemented)
+- Unknown action_type: logs warning
+
+**Community Scout Integration:**
+- Replaces direct notification with approval request
+- Payload includes url, title, subreddit for future reply posting
+- Summary shows upvotes threshold and draft reply context
+- When approved, stub logs "not yet implemented" (Playwright integration future)
+
+**Test Coverage:**
+- All tests use in-memory temp database
+- Tests verify CRUD operations, expiration, and reply handling
+- Reply handler test mocks get_latest_pending for isolation
+- Expiration test manually inserts past timestamp
+
+### Test Floor
+
+- **Previous**: 578/1 (Phase 31d)
+- **Current**: 584/1
+- **New Tests**: 6 (test_approval_gate.py)
+- **Status**: All new tests passing, deploy safe
+
+### Completion Criteria
+
+- [x] `verify_result.txt` shows target floor (584/1), 0 new failures
+- [x] `action_approvals` table confirmed in schema
+- [x] `request_approval()` creates approval record and sends Telegram message
+- [x] YES reply executes action and sends confirmation
+- [x] NO reply skips action and sends confirmation
+- [x] Timeout: pending approval older than 30 min gets marked expired
+- [x] Max one pending approval at a time enforced
+- [x] `docs/state/current.md` updated
+- [ ] Committed to main, Tower deployed
+- [ ] Live test: trigger approval manually, verify Telegram message and reply handling
+
+### Next Steps
+
+**Manual Testing Required:**
+1. Trigger `request_approval()` manually to verify Telegram message format
+2. Reply YES from Telegram and confirm action executes
+3. Reply NO from Telegram and confirm action skipped
+4. Verify timeout handling (create approval with past expires_at, run expire_stale_approvals)
+
+**Future Enhancements:**
+- Implement `update_video_description` action (YouTube API videos.update)
+- Implement `send_email` action (Gmail send)
+- Implement `community_reply` action (Playwright Reddit posting)
+- Add approval history tracking in database
+- Support for approval expiration notifications
+- Add approval metrics (approval rate, action type breakdown)
+
+Phase 31e delivers a simple YES/NO approval gate for autonomous actions. The system allows PrivyBot to request human approval before executing actions, with a 30-minute timeout and maximum one pending approval at a time. The reply handler is checked before normal routing, ensuring YES/NO commands are always processed as approval responses.
+
+---
 
 ### What Was Built
 
