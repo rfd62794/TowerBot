@@ -426,7 +426,7 @@ def test_jina_read_success():
 def test_jina_read_error():
     from tools.search.search_tools import jina_read
     from unittest.mock import patch
-    with patch("tools.search.search_tools.httpx.get") as mock_get:
+    with patch("api.web.jina_api.requests.get") as mock_get:
         mock_get.side_effect = Exception("API error")
         result = jina_read("https://example.com")
         assert result.get("ok") == False, "Expected ok=False on error"
