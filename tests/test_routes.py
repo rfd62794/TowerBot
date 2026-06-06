@@ -32,7 +32,7 @@ ROUTE_EXEMPT = {
     # WordPress tools (MCP-only)
     "create_page", "delete_page", "get_page", "get_pages", "update_page",
     # Google Tasks tools (MCP-only)
-    "create_google_task", "delete_google_task", "get_google_task", "list_google_tasks", "update_google_task", "sync_google_tasks",
+    "create_google_task", "delete_google_task", "get_google_task", "list_google_tasks", "update_google_task", "sync_google_tasks", "complete_google_task",
     # Memory tools (MCP-only)
     "delete_memory", "list_memories",
     # Post pipeline tools (MCP-only)
