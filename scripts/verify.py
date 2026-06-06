@@ -64,6 +64,7 @@ TEST_FILES = [
     "tests/test_delegation.py",
     "tests/test_prompts.py",
     "tests/test_auto_update.py",
+    "tests/test_shell_execution.py",
 ]
 
 
