@@ -92,12 +92,10 @@ def run_all():
         total_passed += p
         total_failed += f
 
-    print()
-    total = total_passed + total_failed
-    sys.__stderr__.write(f"\n{total_passed} passed, {total_failed} failed, {total_skipped} skipped\n")
-    sys.__stderr__.write("Deploy safe.\n" if total_failed == 0 else "Deploy blocked.\n")
-    sys.__stderr__.flush()
-
+    sys.stdout.flush()
+    print(f"\n{total_passed} passed, {total_failed} failed, {total_skipped} skipped")
+    print("Deploy safe." if total_failed == 0 else "Deploy blocked.")
+    sys.stdout.flush()
     sys.exit(0 if total_failed == 0 else 1)
 
 if __name__ == "__main__":
