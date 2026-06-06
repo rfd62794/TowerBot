@@ -50,5 +50,5 @@ community_opportunity_scout:
 
 comment_new_videos:
   schedule: {type: cron, hour: 10, minute: 0}
-  enabled: false  # Keep disabled until manual test passes
+  enabled: true  # Manual test passed, OAuth scope verified
   description: "Post template comment on videos published in last 25 hours"
