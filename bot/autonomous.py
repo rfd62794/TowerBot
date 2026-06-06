@@ -26,12 +26,11 @@ from infra.db.chains import create_chain
 logger = logging.getLogger("privy.autonomous")
 
 
-async def _notify(message: str, urgent: bool = False) -> None:
+async def _notify(message: str, send_fn, urgent: bool = False) -> None:
     """Send immediate Telegram notification from autonomous task."""
     try:
-        from bot.transport import send_message
         prefix = "🔴 " if urgent else "💡 "
-        await send_message(f"{prefix}{message}")
+        await send_fn(f"{prefix}{message}")
     except Exception as e:
         logger.warning(f"[autonomous] notification failed: {e}")
 
@@ -583,10 +582,10 @@ async def run_scheduled_template(template_name: str, send_fn):
             if upvotes >= 20:
                 title = result.get("title", "New thread")
                 url = result.get("url", "")
-                await _notify(f"Community opportunity: {title} ({upvotes} upvotes) — {url}")
+                await _notify(f"Community opportunity: {title} ({upvotes} upvotes) — {url}", send_fn)
         elif template_name == "blog_scaffold":
             draft_title = result.get("title", "New draft") if isinstance(result, dict) else "New draft"
-            await _notify(f"📝 Blog draft ready: {draft_title} — review and edit before publishing")
+            await _notify(f"📝 Blog draft ready: {draft_title} — review and edit before publishing", send_fn)
 
         # Send result if template has send_result flag
         if template.get("send_result", False):
