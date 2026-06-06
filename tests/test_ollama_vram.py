@@ -18,7 +18,7 @@ def _make_manager(loaded_model=None):
     m._loaded_model = loaded_model
     m._lock = asyncio.Lock()
     m.host = "http://localhost:11434"
-    m.model = "gemma3:4b"
+    m.model = "gemma4:e4b"
     m.enabled = True
     m._starting = False
     m._process = None
@@ -81,10 +81,10 @@ def test_vram_check_blocks_when_other_processes_use_vram():
 
 
 def test_vram_check_excludes_current_loaded_model():
-    """gemma3:4b loaded (3.5GB VRAM). Checking qwen2.5:3b — gemma3 excluded → 4.0GB available → True."""
-    manager = _make_manager(loaded_model="gemma3:4b")
+    """gemma4:e4b loaded (9.6GB VRAM). Checking qwen2.5:3b — gemma4 excluded → 32.0GB available → True."""
+    manager = _make_manager(loaded_model="gemma4:e4b")
     mock_ctx = _mock_httpx_client({
-        "models": [{"name": "gemma3:4b", "size_vram": int(3.5 * 1024 ** 3)}]
+        "models": [{"name": "gemma4:e4b", "size_vram": int(9.6 * 1024 ** 3)}]
     })
 
     async def _run():
@@ -92,7 +92,7 @@ def test_vram_check_excludes_current_loaded_model():
             return await manager._check_vram("qwen2.5:3b")
 
     result = asyncio.run(_run())
-    assert result is True, f"Expected True (gemma3:4b excluded from used VRAM), got {result}"
+    assert result is True, f"Expected True (gemma4:e4b excluded from used VRAM), got {result}"
 
 
 def test_vram_check_falls_back_to_psutil_on_api_failure():
@@ -116,12 +116,12 @@ def test_vram_already_loaded_returns_true():
     """Model already present in /api/ps — return True immediately without VRAM math."""
     manager = _make_manager()
     mock_ctx = _mock_httpx_client({
-        "models": [{"name": "gemma3:4b", "size_vram": int(3.5 * 1024 ** 3)}]
+        "models": [{"name": "gemma4:e4b", "size_vram": int(9.6 * 1024 ** 3)}]
     })
 
     async def _run():
         with patch("api.local.ollama_api.httpx.AsyncClient", return_value=mock_ctx):
-            return await manager._check_vram("gemma3:4b")
+            return await manager._check_vram("gemma4:e4b")
 
     result = asyncio.run(_run())
     assert result is True, f"Expected True when model already in VRAM, got {result}"
