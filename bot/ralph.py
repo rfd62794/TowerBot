@@ -83,7 +83,6 @@ class Ralph:
         logger.info(f"[ralph] Starting background work")
 
         try:
-            from bot.autonomous import run_template_task
             from infra.db.autonomous import record_agent_action
             import yaml
             from pathlib import Path
@@ -97,9 +96,30 @@ class Ralph:
 
             full_prompt = f"{overseer}\n\n---\n\n{task_prompt}" if overseer else task_prompt
 
-            self._current_bg_task = asyncio.create_task(
-                run_template_task("background", prompt_override=full_prompt)
-            )
+            # Run background task via autonomous task runner
+            async def run_background_task():
+                from bot.autonomous import run_autonomous_task
+                from bot.task_runner import resolve_task
+
+                # Use a dummy send_fn that logs instead of sending
+                async def dummy_send(message):
+                    logger.info(f"[ralph] Background task output: {message[:200]}...")
+
+                # Create a temporary task definition
+                # We'll use the prompt directly since this is ad-hoc background work
+                from infra.model_router import route
+                from infra.prompts import get_prompts_for_task
+
+                # Simple execution: route the prompt to the model
+                result = await route(
+                    prompt=full_prompt,
+                    model_role="autonomous",
+                    tools_enabled=True
+                )
+
+                return result
+
+            self._current_bg_task = asyncio.create_task(run_background_task())
 
             result = await asyncio.wait_for(
                 self._current_bg_task,
@@ -176,10 +196,11 @@ class Ralph:
             elif event_type == "deep_dive":
                 topic = event.get("topic", "")
                 if topic:
-                    from bot.autonomous import run_template_task
+                    from infra.model_router import route
                     logger.info(f"[ralph] Autonomous deep dive: {topic[:40]}...")
+                    prompt = f"Deep dive analysis on: {topic}\n\nExplore this topic thoroughly. Surface key insights, patterns, and actionable findings."
                     await asyncio.wait_for(
-                        run_template_task("deep_dive", context={"topic": topic}),
+                        route(prompt=prompt, model_role="autonomous", tools_enabled=True),
                         timeout=300
                     )
 
