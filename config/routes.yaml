@@ -62,7 +62,11 @@ routes:
       - update_task
       - get_upcoming_tasks
       - suggest_goal_progress
-    description: "Goals, tasks, milestones, weekly planning"
+      - queue_task
+      - cancel_task
+      - get_task_result
+      - list_pending_tasks
+    description: "Goals, tasks, milestones, weekly planning, task delegation"
 
   memory:
     model: openrouter/free
@@ -134,6 +138,12 @@ routes:
       - get_blog_post
       - create_blog_draft
       - update_blog_post
+      - get_blog_categories
+      - search_blog_posts
+      - set_post_categories
+      - set_post_excerpt
+      - set_post_tags
+      - schedule_blog_post
     description: "Blog posts, drafts, publishing"
 
   utility:
@@ -146,7 +156,13 @@ routes:
 
   system:
     model: openrouter/free
-    tools: []
+    tools:
+      - execute_shell
+      - run_named_command
+      - list_named_commands
+      - sync_db_export
+      - sync_db_import
+      - sync_db_status
     # planned: get_system_resources, get_ollama_loaded, get_ollama_model_sizes,
     #          check_ollama_health, get_daily_cost  (not yet in TOOL_REGISTRY)
-    description: "System resources, Ollama status, budget tracking (tools not yet implemented)"
+    description: "System resources, Ollama status, budget tracking, shell execution, database sync"
