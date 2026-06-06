@@ -10,14 +10,14 @@ if _root not in sys.path:
     sys.path.insert(0, _root)
 
 
-def test_decorator(name):
+def _test_decorator(name):
     def wrapper(fn):
         fn.__name__ = name
         TESTS.append((name, fn))
         return fn
     return wrapper
 
-test = test_decorator
+test = _test_decorator
 
 TESTS = []
 

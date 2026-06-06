@@ -6,14 +6,14 @@ load_dotenv()
 from infra.db import init_db
 init_db()
 
-def test_decorator(name):
+def _test_decorator(name):
     def wrapper(fn):
         fn.__name__ = name
         TESTS.append((name, fn))
         return fn
     return wrapper
 
-test = test_decorator
+test = _test_decorator
 
 TESTS = []
 
