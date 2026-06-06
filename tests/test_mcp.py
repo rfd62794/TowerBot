@@ -61,10 +61,10 @@ def test_mcp_tool_listing_returns_schema():
         assert len(tools) > 0, "Expected at least one tool"
 
         for tool in tools:
-            assert "name" in tool, "Tool must have name"
-            assert "description" in tool, "Tool must have description"
-            assert "inputSchema" in tool, "Tool must have inputSchema"
-            assert tool["name"] in MCP_EXPOSED_TOOLS, f"Tool {tool['name']} not in MCP_EXPOSED_TOOLS"
+            assert hasattr(tool, "name"), "Tool must have name attribute"
+            assert hasattr(tool, "description"), "Tool must have description attribute"
+            assert hasattr(tool, "inputSchema"), "Tool must have inputSchema attribute"
+            assert tool.name in MCP_EXPOSED_TOOLS, f"Tool {tool.name} not in MCP_EXPOSED_TOOLS"
 
     asyncio.run(run_test())
 
