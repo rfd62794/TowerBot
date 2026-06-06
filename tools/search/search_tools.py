@@ -1,6 +1,7 @@
 """Search and grounding tools — web, wiki, reddit, weather."""
 
 import hashlib
+import logging
 from datetime import datetime
 from api.web.ddg_api import ddg_api
 from api.web.wikipedia_api import wikipedia_api
@@ -10,6 +11,8 @@ from api.github.github_api import github_api
 from infra.db import record_weather_day
 from tools._tool import BaseTool
 import httpx
+
+logger = logging.getLogger("privy.search")
 
 
 class SearchTools(BaseTool):
