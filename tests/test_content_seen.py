@@ -1,7 +1,6 @@
 """Tests for content deduplication helpers."""
 import pytest
-from infra.db import init_db
-from infra.db.schema import _conn
+from infra.db.schema import _conn, SCHEMA
 from infra.db.content import already_served, mark_served
 import sqlite3
 
@@ -17,15 +16,7 @@ def setup_test_db():
     # Create in-memory database
     _conn = sqlite3.connect(":memory:", check_same_thread=False)
     _conn.row_factory = sqlite3.Row
-    
-    # Read and execute schema
-    with open("infra/db/schema.py") as f:
-        content = f.read()
-        # Extract SQL between triple quotes
-        sql_start = content.find('"""') + 3
-        sql_end = content.find('"""', sql_start)
-        schema_sql = content[sql_start:sql_end]
-        _conn.executescript(schema_sql)
+    _conn.executescript(SCHEMA)
     _conn.commit()
     
     yield
