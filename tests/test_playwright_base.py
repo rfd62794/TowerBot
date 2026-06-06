@@ -170,15 +170,18 @@ def test_list_profile_status_empty():
 @test("playwright: check_profile_validity handles exception")
 def test_check_profile_validity_handles_exception():
     """Mock playwright raises → returns ok: False, valid: False."""
-    with patch("playwright.sync_api.sync_playwright") as mock_sync:
-        mock_sync.return_value.__enter__.side_effect = Exception("Playwright error")
+    with patch("tools.browser.playwright_base._get_profile", return_value={"storage_state": "fake.json"}):
+        with patch("playwright.sync_api.sync_playwright") as mock_sync:
+            mock_playwright = MagicMock()
+            mock_playwright.chromium.launch.side_effect = Exception("Playwright error")
+            mock_sync.return_value.__enter__.return_value = mock_playwright
 
-        from tools.browser.playwright_base import check_profile_validity
-        result = check_profile_validity("test_site")
+            from tools.browser.playwright_base import check_profile_validity
+            result = check_profile_validity("test_site")
 
-        assert result["ok"] is False
-        assert result["valid"] is False
-        assert "error" in result or "reason" in result
+            assert result["ok"] is False
+            assert result["valid"] is False
+            assert "error" in result or "reason" in result
 
 
 if __name__ == "__main__":
