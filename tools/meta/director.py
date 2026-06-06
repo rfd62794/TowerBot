@@ -108,9 +108,18 @@ def start_chain(template_name: str,
         runner = ChainRunner(tool_registry=TOOL_REGISTRY)
         # Run in background — don't block the MCP call
         import threading
+        import json
         def run():
             try:
-                runner.run(chain_id, template["steps"])
+                result = runner.run(chain_id, template["steps"])
+                # Log to agent_actions for unified history
+                from infra.db.autonomous import record_agent_action
+                record_agent_action(
+                    task_name=template_name,
+                    result=json.dumps(result),
+                    duration_ms=0,
+                    source="template"
+                )
             except Exception as e:
                 logger.error(f"Chain {chain_id} failed: {e}")
         threading.Thread(target=run, daemon=True).start()

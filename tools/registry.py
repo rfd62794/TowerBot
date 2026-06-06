@@ -1633,6 +1633,7 @@ TOOL_REGISTRY = {
                         },
                     },
                     "required": ["content"],
+                    "additionalProperties": False,
                 },
             },
         },
