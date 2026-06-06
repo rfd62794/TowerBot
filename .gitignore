@@ -14,3 +14,4 @@ config/rfd_token.json
 config/steam_catalog.json
 privy_chroma_db/*
 tower_initial_sync.json
+config/playwright_profiles/

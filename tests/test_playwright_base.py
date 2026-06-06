@@ -91,7 +91,7 @@ def test_browser_navigate_no_profile_still_works():
 @test("playwright: browser_navigate failure")
 def test_browser_navigate_failure():
     """Mock raises exception → ok: False with error."""
-    with patch("tools.browser.playwright_base.sync_playwright") as mock_sync:
+    with patch("playwright.sync_api.sync_playwright") as mock_sync:
         mock_sync.side_effect = Exception("Connection failed")
         
         from tools.browser.playwright_base import browser_navigate
