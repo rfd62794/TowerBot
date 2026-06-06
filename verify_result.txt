@@ -1,2 +1,2 @@
-602 passed, 2 failed, 0 skipped
-Deploy blocked.
+604 passed, 0 failed, 0 skipped
+Deploy safe.
