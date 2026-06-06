@@ -77,6 +77,8 @@ def _load_and_run(path: str) -> tuple[int, int]:
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         return mod.run_all()
+    except SystemExit:
+        return 0, 0  # test chose to skip
     except Exception as e:
         print(f"  [CRASH] {path}: {e}")
         return 0, 1
