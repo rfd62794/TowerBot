@@ -1,2 +1,2 @@
-590 passed, 4 failed, 0 skipped
+591 passed, 3 failed, 0 skipped
 Deploy blocked.
