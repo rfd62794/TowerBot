@@ -42,9 +42,18 @@ my_channel_id = me["items"][0]["id"]
 posted = 0
 skipped = 0
 for v in videos:
-    threads = youtube.commentThreads().list(
-        part="snippet", videoId=v["id"], maxResults=20
-    ).execute()
+    try:
+        threads = youtube.commentThreads().list(
+            part="snippet", videoId=v["id"], maxResults=20
+        ).execute()
+    except Exception as e:
+        if "commentsDisabled" in str(e):
+            print(f"SKIP (comments disabled): {v['title']}")
+            skipped += 1
+            continue
+        print(f"ERROR checking comments: {v['title']} — {e}")
+        skipped += 1
+        continue
     owner_commented = any(
         t["snippet"]["topLevelComment"]["snippet"]["authorChannelId"]["value"] == my_channel_id
         for t in threads.get("items", [])
