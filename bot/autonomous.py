@@ -255,17 +255,17 @@ async def bedtime_summary(send_fn):
     try:
         from tools.productivity.google_tasks import list_google_tasks
         from datetime import datetime, timedelta
-        
+
         # Get tomorrow's tasks
         tasks = list_google_tasks()
         tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         due_tomorrow = [t for t in tasks.get("tasks", []) if t.get("due_date", "").startswith(tomorrow)]
-        
+
         msg = "🌙 Bedtime summary:\n\n"
-        
+
         # What happened today vs morning plan
         msg += "Today's summary: [day completed]\n\n"
-        
+
         # Tomorrow's overnight queue
         if due_tomorrow:
             msg += f"📋 Overnight queue ({len(due_tomorrow)} tasks):\n"
@@ -273,13 +273,83 @@ async def bedtime_summary(send_fn):
                 msg += f"  • {t.get('title', '')}\n"
         else:
             msg += "📋 No tasks queued for overnight\n"
-        
+
         msg += "\n💤 I'll work on these while you sleep. Good night!"
-        
+
         await send_fn(msg)
         logger.info("Bedtime summary sent")
     except Exception as e:
         logger.error(f"Bedtime summary failed: {e}")
+
+
+async def skill_review(send_fn):
+    """
+    Sunday 6AM self-improvement analysis — analyze last 7 days of agent_actions.
+    Proposes improvements, new templates, and drops based on performance patterns.
+    """
+    try:
+        from infra.db.autonomous import get_recent_task_actions
+        from infra.model_router import route
+        from datetime import datetime, timedelta
+
+        # Get last 7 days of actions
+        seven_days_ago = (datetime.now() - timedelta(days=7)).isoformat()
+        actions = get_recent_task_actions(since=seven_days_ago)
+
+        # Build analysis prompt
+        prompt = f"""Look at these {len(actions)} agent_actions from the last 7 days:
+
+{actions[:50] if len(actions) > 50 else actions}
+
+Find:
+1. Tasks that ran frequently but produced low-quality output (needs better prompts)
+2. Ad-hoc research topics that came up 2+ times (should become a template)
+3. Notifications that fired but weren't acted on (threshold too low?)
+4. Gaps — things Robert asked about that PrivyBot couldn't answer
+
+Propose 1-3 improvements. Format as:
+IMPROVE: [task_name] — [what to change and why]
+NEW TEMPLATE: [name] — [what it would do and when to run it]
+DROP: [task_name] — [why it's not pulling its weight]
+
+Be specific and actionable."""
+
+        result = route(role="reasoning", prompt=prompt)
+
+        if result.get("ok"):
+            proposal = result.get("result", "")
+            msg = f"🔧 Weekly skill review:\n\n{proposal}\n\nReply APPROVE or REJECT to each proposal."
+            await send_fn(msg)
+            logger.info("Skill review sent for approval")
+        else:
+            logger.error(f"Skill review analysis failed: {result.get('error')}")
+    except Exception as e:
+        logger.error(f"Skill review failed: {e}")
+
+
+async def _check_and_run_background_task(send_fn):
+    """
+    Run a random background task from BACKGROUND_TASKS pool every 10 minutes.
+    Proactive lightweight work that runs constantly regardless of scheduled tasks.
+    """
+    try:
+        task = random.choice(BACKGROUND_TASKS)
+        logger.info(f"Running background task: {task[:60]}...")
+
+        # Execute the task using the agent
+        result = await respond(task, send_fn, chat_id=TELEGRAM_CHAT_ID)
+
+        # Log to agent_actions
+        record_agent_action(
+            task_name="background_task",
+            result=str(result)[:500],
+            duration_ms=0,
+            source="background_pool"
+        )
+
+        logger.debug(f"Background task completed")
+    except Exception as e:
+        logger.error(f"Background task failed: {e}")
 
 
 def _hours_ago(date_str: str) -> int:
@@ -309,6 +379,22 @@ async def budget_status_check(send_fn):
             logger.debug(f"Budget status OK: {status.get('quota_used_today', 0):.4f} used")
     except Exception as e:
         logger.error(f"Budget status check failed: {e}")
+
+# Background task pool — proactive lightweight work that runs constantly
+# Separate from idle fallback. These run every 10 minutes regardless of scheduled tasks.
+# Very lightweight: 1-2 tool calls, no heavy inference. Silent if nothing actionable.
+BACKGROUND_TASKS = [
+    "Check if any YouTube video crossed a new view milestone (100, 500, 1000). Notify if yes.",
+    "Scan r/incremental_games new posts for VoidDrift mention opportunity. Check content_seen first.",
+    "Check PyPI downloads for openagent-directive. Note if trending up or down.",
+    "Pull one HN post about Rust or Bevy posted in last hour. Mark seen if already served.",
+    "Check itch.io plays delta since last check. Notify if spike detected.",
+    "Find one Bevy question on Reddit that Robert could answer in under 2 minutes.",
+    "Check YouTube realtime for any video gaining unusual momentum in last hour.",
+    "Search web for 'VoidDrift' or 'openagent-directive' new mentions.",
+    "Review oldest unread community scout finding. Surface if still actionable.",
+    "Check if any scheduled YouTube Shorts published today have a comment from channel owner yet.",
+]
 
 # Idle task pool — fallback tasks when no autonomous work is queued
 IDLE_TASKS = [
@@ -1142,6 +1228,17 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     )
     logger.info("Registered idle detection job: _check_and_run_idle_task every 15min")
 
+    # Register 10-minute background task pool
+    scheduler.add_job(
+        _check_and_run_background_task,
+        "interval",
+        minutes=10,
+        id="background_task_checker",
+        max_instances=1,
+        args=[send_fn]
+    )
+    logger.info("Registered background task pool: every 10 minutes")
+
     # Register delegation queue poll
     scheduler.add_job(
         process_delegation_queue,
@@ -1341,3 +1438,17 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         replace_existing=True
     )
     logger.info("Registered bedtime_summary: daily 22:30")
+
+    # Register Sunday 6AM skill review
+    scheduler.add_job(
+        skill_review,
+        "cron",
+        day_of_week='sun',
+        hour=6,
+        minute=0,
+        id='skill_review',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered skill_review: Sunday 06:00")
