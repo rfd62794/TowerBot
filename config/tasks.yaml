@@ -97,7 +97,7 @@ weekly_accountability:
 
 # --- HACKER NEWS MONITOR ---
 hn_monitor:
-  template: hn_monitor
-  schedule: {type: cron, minute: 0, hour: "*/2"}
+  schedule: cron
+  cron: "0 */2 * * *"    # Every 2 hours
   enabled: true
-  description: "Watch HN for posts about Rust game dev, Bevy, idle games, or Python CLI tools with >50 points"
+  description: "Watch HN for Rust game dev, Bevy, idle games, or Python CLI posts >50 points. Deduplicate via content_seen."

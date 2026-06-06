@@ -27,11 +27,37 @@ logger = logging.getLogger("privy.autonomous")
 
 # Idle task pool — fallback tasks when no autonomous work is queued
 IDLE_TASKS = [
-    "Search HN for anything about Rust ECS patterns and summarize the top result",
-    "Check if any of Robert's recent YouTube videos have comments worth responding to",
-    "Review the oldest open Google Task and draft a completion plan",
-    "Search for new Bevy community showcase posts and find one worth sharing",
-    "Check if VoidDrift appears in any new itch.io collections or lists",
+    # Research
+    "Search HackerNews for Rust ECS or game development posts with >30 points. Summarize the most relevant one to VoidDrift development in 2 sentences. If already served, skip it.",
+    "Search r/bevy for questions posted in the last 24 hours that Robert could answer based on VoidDrift experience. Surface the most relevant one.",
+    "Search itch.io or r/incremental_games for new idle game launches this week. Find one that's doing well and note what mechanic is driving it.",
+    "Search HackerNews for 'Python CLI' or 'Python automation' with >20 points today. Summarize anything relevant to OpenAgent.",
+    "Search r/rust for posts about game development or ECS patterns posted today. Surface the most interesting one.",
+
+    # Content ideas
+    "Generate 3 YouTube Short title concepts for Everything is Crab using the identity transformation pattern (what the game turned you into). Make each title specific and visceral — not generic.",
+    "Generate 3 YouTube Short title concepts for Dune: Awakening using survival or discovery moments. Each title should create a question in the viewer's mind.",
+    "Look at recent VoidDrift commits using get_recent_commits(). Generate 2 Short title concepts that turn the most recent technical change into a player-facing story.",
+    "Find a trending game mechanic discussion on Reddit or HN. Explain in 2 sentences how it relates to VoidDrift's current design.",
+
+    # Monitoring
+    "Search the web for 'VoidDrift game' or 'VoidDrift Bevy' using web_search(). Report any new mentions not previously seen.",
+    "Search the web for 'openagent-directive' or 'OpenAgent CLI'. Report any new mentions, blog posts, or GitHub forks.",
+    "Use get_pypi_stats() to check OpenAgent download counts. Compare to last known baseline and note the trend.",
+    "Search r/incremental_games for threads where VoidDrift could be recommended. Check content_seen before surfacing.",
+    "Use get_itch_stats() and check if VoidDrift views or plays changed in the last few hours.",
+
+    # Drafts
+    "Using get_recent_commits(), draft a 2-sentence LinkedIn post about the most recent VoidDrift or PrivyBot commit. Keep it technical but accessible.",
+    "Draft a 3-point outline for a blog post using the most interesting commit from the last 7 days as the hook. Use the RFD Content Frame: MOMENT → SURPRISE → STRUGGLE → LESSON → NEXT.",
+    "Review the last 3 YouTube Shorts titles published using get_top_videos(). Suggest 2 improved versions using the identity transformation pattern.",
+
+    # Intelligence
+    "Search HN for 'indie game' with >50 points today. Find the top result and summarize what's driving its success in one sentence.",
+    "Search r/gamedev for posts about monetization, launch strategy, or wishlist building with >30 upvotes. Surface the most relevant to VoidDrift's Android launch.",
+
+    # Utility
+    "Use list_google_tasks() to find the oldest overdue task. Draft a one-paragraph completion plan for it.",
 ]
 
 
@@ -672,50 +698,33 @@ def setup_template_scheduler(scheduler: AsyncIOScheduler, send_fn):
     logger.info(f"Template scheduler registered {scheduled_count} jobs")
 
 
-async def check_and_run_idle_task(send_fn):
-    """
-    Idle detection and fallback task execution.
+IDLE_THRESHOLD_MINUTES = 15
 
-    Checks if no autonomous task has run in the last 90 minutes.
-    If idle, randomly picks a task from IDLE_TASKS and executes it.
-    Short tasks (2-3 tool calls max), result to Telegram only if interesting.
-    """
+
+async def _check_and_run_idle_task() -> None:
+    """If no task ran in the last 15 minutes, pick a random idle task and run it."""
     try:
-        # Check when the last task ran
-        recent_actions = get_recent_task_actions(limit=1)
-        if not recent_actions:
-            # No actions recorded yet, consider idle
-            logger.info("[idle] No recent actions found, running idle task")
-            should_run_idle = True
-        else:
-            last_action = recent_actions[0]
-            last_run = datetime.fromisoformat(last_action["ran_at"])
-            idle_threshold = datetime.now() - timedelta(minutes=90)
-            should_run_idle = last_run < idle_threshold
+        from infra.db.autonomous import get_overnight_actions
+        from datetime import datetime, timedelta
 
-        if not should_run_idle:
-            logger.debug("[idle] Recent activity detected, skipping idle task")
-            return
+        cutoff = datetime.utcnow() - timedelta(minutes=IDLE_THRESHOLD_MINUTES)
+        recent = [a for a in get_overnight_actions()
+                  if a.get("ran_at", "") >= cutoff.isoformat()]
 
-        # Pick random task from IDLE_TASKS
+        if recent:
+            return  # something ran recently, stay quiet
+
         task_prompt = random.choice(IDLE_TASKS)
-        logger.info(f"[idle] Running idle task: {task_prompt[:50]}...")
+        logger.info(f"[idle] No task in {IDLE_THRESHOLD_MINUTES}m — running idle task")
 
-        # Execute the task using the agent
-        result = await respond(task_prompt, send_fn=send_fn)
-
-        # Log to agent_actions
-        record_agent_action(
-            task_name="idle_task",
-            result=str(result)[:500],  # Truncate to avoid huge strings
-            duration_ms=0,
-            source="idle"
-        )
-
-        logger.info(f"[idle] Idle task completed")
-
+        try:
+            result = await run_template_task("idle_task", prompt_override=task_prompt)
+            if result and result.get("ok"):
+                await _notify(f"💭 {result.get('summary', task_prompt[:80])}")
+        except Exception as e:
+            logger.warning(f"[idle] task failed: {e}")
     except Exception as e:
-        logger.error(f"[idle] Idle task failed: {e}")
+        logger.warning(f"[idle] checker failed: {e}")
 
 
 def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
@@ -764,17 +773,14 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
             day_str = f" day {schedule['day_of_week']}" if 'day_of_week' in schedule else ""
             logger.info(f"Registered cron task: {task_name} at {schedule['hour']:02d}:{schedule['minute']:02d}{day_str}")
 
-    # Register idle detection job (runs every 30 minutes)
+    # Register idle detection job (runs every 15 minutes)
     scheduler.add_job(
-        check_and_run_idle_task,
+        _check_and_run_idle_task,
         "interval",
-        minutes=30,
-        args=[send_fn],
-        id="idle_detection",
-        max_instances=1,
-        replace_existing=True,
+        minutes=15,
+        id="idle_task_checker"
     )
-    logger.info("Registered idle detection job: check_and_run_idle_task every 30min")
+    logger.info("Registered idle detection job: _check_and_run_idle_task every 15min")
 
     # Register delegation queue poll
     scheduler.add_job(

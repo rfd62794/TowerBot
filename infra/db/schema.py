@@ -348,13 +348,11 @@ CREATE TABLE IF NOT EXISTS content_seen (
     external_id TEXT NOT NULL,
     title TEXT,
     url TEXT,
-    seen_at TEXT DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+    seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     served INTEGER DEFAULT 0,
     used INTEGER DEFAULT 0,
     UNIQUE(source, external_id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_content_seen_source ON content_seen(source, seen_at DESC);
 """
 
 _conn: sqlite3.Connection | None = None
