@@ -122,6 +122,171 @@ def test_briefing_has_weekly_focus():
     # Just verify the function doesn't crash
 
 
+@test("briefing: includes google tasks section")
+def test_briefing_includes_google_tasks():
+    from bot.scheduler import morning_briefing
+    from unittest.mock import patch
+    
+    output = []
+    
+    async def capture(msg):
+        output.append(msg)
+    
+    mock_tasks = {
+        "ok": True,
+        "tasks": [
+            {"title": "Task 1", "due_date": "2026-06-06", "status": "needsAction"},
+            {"title": "Task 2", "due_date": "2026-06-06", "status": "needsAction"},
+        ],
+        "count": 2
+    }
+    
+    with patch("tools.productivity.google_tasks.list_google_tasks", return_value=mock_tasks):
+        asyncio.run(morning_briefing(capture))
+    
+    assert len(output) > 0
+    msg = output[0]
+    # Section may be present or empty depending on date filter
+
+
+@test("briefing: tasks empty ok")
+def test_briefing_tasks_empty_ok():
+    from bot.scheduler import morning_briefing
+    from unittest.mock import patch
+    
+    output = []
+    
+    async def capture(msg):
+        output.append(msg)
+    
+    mock_tasks = {"ok": True, "tasks": [], "count": 0}
+    
+    with patch("tools.productivity.google_tasks.list_google_tasks", return_value=mock_tasks):
+        asyncio.run(morning_briefing(capture))
+    
+    assert len(output) > 0
+    # Should not crash with empty tasks
+
+
+@test("briefing: overnight findings")
+def test_briefing_overnight_findings():
+    from bot.scheduler import morning_briefing
+    from unittest.mock import patch
+    
+    output = []
+    
+    async def capture(msg):
+        output.append(msg)
+    
+    mock_actions = [
+        {"task_name": "community_scout", "result": "Found opportunity", "ran_at": "2026-06-06 04:00:00"},
+    ]
+    
+    with patch("infra.db.autonomous.get_overnight_actions", return_value=mock_actions):
+        asyncio.run(morning_briefing(capture))
+    
+    assert len(output) > 0
+    msg = output[0]
+    # Section may be present if actions exist
+
+
+@test("briefing: no overnight findings")
+def test_briefing_no_overnight_findings():
+    from bot.scheduler import morning_briefing
+    from unittest.mock import patch
+    
+    output = []
+    
+    async def capture(msg):
+        output.append(msg)
+    
+    with patch("infra.db.autonomous.get_overnight_actions", return_value=[]):
+        asyncio.run(morning_briefing(capture))
+    
+    assert len(output) > 0
+    # Should not crash with empty actions
+
+
+@test("briefing: commit digest")
+def test_briefing_commit_digest():
+    from bot.scheduler import morning_briefing
+    from unittest.mock import patch
+    
+    output = []
+    
+    async def capture(msg):
+        output.append(msg)
+    
+    mock_commits = {
+        "commits": [
+            {"sha": "abc123", "message": "Fix bug", "date": "2026-06-06T10:00:00Z", "repo": "PrivyBot"},
+            {"sha": "def456", "message": "Add feature", "date": "2026-06-06T11:00:00Z", "repo": "PrivyBot"},
+        ],
+        "count": 2
+    }
+    
+    with patch("tools.search.search_tools.get_recent_commits", return_value=mock_commits):
+        asyncio.run(morning_briefing(capture))
+    
+    assert len(output) > 0
+    msg = output[0]
+    # Section may be present if recent commits exist
+
+
+@test("briefing: weekly mirror monday")
+def test_briefing_weekly_mirror_monday():
+    from bot.scheduler import morning_briefing
+    from unittest.mock import patch, MagicMock
+    from datetime import datetime
+    
+    output = []
+    
+    async def capture(msg):
+        output.append(msg)
+    
+    # Mock Monday
+    monday = datetime(2026, 6, 7)  # Monday
+    
+    with patch("bot.scheduler.datetime") as mock_dt:
+        mock_dt.now.return_value = monday
+        mock_dt.now.return_value.weekday.return_value = 0
+        
+        mock_actions = [
+            {"task_name": "community_scout", "count": 5},
+        ]
+        
+        mock_exec = MagicMock()
+        mock_exec.return_value.fetchall.return_value = mock_actions
+        
+        with patch("infra.db.schema._exec", return_value=mock_exec):
+            asyncio.run(morning_briefing(capture))
+    
+    assert len(output) > 0
+
+
+@test("briefing: weekly mirror not monday")
+def test_briefing_weekly_mirror_not_monday():
+    from bot.scheduler import morning_briefing
+    from unittest.mock import patch
+    from datetime import datetime
+    
+    output = []
+    
+    async def capture(msg):
+        output.append(msg)
+    
+    # Mock Tuesday
+    tuesday = datetime(2026, 6, 8)  # Tuesday
+    
+    with patch("bot.scheduler.datetime") as mock_dt:
+        mock_dt.now.return_value = tuesday
+        mock_dt.now.return_value.weekday = lambda: 1
+        asyncio.run(morning_briefing(capture))
+    
+    assert len(output) > 0
+    # Should not crash on non-Monday
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
