@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import yaml
 from datetime import datetime, timedelta
 from tools._tool import BaseTool
 from api.google.youtube_api import (
@@ -10,6 +11,7 @@ from api.google.youtube_api import (
     get_channel_uploads_playlist_id,
     get_playlist_items,
     get_video_statistics,
+    post_comment,
 )
 
 
@@ -169,6 +171,48 @@ class VideoTools(BaseTool):
         except Exception as e:
             return self.error(str(e), code="exception")
 
+    def post_video_comment(self, video_id: str, text: str = None, series: str = None) -> dict:
+        """
+        Post a comment on a video using series template or provided text.
+        Args:
+            video_id: YouTube video ID
+            text: Comment text (overrides template if provided)
+            series: Series name to look up template (e.g. "Everything is Crab")
+        Returns: {ok, comment_id, video_id, text_used}
+        """
+        try:
+            # Load comment text from template if not provided
+            if text is None:
+                template_path = "config/comment_templates.yaml"
+                try:
+                    with open(template_path, "r") as f:
+                        templates = yaml.safe_load(f)
+                    
+                    if series and series in templates.get("series", {}):
+                        text = templates["series"][series]
+                    else:
+                        text = templates.get("default", "")
+                except Exception as e:
+                    return self.error(f"Failed to load comment templates: {e}", code="template_error")
+            
+            if not text:
+                return self.error("No comment text provided and no template found", code="no_text")
+            
+            # Post comment via API
+            api_response = post_comment(video_id, text)
+            
+            if not api_response.get("ok"):
+                code = api_response.get("code", "api_error")
+                return self.error(api_response.get("error", "Unknown error"), code=code)
+            
+            return self.success({
+                "comment_id": api_response.get("comment_id"),
+                "video_id": video_id,
+                "text_used": text,
+            }, stale_result=api_response)
+        except Exception as e:
+            return self.error(str(e), code="exception")
+
 
 # Module-level instance
 _video_tools = VideoTools()
@@ -185,3 +229,7 @@ def get_video_analytics(video_id: str, days: int = 28) -> dict:
 
 def get_retention_curve(video_id: str, days: int = 28) -> dict:
     return _video_tools.get_retention_curve(video_id, days)
+
+
+def post_video_comment(video_id: str, text: str = None, series: str = None) -> dict:
+    return _video_tools.post_video_comment(video_id, text, series)
