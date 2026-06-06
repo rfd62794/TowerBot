@@ -14,11 +14,16 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 SCOPES = [
     "https://www.googleapis.com/auth/yt-analytics.readonly",
     "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.force-ssl",      # ADD: comments, video updates, playlists
     "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/calendar.events",        # ADD: create/update calendar events
     "https://www.googleapis.com/auth/tasks",
     "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",             # ADD: send emails (approval gates, notifications)
     "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/drive.file",             # ADD: create files in Drive (YAML generation)
     "https://www.googleapis.com/auth/spreadsheets.readonly",
+    "https://www.googleapis.com/auth/spreadsheets",           # ADD: write to sheets (RFD_Sheets_MCP)
     "https://www.googleapis.com/auth/documents.readonly",
 ]
 
