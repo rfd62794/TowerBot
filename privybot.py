@@ -38,6 +38,7 @@ from bot.report import init_report
 from bot.transport import handle_message, handle_callback_query
 from bot.scheduler import run_scheduler, check_missed_briefing
 from bot.autonomous import setup_autonomous_scheduler
+from bot.ralph import ralph
 from infra.polling import polling_manager
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters
 from telegram.request import HTTPXRequest
@@ -162,6 +163,10 @@ if __name__ == "__main__":
 
         # Store scheduler for cleanup
         application._ap_scheduler = ap_scheduler
+
+        # Start RALPH — persistent always-on overseer
+        asyncio.create_task(ralph.start())
+        logging.info("[startup] RALPH started — persistent loop active")
 
     # HTTPXRequest with extended timeouts for Windows TLS handshake reliability
     request = HTTPXRequest(
