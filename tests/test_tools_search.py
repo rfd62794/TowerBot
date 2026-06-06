@@ -93,6 +93,60 @@ def test_reddit_search():
     assert "stale_notice" in result, "Expected stale_notice key"
 
 
+@test("search: reddit_search falls back to DDG when Reddit fails")
+def test_reddit_search_falls_back_to_ddg():
+    from unittest.mock import patch, MagicMock
+    from tools.search.search_tools import reddit_search
+
+    # Mock both Reddit API and DDG API
+    mock_reddit_response = {"_live_failed": True, "ok": False}
+    mock_ddg_response = {"ok": True, "results": [{"title": "test", "url": "http://test.com"}]}
+
+    with patch('tools.search.search_tools.reddit_api.search_reddit', return_value=mock_reddit_response):
+        with patch('tools.search.search_tools.ddg_api.search_web', return_value=mock_ddg_response):
+            result = reddit_search("test query", subreddit="r/test", limit=3)
+            # Should have DDG fallback source marker
+            assert result.get("source") == "ddg_fallback", f"Expected source='ddg_fallback', got {result.get('source')}"
+            assert result.get("note") == "Reddit API unavailable, results via DDG", f"Expected fallback note, got {result.get('note')}"
+            assert result.get("ok") == True, "Expected DDG fallback to succeed"
+
+
+@test("search: get_subreddit_feed returns posts list")
+def test_get_subreddit_feed():
+    from unittest.mock import patch
+    from tools.search.search_tools import get_subreddit_feed
+
+    mock_response = {
+        "ok": True,
+        "subreddit": "test",
+        "feed": "hot",
+        "posts": [
+            {"title": "Test post", "url": "http://test.com", "score": 100, "comments": 5, "permalink": "http://reddit.com/test"}
+        ],
+        "count": 1
+    }
+
+    with patch('tools.search.search_tools.reddit_api.get_subreddit_posts', return_value=mock_response):
+        result = get_subreddit_feed("test", feed="hot", limit=5)
+        assert result.get("ok") == True, "Expected ok=True"
+        assert "posts" in result, "Expected 'posts' key"
+        assert result["count"] == 1, "Expected count=1"
+
+
+@test("search: jina_read returns content")
+def test_jina_read():
+    from unittest.mock import patch
+    from tools.search.search_tools import jina_read
+
+    mock_response = {"ok": True, "url": "http://test.com", "content": "Test content"}
+
+    with patch('api.web.jina_api.jina_reader_api.read_url', return_value=mock_response):
+        result = jina_read("http://test.com")
+        assert result.get("ok") == True, "Expected ok=True"
+        assert "content" in result, "Expected 'content' key"
+        assert result["url"] == "http://test.com", "Expected url to match"
+
+
 @test("search: get_weather returns temp_f")
 def test_weather():
     from tools.search.search_tools import get_weather

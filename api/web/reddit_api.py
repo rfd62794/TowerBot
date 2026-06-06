@@ -70,6 +70,44 @@ class RedditAPIHandler(BaseAPIHandler):
 
         return self.call("search", params_hash, _live, stale_ok=True)
 
+    def get_subreddit_posts(self, subreddit: str, feed: str = "hot", limit: int = 10) -> dict:
+        """
+        Fetch posts from subreddit hot/new feed. No auth required.
+
+        Args:
+            subreddit: Subreddit name (without r/)
+            feed: 'hot' or 'new'
+            limit: Maximum posts to return
+
+        Returns:
+            Dict with posts list, subreddit, feed, count
+        """
+        url = f"{self.BASE_URL}/r/{subreddit}/{feed}.json"
+        params = {"limit": limit}
+
+        response = requests.get(url, headers=self.HEADERS, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        posts = [
+            {
+                "title": p["data"]["title"],
+                "url": p["data"]["url"],
+                "score": p["data"]["score"],
+                "comments": p["data"]["num_comments"],
+                "permalink": f"https://reddit.com{p['data']['permalink']}"
+            }
+            for p in data["data"]["children"]
+        ]
+
+        return {
+            "ok": True,
+            "subreddit": subreddit,
+            "feed": feed,
+            "posts": posts,
+            "count": len(posts)
+        }
+
 
 # Module-level instance
 reddit_api = RedditAPIHandler()
