@@ -221,12 +221,13 @@ def test_community_scout_notifies_above_threshold():
                     "status": "complete",
                     "upvotes": 25,
                     "title": "Test thread",
-                    "url": "https://example.com"
+                    "url": "https://example.com",
+                    "subreddit": "test"
                 }
-                with patch("bot.autonomous._notify", new_callable=AsyncMock) as mock_notify:
+                with patch("bot.autonomous.request_approval", new_callable=AsyncMock, return_value=True) as mock_approval:
                     import asyncio
                     asyncio.run(run_scheduled_template("community_scout", mock_send))
-                    assert mock_notify.called, "_notify should have been called for upvotes >= 20"
+                    assert mock_approval.called, "request_approval should have been called for upvotes >= 20"
 
 
 @test("autonomous: community_scout silent below threshold")
