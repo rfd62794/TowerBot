@@ -153,7 +153,10 @@ if __name__ == "__main__":
         if ollama_api.enabled:
             async def _start_ollama():
                 if await ollama_api.ensure_running():
-                    await ollama_api.warmup()
+                    try:
+                        await ollama_api.warmup()
+                    except Exception as e:
+                        logging.warning(f"[startup] Ollama warmup failed: {e}")
             asyncio.create_task(_start_ollama())
 
         # Start APScheduler for autonomous tasks
