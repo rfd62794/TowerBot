@@ -1,0 +1,82 @@
+name: research_request
+description: >
+  Deep research on a topic using multiple sources (web search, Jina Reader, Hacker News).
+  Synthesizes findings into a structured summary with actionable insights.
+version: "1.0"
+trigger:
+  type: manual
+
+steps:
+  - name: web_search_landscape
+    type: tool_call
+    config:
+      tool_name: web_search
+      tool_args:
+        query: "{topic}"
+        max_results: 5
+      result_key: landscape
+
+  - name: read_top_urls
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        From these web search results, identify the 2 most relevant URLs for deep reading:
+        
+        {tool_result}
+        
+        Return ONLY the 2 URLs, one per line. No other text.
+      result_key: top_urls
+
+  - name: jina_read_depth
+    type: tool_call
+    config:
+      tool_name: jina_read
+      tool_args:
+        url: "{llm_result}"
+      result_key: depth_read
+    loop:
+      over: top_urls
+      as: url
+
+  - name: hackernews_discussion
+    type: tool_call
+    config:
+      tool_name: hackernews_search
+      tool_args:
+        query: "{topic}"
+        limit: 5
+      result_key: hn_discussion
+
+  - name: synthesize_findings
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        Research topic: {topic}
+        
+        Web search landscape:
+        {landscape}
+        
+        Deep reads from top URLs:
+        {depth_read}
+        
+        Hacker News discussion:
+        {hn_discussion}
+        
+        Synthesize these findings into a structured summary:
+        
+        1. What's the current state (2-3 sentences)
+        2. What's actionable for Robert specifically
+        3. 3 sources worth bookmarking (with URLs)
+        4. One thing that surprised you in the research
+        
+        Maximum 300 words. Be specific, not general. Output ONLY the summary.
+      result_key: summary
+
+  - name: send_to_telegram
+    type: tool_call
+    config:
+      tool_name: send_telegram
+      tool_args:
+        message: "🔬 Research: {topic}\n\n{summary}"

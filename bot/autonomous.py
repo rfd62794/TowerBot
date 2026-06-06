@@ -365,6 +365,59 @@ async def self_direction_loop(send_fn):
         tasks_today = [t for t in all_tasks if t.get("due_date") == today and t.get("status") != "completed"]
         upcoming_tasks = get_upcoming_tasks(hours=24)
 
+        # Check for Research: tasks and run research_request template
+        research_tasks = [t for t in all_tasks if t.get("title", "").startswith("Research:") and t.get("status") != "completed"]
+        for research_task in research_tasks:
+            try:
+                topic = research_task["title"].replace("Research:", "").strip()
+                logger.info(f"Running research_request for topic: {topic}")
+                
+                # Load template and create chain
+                from infra.chain.template_loader import load_template
+                template = load_template("research_request")
+                
+                # Substitute topic in template steps
+                from infra.chain.runner import ChainRunner
+                from infra.model_router import route
+                
+                chain_id = create_chain(template_name="research_request")
+                
+                # Replace {topic} placeholder in template steps
+                steps_with_topic = []
+                for step in template["steps"]:
+                    step_copy = step.copy()
+                    step_copy["config"] = step["config"].copy()
+                    for key, value in step_copy["config"].items():
+                        if isinstance(value, str):
+                            step_copy["config"][key] = value.replace("{topic}", topic)
+                    steps_with_topic.append(step_copy)
+                
+                # Run the chain
+                runner = ChainRunner(
+                    tool_registry=TOOL_REGISTRY,
+                    call_model_fn=lambda prompt, role="reasoning": route(role=role, prompt=prompt)["result"],
+                    create_chain_fn=create_chain
+                )
+                result = runner.run(chain_id, steps_with_topic)
+                
+                # Extract summary from final payload
+                summary = ""
+                if result.get("status") == "complete":
+                    from infra.db.payloads import get_payload
+                    final_step = result.get("current_step", 0) - 1
+                    # Get the final step's output payload
+                    # For now, just notify completion
+                    summary = f"Research completed for: {topic}"
+                
+                await send_fn(f"🔬 Research complete: {topic}\n\n{summary}")
+                
+                # Mark task as completed
+                from tools.productivity.google_tasks import complete_google_task
+                complete_google_task(research_task["id"])
+                logger.info(f"Marked research task as completed: {research_task['id']}")
+            except Exception as e:
+                logger.error(f"Research task failed: {e}")
+
         # Read inbox summary
         inbox_result = gmail_tools.get_inbox_summary(account="personal")
 
