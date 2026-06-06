@@ -129,7 +129,7 @@ def test_a2a_search_limit_capped(mock_get):
 # ─────────────────────────────────────────────
 
 @patch("tools.meta.tool_registry.httpx.get")
-@patch("tools.meta.tool_registry._exec")
+@patch("infra.db.schema._exec")
 def test_register_tool_from_spec_valid(mock_exec, mock_get):
     """Mock spec with 2 endpoints — 2 tools registered."""
     mock_exec.return_value = None  # No existing tools
@@ -187,7 +187,7 @@ def test_register_tool_from_spec_empty_spec(mock_get):
 
 
 @patch("tools.meta.tool_registry.httpx.get")
-@patch("tools.meta.tool_registry._exec")
+@patch("infra.db.schema._exec")
 def test_register_tool_from_spec_deduplication(mock_exec, mock_get):
     """Same tool registered twice — second skipped."""
     # First call: no existing tool
@@ -224,7 +224,7 @@ def test_register_tool_from_spec_deduplication(mock_exec, mock_get):
 
 
 @patch("tools.meta.tool_registry.httpx.get")
-@patch("tools.meta.tool_registry._exec")
+@patch("infra.db.schema._exec")
 def test_register_tool_prefix(mock_exec, mock_get):
     """tool_prefix='myapi' — names start with 'myapi_'."""
     mock_exec.return_value = None
@@ -251,7 +251,7 @@ def test_register_tool_prefix(mock_exec, mock_get):
 
 
 @patch("tools.meta.tool_registry.httpx.get")
-@patch("tools.meta.tool_registry._exec")
+@patch("infra.db.schema._exec")
 def test_register_tool_max_tools_cap(mock_exec, mock_get):
     """Spec with 10 endpoints, max_tools=3 — only 3 registered."""
     mock_exec.return_value = None
@@ -391,7 +391,7 @@ def test_list_experimental_tools_filtered():
 
 def test_promote_tool_success():
     """Experimental tool — status becomes promoted."""
-    with patch("tools.meta.tool_registry._exec") as mock_exec:
+    with patch("infra.db.schema._exec") as mock_exec:
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {
             "id": "test-id-4", "name": "to_promote", "description": "Tool to promote",
@@ -409,7 +409,7 @@ def test_promote_tool_success():
 
 def test_promote_tool_already_promoted():
     """Already promoted — ok=False."""
-    with patch("tools.meta.tool_registry._exec") as mock_exec:
+    with patch("infra.db.schema._exec") as mock_exec:
         mock_cursor = MagicMock()
         mock_cursor.fetchone.return_value = {
             "id": "test-id-5", "name": "already_promoted", "description": "Already promoted",
