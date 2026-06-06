@@ -1,0 +1,75 @@
+name: blog_scaffold
+description: >
+  Generates blog post skeleton using RFD Content Frame (MOMENT → SURPRISE → STRUGGLE → LESSON → NEXT).
+  Uses recent commits, YouTube performance, and itch.io stats as data sources.
+version: "1.0"
+trigger:
+  type: schedule
+  hour: 1
+  minute: 0
+  day_of_week: 6
+
+steps:
+  - name: get_commits
+    type: tool_call
+    config:
+      tool_name: get_recent_commits
+      tool_args:
+        limit: 10
+      result_key: commits
+
+  - name: get_youtube_stats
+    type: tool_call
+    config:
+      tool_name: get_channel_summary
+      tool_args:
+        days: 7
+      result_key: youtube
+
+  - name: get_itch_stats
+    type: tool_call
+    config:
+      tool_name: get_itch_stats
+      tool_args: {}
+      result_key: itch
+
+  - name: generate_scaffold
+    type: llm_call
+    config:
+      model_role: creator
+      prompt_template: |
+        Recent commits (last 10):
+        {tool_result_commits}
+
+        YouTube performance (7 days):
+        {tool_result_youtube}
+
+        itch.io stats:
+        {tool_result_itch}
+
+        Generate a blog post skeleton using the RFD Content Frame:
+        1. MOMENT — What happened? (Specific event, timestamp)
+        2. SURPRISE — What was unexpected? (Counterintuitive finding)
+        3. STRUGGLE — What went wrong? (Technical challenge, blocker)
+        4. LESSON — What did you learn? (Principle, pattern)
+        5. NEXT — What's the action? (Specific next step)
+
+        Pick ONE meaningful story from the commits that has a clear arc.
+        Do not invent facts — use only what's in the data above.
+        If no clear story exists, respond with "No compelling story found this week."
+
+        Format your response as:
+        MOMENT: [2-3 sentences]
+        SURPRISE: [2-3 sentences]
+        STRUGGLE: [2-3 sentences]
+        LESSON: [2-3 sentences]
+        NEXT: [1-2 sentences]
+
+  - name: save_draft
+    type: tool_call
+    config:
+      tool_name: save_memory
+      tool_args:
+        key: "Blog draft {date}"
+        content: "{llm_result}"
+        layer: content
