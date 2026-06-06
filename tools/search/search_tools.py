@@ -354,7 +354,7 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(str(e), code="exception")
 
-    def jina_read(self, url: str, timeout: int = 30) -> dict:
+    def jina_read(self, url: str, timeout: int = 60) -> dict:
         """
         Read a web page using Jina Reader API.
 
@@ -908,7 +908,7 @@ def get_subreddit_feed(subreddit: str, feed: str = "hot", limit: int = 10) -> di
     return _search.get_subreddit_feed(subreddit, feed, limit)
 
 
-def jina_read(url: str, timeout: int = 30) -> dict:
+def jina_read(url: str, timeout: int = 60) -> dict:
     """
     Read a web page using Jina Reader API.
 

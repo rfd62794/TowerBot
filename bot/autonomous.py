@@ -16,6 +16,7 @@ from infra.prompts import get_prompts_for_task
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
 from infra.utils import safe_serialize, notify, get_task_type
 from infra.db.system_metrics import record_system_snapshot
+from bot.ralph import ralph, PRIORITY_SCHEDULED
 from infra.db.bot_state import get_dev_mode
 from infra.db.task_queue import get_due_tasks, mark_running, mark_complete, mark_failed
 from scripts.update import check_for_updates
@@ -28,6 +29,19 @@ from infra.db.chains import create_chain
 logger = logging.getLogger("privy.autonomous")
 
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+
+async def _ralph_scheduled_wrapper(template_name: str, send_fn):
+    """
+    Push scheduled task to Ralph's queue and run it.
+    Ralph handles priority ordering; this wrapper ensures scheduled tasks
+    are visible to Ralph's event loop.
+    """
+    await ralph.push(PRIORITY_SCHEDULED, {
+        "type": "scheduled_task",
+        "task_name": template_name
+    })
+    await run_scheduled_template(template_name, send_fn)
 
 
 async def system_watchdog(send_fn):
@@ -1204,7 +1218,7 @@ def setup_template_scheduler(scheduler: AsyncIOScheduler, send_fn):
             if "interval_minutes" in trigger:
                 # Interval schedule
                 scheduler.add_job(
-                    run_scheduled_template,
+                    _ralph_scheduled_wrapper,
                     "interval",
                     minutes=trigger["interval_minutes"],
                     args=[template_name, send_fn],
@@ -1229,7 +1243,7 @@ def setup_template_scheduler(scheduler: AsyncIOScheduler, send_fn):
                     job_kwargs["day_of_week"] = trigger["day_of_week"]
 
                 scheduler.add_job(
-                    run_scheduled_template,
+                    _ralph_scheduled_wrapper,
                     "cron",
                     **job_kwargs
                 )

@@ -6,7 +6,7 @@ import requests
 class JinaReaderAPI:
     BASE = "https://r.jina.ai"
 
-    def read_url(self, url: str, timeout: int = 30) -> dict:
+    def read_url(self, url: str, timeout: int = 60) -> dict:
         """
         Read a web page using Jina Reader API.
 
@@ -30,6 +30,6 @@ jina_reader_api = JinaReaderAPI()
 
 
 # Backwards compat
-def read_url(url: str, timeout: int = 30) -> dict:
+def read_url(url: str, timeout: int = 60) -> dict:
     result = jina_reader_api.read_url(url, timeout)
     return result

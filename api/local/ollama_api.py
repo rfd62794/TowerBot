@@ -264,7 +264,7 @@ class OllamaSwapManager:
             # Run blocking requests in thread pool
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
-                None, lambda: requests.post(url, json=payload, timeout=60)
+                None, lambda: requests.post(url, json=payload, timeout=180)
             )
             response.raise_for_status()
             data = response.json()
