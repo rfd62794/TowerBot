@@ -69,27 +69,15 @@ TEST_FILES = [
 
 
 def _load_and_run(path: str) -> tuple[int, int]:
+    """Load a test module and run its tests. Returns (passed, failed)."""
     full_path = os.path.join(_root, path)
     if not os.path.exists(full_path):
-        return -1, 0
-
-    import io
-    buf = io.StringIO()
-    old_stdout = sys.stdout
-    sys.stdout = buf
-
-    try:
-        spec = importlib.util.spec_from_file_location("_test_module", full_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        passed, failed = mod.run_all()
-    finally:
-        sys.stdout = old_stdout
-
-    if failed:
-        print(buf.getvalue())  # only show output when something failed
-
-    return passed, failed
+        print(f"  ⚠ {path}: file not found, skipping")
+        return 0, 0
+    spec = importlib.util.spec_from_file_location("_test_module", full_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.run_all()
 
 
 def run_all():
@@ -104,14 +92,11 @@ def run_all():
 
     print()
     total = total_passed + total_failed
-    print(f"{total_passed} passed, {total_failed} failed, {total_skipped} skipped")
+    sys.stderr.write(f"\n{total_passed} passed, {total_failed} failed, {total_skipped} skipped\n")
+    sys.stderr.write("Deploy safe.\n" if total_failed == 0 else "Deploy blocked.\n")
+    sys.stderr.flush()
 
-    if total_failed == 0:
-        print("Deploy safe.")
-        sys.exit(0)
-    else:
-        print("Deploy blocked.")
-        sys.exit(1)
+    sys.exit(0 if total_failed == 0 else 1)
 
 if __name__ == "__main__":
     run_all()
