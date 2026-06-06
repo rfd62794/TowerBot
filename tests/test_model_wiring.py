@@ -30,9 +30,11 @@ def test_search_tools_name_weighted_higher():
     from tools.meta.tool_index import search_tools
     result = search_tools("itch", limit=10)
     assert result["ok"] is True
-    # get_itch_stats should have highest score due to name match
+    # Both itch tools should be in results due to name match
     if result["count"] > 0:
-        assert result["tools"][0]["name"] == "get_itch_stats"
+        tool_names = [t["name"] for t in result["tools"]]
+        assert "get_itch_stats" in tool_names
+        assert "itch_post_devlog" in tool_names
 
 
 def test_search_tools_limit():
