@@ -1,0 +1,57 @@
+name: community_scout
+description: >
+  Monitors Reddit for threads where technical expertise adds value.
+  Drafts potential responses and saves to memory for review.
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 180
+  start_hour: 7
+  end_hour: 23
+
+steps:
+  - name: search_reddit
+    type: tool_call
+    config:
+      tool_name: reddit_search
+      tool_args:
+        query: "Python OR Rust OR data automation OR Selenium OR incremental games"
+        subreddits: ["r/incremental_games", "r/bevy", "r/rust", "r/gamedev"]
+        limit: 10
+      result_key: threads
+
+  - name: filter_opportunities
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        Recent Reddit threads:
+        {tool_result}
+
+        Filter for threads where technical expertise would add genuine value.
+        Criteria:
+        - Technical question about Python, Rust, data automation, or game dev
+        - Not already solved (check recent comments)
+        - Genuinely helpful response possible (not opinion wars)
+        - Avoid low-effort posts (e.g., "how do I start coding")
+
+        For each qualifying thread, provide:
+        1. Thread title and URL
+        2. Brief summary of the question/problem
+        3. One sentence on what expertise to offer
+
+        If no qualifying threads, respond with "No opportunities found."
+
+        Format:
+        [Thread Title]({url})
+        Summary: [2-3 sentences]
+        Expertise: [1 sentence]
+
+  - name: save_opportunities
+    type: tool_call
+    config:
+      tool_name: save_memory
+      tool_args:
+        key: "Community opportunities {timestamp}"
+        content: "{llm_result}"
+        layer: content
