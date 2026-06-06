@@ -14,7 +14,7 @@ from pathlib import Path
 PRIVYBOT_REPO = Path("C:/Github/PrivyBot")
 
 
-def think(content: str) -> dict:
+def think(content: str = None, thought: str = None, plan: str = None, **kwargs) -> dict:
     """
     Record a reasoning step before acting.
     Creates a visible scratchpad entry.
@@ -26,9 +26,10 @@ def think(content: str) -> dict:
 
     Returns immediately. No side effects.
     """
+    actual = content or thought or plan or ""
     return {
         "ok": True,
-        "thought": content,
+        "thought": actual,
         "stale_notice": None
     }
 

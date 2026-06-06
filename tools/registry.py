@@ -2001,6 +2001,7 @@ TOOL_REGISTRY = {
                         },
                     },
                     "required": ["key", "content", "layer"],
+                    "additionalProperties": False
                 },
             },
         },
@@ -2020,6 +2021,7 @@ TOOL_REGISTRY = {
                         "reason": {"type": "string", "description": "What changed and why"},
                     },
                     "required": ["key", "content", "reason"],
+                    "additionalProperties": False
                 },
             },
         },
@@ -2038,6 +2040,7 @@ TOOL_REGISTRY = {
                         "reason": {"type": "string", "description": "Why it is retired"},
                     },
                     "required": ["key", "reason"],
+                    "additionalProperties": False
                 },
             },
         },
