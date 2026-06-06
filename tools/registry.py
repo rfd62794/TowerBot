@@ -427,6 +427,7 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["query"],
+                    "additionalProperties": False
                 },
             },
         },

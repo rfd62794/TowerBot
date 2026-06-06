@@ -1,20 +1,20 @@
-name: weekly_finds
-description: Weekly digest of the most interesting research findings
+name: daily_finds
+description: Daily digest of the most interesting research findings
 prompt: |
-  You are PrivyBot. Review the last 7 days of agent_actions where task_name 
+  You are PrivyBot. Review the last 24 hours of agent_actions where task_name 
   contains 'background' or 'research' or 'digest' or 'monitor'.
   
   Use: query_db("SELECT task_name, result, ran_at FROM agent_actions 
-                 WHERE ran_at >= datetime('now', '-7 days') 
+                 WHERE ran_at >= datetime('now', '-24 hours') 
                  AND (task_name LIKE '%background%' OR task_name LIKE '%research%'
                       OR task_name LIKE '%digest%' OR task_name LIKE '%monitor%')
                  ORDER BY ran_at DESC LIMIT 50")
   
-  Find the 5 most interesting findings from the week.
+  Find the 5 most interesting findings from today.
   Interesting = surprising, actionable, or directly relevant to active projects.
   
   Format:
-  📚 Week's best finds:
+  📚 Today's best finds:
   
   1. [Finding title] — [why it's interesting, one sentence]
      [source if available]
