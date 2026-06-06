@@ -349,13 +349,21 @@ def test_number_fact_error():
 @test("random_quote: returns content, author, and tags keys")
 def test_random_quote_success():
     from tools.search.search_tools import random_quote
-    result = random_quote()
-    if result.get("ok") == True:
-        assert "content" in result, "Expected 'content' key on success"
-        assert "author" in result, "Expected 'author' key on success"
-        assert "tags" in result, "Expected 'tags' key on success"
-    else:
-        assert "error" in result, "Expected 'error' key on failure"
+    from unittest.mock import patch, MagicMock
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "content": "Test quote",
+        "author": "Test Author",
+        "tags": ["test"]
+    }
+    with patch("tools.search.search_tools.httpx.get", return_value=mock_response):
+        result = random_quote()
+        if result.get("ok") == True:
+            assert "content" in result, "Expected 'content' key on success"
+            assert "author" in result, "Expected 'author' key on success"
+            assert "tags" in result, "Expected 'tags' key on success"
+        else:
+            assert "error" in result, "Expected 'error' key on failure"
 
 
 @test("random_quote: handles API error gracefully")
@@ -372,13 +380,21 @@ def test_random_quote_error():
 @test("wiki_random: returns title, extract, and url keys")
 def test_wiki_random_success():
     from tools.search.search_tools import wiki_random
-    result = wiki_random()
-    if result.get("ok") == True:
-        assert "title" in result, "Expected 'title' key on success"
-        assert "extract" in result, "Expected 'extract' key on success"
-        assert "url" in result, "Expected 'url' key on success"
-    else:
-        assert "error" in result, "Expected 'error' key on failure"
+    from unittest.mock import patch, MagicMock
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "title": "Test Article",
+        "extract": "Test extract",
+        "content_urls": {"desktop": {"page": "https://example.com"}}
+    }
+    with patch("tools.search.search_tools.httpx.get", return_value=mock_response):
+        result = wiki_random()
+        if result.get("ok") == True:
+            assert "title" in result, "Expected 'title' key on success"
+            assert "extract" in result, "Expected 'extract' key on success"
+            assert "url" in result, "Expected 'url' key on success"
+        else:
+            assert "error" in result, "Expected 'error' key on failure"
 
 
 @test("wiki_random: handles API error gracefully")
