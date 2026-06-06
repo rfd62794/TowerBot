@@ -74,7 +74,8 @@ def test_vram_check_blocks_when_other_processes_use_vram():
 
     async def _run():
         with patch("api.local.ollama_api.httpx.AsyncClient", return_value=mock_ctx):
-            return await manager._check_vram("qwen2.5:7b")
+            with patch("api.local.ollama_api.TOTAL_VRAM_GB", 4.0):
+                return await manager._check_vram("qwen2.5:7b")
 
     result = asyncio.run(_run())
     assert result is False, f"Expected False (2.0GB available < 4.0GB required), got {result}"
