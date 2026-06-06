@@ -359,7 +359,7 @@ async def _check_and_run_background_task(send_fn):
         logger.info(f"Running background task: {task[:60]}...")
 
         # Execute the task using the agent
-        result = await respond(task, send_fn, chat_id=TELEGRAM_CHAT_ID)
+        result = await respond(task, "background")
 
         # Log to agent_actions
         record_agent_action(
