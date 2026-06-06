@@ -78,8 +78,8 @@ async def classify(message: str) -> list[str]:
             routes = parse_routes(raw)
             if routes != ["chat"]:
                 return routes  # got a real answer, done
-        except Exception:
-            pass  # fall through to keyword fallback
+        except Exception as e:
+            logger.warning(f"[router_ai] Ollama unavailable ({e}), using keyword fallback")
 
     # Layer 2: keyword heuristic
     routes = _keyword_fallback(message)
