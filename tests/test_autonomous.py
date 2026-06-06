@@ -90,7 +90,7 @@ def test_urgent_flag():
     assert urgent_tasks[0]["urgent"] == 1, f"Expected urgent=1, got {urgent_tasks[0]['urgent']}"
 
 
-@test("autonomous: setup_autonomous_scheduler registers expected jobs")
+@test("autonomous: setup_autonomous_scheduler registers 8 jobs")
 def test_scheduler_jobs():
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from bot.autonomous import setup_autonomous_scheduler
@@ -99,7 +99,7 @@ def test_scheduler_jobs():
         pass
     setup_autonomous_scheduler(scheduler, mock_send)
     jobs = scheduler.get_jobs()
-    assert len(jobs) >= 8, f"Expected at least 8 jobs, got {len(jobs)}"
+    assert len(jobs) == 8, f"Expected 8 jobs, got {len(jobs)}"
 
 
 @test("autonomous: get_all_resolved_tasks returns 6 enabled tasks")

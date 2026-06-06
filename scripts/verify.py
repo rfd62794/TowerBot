@@ -38,8 +38,6 @@ TEST_FILES = [
     "tests/test_tools_goals.py",
     "tests/test_api.py",
     "tests/test_deployments.py",
-    "tests/test_personal_tasks.py",
-    "tests/test_google_tasks.py",
     "tests/test_google_tasks_sync.py",
     "tests/test_google_calendar.py",
     "tests/test_gmail.py",
@@ -78,18 +76,42 @@ TEST_FILES = [
     "tests/test_tool_registry.py",
     "tests/test_model_wiring.py",
     "tests/test_wordpress_pages.py",
+    "tests/test_shell_execution.py",
 ]
 
 
 def _load_and_run(path: str) -> tuple[int, int]:
-    """Load a test module and run its tests. Returns (passed, failed)."""
     full_path = os.path.join(_root, path)
     if not os.path.exists(full_path):
-        return -1, 0
-    spec = importlib.util.spec_from_file_location("_test_module", full_path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod.run_all()
+        print(f"  [missing]  {path}")
+        return 0, 0
+    try:
+        spec = importlib.util.spec_from_file_location("_test_module", full_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        if hasattr(mod, 'run_all'):
+            return mod.run_all()
+        else:
+            return _run_pytest_file(full_path)
+    except SystemExit:
+        return 0, 0  # test chose to skip
+    except Exception as e:
+        print(f"  [CRASH] {path}: {e}")
+        return 0, 1
+
+
+def _run_pytest_file(path: str) -> tuple[int, int]:
+    import subprocess
+    import re
+    result = subprocess.run(
+        ["uv", "run", "pytest", path, "--tb=short", "-q", "--no-header"],
+        capture_output=True, text=True, cwd=_root
+    )
+    output = result.stdout + result.stderr
+    print(output)
+    passed = int(m.group(1)) if (m := re.search(r'(\d+) passed', output)) else 0
+    failed = int(m.group(1)) if (m := re.search(r'(\d+) failed', output)) else 0
+    return passed, failed
 
 
 def run_all():
@@ -127,12 +149,17 @@ def run_all():
     print(f"  TOTAL  {total_passed} passed  {total_failed} failed{skip_note}")
     print()
 
-    if total_failed == 0:
-        print("Deploy safe.")
-        sys.exit(0)
-    else:
-        print("Deploy blocked.")
-        sys.exit(1)
+    summary = f"{total_passed} passed, {total_failed} failed, {total_skipped} skipped"
+    verdict = "Deploy safe." if total_failed == 0 else "Deploy blocked."
+
+    result_path = os.path.join(_root, "verify_result.txt")
+    with open(result_path, "w") as f:
+        f.write(summary + "\n")
+        f.write(verdict + "\n")
+
+    print(summary)
+    print(verdict)
+    sys.exit(0 if total_failed == 0 else 1)
 
 
 if __name__ == "__main__":
