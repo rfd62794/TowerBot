@@ -10,11 +10,12 @@ from infra.memory_manager import memory_manager
 VALID_LAYERS = {"technical", "project", "personal", "business", "content"}
 
 
-def tool_save_memory(key: str, content: str, layer: str) -> dict:
+def tool_save_memory(key: str, content: str = None, value: str = None, layer: str = "project") -> dict:
+    actual_content = content or value or ""
     if layer not in VALID_LAYERS:
         return {"status": "error", "reason": f"invalid layer '{layer}'"}
-    memory_manager.save(key, content, layer)
-    return {"status": "saved", "key": key, "layer": layer, "content": content}
+    memory_manager.save(key, actual_content, layer)
+    return {"status": "saved", "key": key, "layer": layer, "content": actual_content}
 
 
 def tool_update_memory(key: str, content: str, reason: str) -> dict:
