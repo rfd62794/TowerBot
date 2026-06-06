@@ -1,0 +1,23 @@
+# Centralized timeout configuration
+# All timeouts in seconds
+
+ollama:
+  request: 180          # was 60 — needs room for complex reasoning
+  model_load: 30        # additional grace for cold start
+
+tasks:
+  background: 90        # single background task max runtime
+  deep_dive: 300        # 5 minutes — complex multi-step research
+  scheduled: 120        # regular scheduled tasks
+  research: 180         # research_request template
+
+tools:
+  jina_read: 60         # was 30
+  web_search: 30
+  playwright: 30000     # ms — keep existing
+  shell: 300
+
+ralph:
+  queue_check_interval: 1    # seconds between queue polls
+  background_interrupt: true  # background work can be interrupted
+  deep_dive_threshold: 0.7   # interest score to trigger autonomous deep dive
