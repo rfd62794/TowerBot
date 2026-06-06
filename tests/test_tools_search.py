@@ -13,12 +13,19 @@ load_dotenv(os.path.join(_root, ".env"))
 from infra.db import init_db
 init_db()
 
-from tests._harness import test
+TESTS = []
+
+
+def test(name):
+    def decorator(func):
+        TESTS.append((name, func))
+        return func
+    return decorator
 
 
 def run_all() -> tuple[int, int]:
-    from tests._harness import auto_run
-    return auto_run()
+    from tests._harness import run_all as _run
+    return _run(TESTS)
 
 
 @test("search: web_search returns count >= 0")
