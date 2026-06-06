@@ -1,5 +1,54 @@
 # Current State
 
+## Phase 32d — Proactive All-Day Research & Study ✅ DONE
+
+**Status**: Complete
+**Test Floor**: 599/0 (unchanged from Phase 32b)
+
+### What Was Built
+
+- **bot/autonomous.py**: Weighted background task pools
+  - Replaced flat `BACKGROUND_TASKS` list with three weighted pools
+  - `BACKGROUND_TASKS_CORE` (10 tasks, 60% weight): Rust/Bevy/game dev focus
+  - `BACKGROUND_TASKS_ADJACENT` (10 tasks, 30% weight): Game design/indie dev/AI
+  - `BACKGROUND_TASKS_EXPANDING` (10 tasks, 10% weight): Wider intellectual territory
+  - `_pick_background_task()`: Weighted selection function (60/30/10 distribution)
+  - Updated `_check_and_run_background_task()` to use weighted picker
+  - Total pool size: 30 tasks (up from 10)
+
+- **templates/canonical/deep_dive.yaml**: Multi-step research template
+  - Executes web_search → jina_read → hackernews_search → wiki_lookup
+  - Synthesizes into: what it is, why it matters, surprising finding, next step, best sources
+  - Maximum 400 words, project-specific (not generic)
+  - Triggered by Google Task: "Deep dive: [topic]"
+
+- **templates/canonical/weekly_finds.yaml**: Weekly digest template
+  - Queries agent_actions for last 7 days of background/research/digest/monitor tasks
+  - Finds 5 most interesting findings (surprising, actionable, relevant)
+  - Format: numbered list with title, why interesting, source
+  - Doesn't pad with mediocre findings — reports what there is
+  - Ends with "Deep dive available on any of these — just ask."
+
+- **config/tasks.yaml**: New tasks
+  - `weekly_finds`: Sunday 7AM cron (before skill_review at 6AM)
+  - `deep_dive`: Manual schedule, triggered by self-direction loop via Google Task
+
+### Impact
+
+Background task pool now covers a much wider range of topics with intelligent weighting toward core work. Robert gets continuous proactive research throughout the day across Rust/Bevy, game design, AI, and unexpected connections. Weekly digest surfaces the best findings from the week. Deep dive template enables on-demand focused research on any topic via Google Task.
+
+### Manual Testing
+
+No manual testing required — background tasks run automatically every 10 minutes. Weekly digest runs Sunday 7AM. Deep dive triggered by Google Task: "Deep dive: [topic]".
+
+### Future Enhancements
+
+- Add more tasks to any pool as patterns emerge
+- Adjust weights based on what proves most valuable
+- Add content_seen enforcement to background task runner (currently instructed in prompts)
+
+---
+
 ## Phase 32b — Base Prompt System for Output Quality ✅ DONE
 
 **Status**: Complete

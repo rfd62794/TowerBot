@@ -351,11 +351,11 @@ Be specific and actionable."""
 
 async def _check_and_run_background_task(send_fn):
     """
-    Run a random background task from BACKGROUND_TASKS pool every 10 minutes.
+    Run a random background task from weighted pool every 10 minutes.
     Proactive lightweight work that runs constantly regardless of scheduled tasks.
     """
     try:
-        task = random.choice(BACKGROUND_TASKS)
+        task = _pick_background_task()
         logger.info(f"Running background task: {task[:60]}...")
 
         # Execute the task using the agent
@@ -467,21 +467,64 @@ async def request_approval(
     logger.info(f"[approval] requested: {action_type} (ID: {approval_id})")
     return True
 
-# Background task pool — proactive lightweight work that runs constantly
-# Separate from idle fallback. These run every 10 minutes regardless of scheduled tasks.
+# Weighted background task pools — proactive lightweight work that runs constantly
+# 60% Core, 30% Adjacent, 10% Expanding
+# These run every 10 minutes regardless of scheduled tasks.
 # Very lightweight: 1-2 tool calls, no heavy inference. Silent if nothing actionable.
-BACKGROUND_TASKS = [
-    "Check if any YouTube video crossed a new view milestone (100, 500, 1000). Notify if yes.",
-    "Scan r/incremental_games new posts for VoidDrift mention opportunity. Check content_seen first.",
-    "Check PyPI downloads for openagent-directive. Note if trending up or down.",
-    "Pull one HN post about Rust or Bevy posted in last hour. Mark seen if already served.",
-    "Check itch.io plays delta since last check. Notify if spike detected.",
-    "Find one Bevy question on Reddit that Robert could answer in under 2 minutes.",
-    "Check YouTube realtime for any video gaining unusual momentum in last hour.",
-    "Search web for 'VoidDrift' or 'openagent-directive' new mentions.",
-    "Review oldest unread community scout finding. Surface if still actionable.",
-    "Check if any scheduled YouTube Shorts published today have a comment from channel owner yet.",
+
+BACKGROUND_TASKS_CORE = [
+    # Rust / Bevy / Game Dev (weight: high)
+    "Search HackerNews for Rust game development posts with >30 points today. Check content_seen. Surface if new and relevant to VoidDrift.",
+    "Find one new crates.io release relevant to game development or ECS. Check if it could benefit VoidDrift. Mark seen.",
+    "Search r/bevy for questions or showcases posted in the last 6 hours. Surface anything relevant to Robert's Bevy 0.15 work.",
+    "Search r/rust for posts about game development, ECS patterns, or WASM that Robert hasn't seen. Check content_seen first.",
+    "Search HN for 'Bevy' or 'Rust game' posts. Surface any with >20 points not already seen.",
+    "Check r/incremental_games for new posts about idle game design, mechanics, or launches. Mark seen.",
+    "Search for new VoidDrift or openagent-directive mentions on the web. Notify immediately if found.",
+    "Check PyPI for openagent-directive download trend. Note if direction changed from yesterday.",
+    "Search HN for Python automation or CLI tooling posts with >40 points. Relevant to OpenAgent direction.",
+    "Find one itch.io game in the idle/incremental category launched this week. Note what mechanic it leads with.",
 ]
+
+BACKGROUND_TASKS_ADJACENT = [
+    # Game Design / Indie Dev / Content / AI
+    "Find one post-mortem or launch retrospective from an indie game developer on r/gamedev or HN. Summarize the key lesson in one sentence.",
+    "Search for a game design pattern or mechanic discussion on r/gamedev with >50 upvotes this week. Note if applicable to VoidDrift.",
+    "Find a YouTube Shorts creator in gaming who gained >1000 subscribers this week. Check content_seen. Note what's working for them.",
+    "Search HN for AI agent architecture, autonomous systems, or LLM tool-use posts with >50 points. Relevant to PrivyBot direction.",
+    "Find one interesting Python automation or workflow tool posted on HN or Reddit this week. Check if it should become a PrivyBot tool.",
+    "Search r/selfhosted for self-hosted tools relevant to Robert's stack (Telegram bots, local LLMs, home servers). Mark seen.",
+    "Find one content creator in the indie dev space who posted a video about their tools or workflow. Note what they use.",
+    "Search for Rust vs other languages performance discussions with interesting benchmarks. Note anything applicable to VoidDrift.",
+    "Find an AI assistant or agent project on HN that does something PrivyBot doesn't do yet. Note the capability gap.",
+    "Search for 'solopreneur' or 'indie hacker' posts about passive income from games or tools with >30 points.",
+]
+
+BACKGROUND_TASKS_EXPANDING = [
+    # Wider intellectual territory — unexpected connections
+    "Find a random Wikipedia article in systems thinking, complexity theory, or emergence. Summarize the core idea in 2 sentences.",
+    "Search HN for 'Ask HN' posts about learning, building, or shipping with >100 points. Surface the most interesting response.",
+    "Find a post about behavioral economics or decision theory on HN or r/psychology. Note any connection to game design.",
+    "Search for a paper abstract on arxiv in human-computer interaction or game theory. Summarize if accessible.",
+    "Find one historical example of a technology or idea that was ahead of its time. Note the parallel to something Robert is building.",
+    "Search for a post about cognitive science, memory, or learning systems with >40 points on HN. Note anything applicable to content creation.",
+    "Find one post about visual design, typography, or color theory on HN or Dribbble. Note if applicable to VoidDrift UI.",
+    "Search for an unusual use of automation or AI in a creative domain (music, art, writing). Note the technique.",
+    "Find a post about the philosophy of tools, craftmanship, or expertise with >50 HN points. Surface if insightful.",
+    "Search wiki_random() for a random article. If the topic connects to any of Robert's projects in an unexpected way, note the connection.",
+]
+
+
+def _pick_background_task() -> str:
+    """Pick a random task weighted by category: 60% core, 30% adjacent, 10% expanding."""
+    import random
+    roll = random.random()
+    if roll < 0.60:
+        return random.choice(BACKGROUND_TASKS_CORE)
+    elif roll < 0.90:
+        return random.choice(BACKGROUND_TASKS_ADJACENT)
+    else:
+        return random.choice(BACKGROUND_TASKS_EXPANDING)
 
 # Idle task pool — fallback tasks when no autonomous work is queued
 IDLE_TASKS = [

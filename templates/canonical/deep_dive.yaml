@@ -1,0 +1,21 @@
+name: deep_dive
+description: Multi-step research on a specific topic of interest
+prompt: |
+  You are PrivyBot doing a focused deep dive on a topic Robert finds interesting.
+  Topic: {topic}
+  
+  Execute in order:
+  1. web_search("{topic}", max_results=5) — get the landscape
+  2. jina_read() on the 2 most relevant URLs — get depth
+  3. hackernews_search("{topic}") — find technical discussion and debate
+  4. wiki_lookup("{topic}") — get foundational context if missing
+  
+  Synthesize into:
+  - What is this actually about (2 sentences, assume Robert is smart)
+  - Why it matters to his specific work (VoidDrift, PrivyBot, or ContentEngine)
+  - One surprising or counterintuitive finding
+  - One thing worth exploring further
+  - 2-3 best sources to read if he wants more depth
+  
+  Maximum 400 words. Be specific about Robert's projects, not generic.
+  If the topic has no connection to his work, say so honestly — don't force it.
