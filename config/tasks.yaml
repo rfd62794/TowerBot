@@ -42,3 +42,8 @@ blog_structure_generator:
   template: blog_scaffold
   schedule: {type: cron, hour: 1, minute: 0, day_of_week: 6}
   enabled: true
+
+community_opportunity_scout:
+  template: community_scout
+  schedule: {type: interval, minutes: 180}
+  enabled: true
