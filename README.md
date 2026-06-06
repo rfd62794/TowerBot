@@ -5,6 +5,8 @@ routes messages to OpenRouter, holds conversation context in SQLite, manages its
 own memory via tool calling, reports memory operations to Telegram, and names
 threads automatically.
 
+> **Project Page:** [rfditservices.com/projects/privybot/](https://rfditservices.com/projects/privybot/)
+
 ## Features
 
 - **OpenRouter routing** via the OpenAI client (default free Llama, DeepSeek, Claude Sonnet).
