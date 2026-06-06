@@ -1,0 +1,124 @@
+name: weekly_accountability
+description: Monday morning numbers vs goals
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 10080  # Monday 8AM
+
+steps:
+  - name: get_commits
+    type: tool_call
+    config:
+      tool_name: get_recent_commits
+      tool_args:
+        days: 7
+      result_key: commits
+
+  - name: get_videos
+    type: tool_call
+    config:
+      tool_name: get_top_videos
+      tool_args:
+        days: 7
+        limit: 20
+      result_key: videos
+
+  - name: get_itch
+    type: tool_call
+    config:
+      tool_name: get_itch_stats
+      tool_args: {}
+      result_key: itch
+
+  - name: get_channel
+    type: tool_call
+    config:
+      tool_name: get_youtube_stats
+      tool_args:
+        days: 7
+      result_key: channel
+
+  - name: get_tasks
+    type: tool_call
+    config:
+      tool_name: list_google_tasks
+      tool_args:
+        show_completed: true
+      result_key: tasks
+
+  - name: generate_report
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        You are PrivyBot. Every Monday, Robert needs an honest accounting of last week.
+        
+        Recent commits (last 7 days):
+        {tool_result[commits]}
+        
+        Top videos (last 7 days):
+        {tool_result[videos]}
+        
+        itch.io stats:
+        {tool_result[itch]}
+        
+        Channel stats (last 7 days):
+        {tool_result[channel]}
+        
+        Google Tasks:
+        {tool_result[tasks]}
+        
+        Weekly targets (Robert's baseline goals):
+        - Commits: 7+ (one per day minimum)
+        - Shorts published: 7 (one per day)
+        - Blog posts: 1 (target, not always achieved)
+        - itch.io sessions: any growth
+        
+        Output format:
+        📊 Week of [date]:
+        Commits: X ([above/below] target) — [top project]
+        Shorts: X ([above/below] target) — top: [title] ([views] views)
+        Blog: [published/not published]
+        itch.io: [delta or flat]
+        Subscribers: +X this week
+        
+        [One sentence honest assessment — what compounded, what slipped]
+        [One specific thing to fix this week]
+        
+        Rules:
+        - Never soften the numbers. If 3 Shorts went out, say 3 — not "nearly met target"
+        - The assessment must be honest, not motivational
+        - The fix must be specific — not "publish more content"
+        
+        Examples:
+        
+        Input: commits=12, top_project="PrivyBot", shorts=7, top_short="Dune: a stranger flew me home (385 views)", blog=false, itch_delta="+23 views", subs="+3"
+        Good output:
+        📊 Week of Jun 2:
+        Commits: 12 (above target) — mostly PrivyBot infrastructure
+        Shorts: 7 (on target) — top: "Dune: a stranger flew me home" (385 views, 92.2% retention)
+        Blog: not published
+        itch.io: +23 views
+        Subscribers: +3 this week
+        
+        PrivyBot got the bulk of commits — VoidDrift stalled for 5 days.
+        This week: push at least 3 VoidDrift commits before touching PrivyBot again.
+        
+        Input: commits=3, shorts=4, blog=false, itch_delta="flat", subs="+1"
+        Good output:
+        📊 Week of Jun 9:
+        Commits: 3 (below target — missed 4 days)
+        Shorts: 4 (below target — 3 gaps in calendar)
+        Blog: not published (3 weeks running)
+        itch.io: flat
+        Subscribers: +1 this week
+        
+        Low-output week across the board. Calendar gaps mean algorithm momentum resets.
+        This week: fill Jun 28, Jun 30, Jul 2 gaps before recording anything new.
+
+  - name: send_result
+    type: tool_call
+    config:
+      tool_name: send_telegram
+      tool_args:
+        message: "{llm_result}"

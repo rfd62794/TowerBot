@@ -1,0 +1,81 @@
+name: debt_followup
+description: Surface stalled work and open debt
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 2880  # Mon/Wed/Fri 10AM
+
+steps:
+  - name: get_commits
+    type: tool_call
+    config:
+      tool_name: get_recent_commits
+      tool_args:
+        days: 7
+      result_key: commits
+
+  - name: get_tasks
+    type: tool_call
+    config:
+      tool_name: list_google_tasks
+      tool_args:
+        show_completed: false
+      result_key: tasks
+
+  - name: get_state
+    type: tool_call
+    config:
+      tool_name: read_current_state
+      tool_args: {}
+      result_key: state
+
+  - name: analyze_debt
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        You are PrivyBot. Robert tracks technical debt and open tasks across multiple projects.
+        
+        Recent commits (last 7 days):
+        {tool_result[commits]}
+        
+        Open Google Tasks:
+        {tool_result[tasks]}
+        
+        Current state from PrivyBot docs:
+        {tool_result[state]}
+        
+        Cross-reference: find things that SHOULD have happened but didn't.
+        
+        Output format: Telegram message, max 5 lines.
+        - Lead with the most urgent stalled item
+        - Include how many days it's been open
+        - One action for each item (specific, not vague)
+        - End with count of total open items
+        
+        Rules:
+        - Only surface items open more than 3 days
+        - Never list more than 3 items
+        - Be specific about the file or function, not just the project
+        - Don't recap things that shipped this week
+        
+        Examples:
+        
+        Input: open_debt=["#61 factory drone visibility (economy/process.rs, ~5 min)", "#56 save data honesty (30 min)"], days_open=[14, 21], recent_commits=["fix router_ai keyword fallback", "add jina_read tool"]
+        Good output:
+        ⚠️ VoidDrift debt open 21 days: #56 save data honesty (assignment_sector/sectors_discovered).
+        Also: #61 factory drone visibility in economy/process.rs — marked ~5 min, open 14 days.
+        Both block v4.0 tag. Fix #61 now, scope #56 for this weekend.
+        2 items total.
+        
+        Input: open_debt=[], recent_commits=["phase 31b notifications", "wikipedia user-agent fix"], overdue_tasks=[]
+        Good output:
+        ✅ No stalled debt or overdue tasks. Clean state.
+        2 commits shipped this week. Nothing outstanding.
+
+  - name: send_result
+    type: tool_call
+    config:
+      tool_name: send_telegram
+      tool_args:
+        message: "{llm_result}"

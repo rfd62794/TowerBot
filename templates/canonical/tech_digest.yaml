@@ -1,0 +1,98 @@
+name: tech_digest
+description: 3 items from Bevy, Rust, and indie game dev worth knowing today
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 1440  # 7:30AM daily
+
+steps:
+  - name: get_rust_games
+    type: tool_call
+    config:
+      tool_name: hackernews_search
+      tool_args:
+        query: Rust game development
+        limit: 10
+      result_key: rust_games
+
+  - name: get_bevy_new
+    type: tool_call
+    config:
+      tool_name: get_subreddit_feed
+      tool_args:
+        subreddit: bevy
+        feed: new
+        limit: 15
+      result_key: bevy_new
+
+  - name: get_rust_hot
+    type: tool_call
+    config:
+      tool_name: get_subreddit_feed
+      tool_args:
+        subreddit: rust
+        feed: hot
+        limit: 10
+      result_key: rust_hot
+
+  - name: get_indie_launches
+    type: tool_call
+    config:
+      tool_name: hackernews_search
+      tool_args:
+        query: indie game launch
+        limit: 5
+      result_key: indie_launches
+
+  - name: curate_digest
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        You are PrivyBot. Robert uses Rust, Bevy 0.15.3, Python, and follows indie game dev.
+        
+        Rust game dev search:
+        {tool_result[rust_games]}
+        
+        r/bevy new posts:
+        {tool_result[bevy_new]}
+        
+        r/rust hot posts:
+        {tool_result[rust_hot]}
+        
+        Indie game launches:
+        {tool_result[indie_launches]}
+        
+        Find exactly 3 items worth knowing. Priority order:
+        1. Bevy updates, breaking changes, or migration guides
+        2. Rust game dev techniques Robert could use in VoidDrift
+        3. Indie game launches that are succeeding (for market intelligence)
+        4. Python/CLI tooling relevant to OpenAgent
+        
+        Output format:
+        📡 Today's digest:
+        1. [Title] — [one sentence on why it matters to Robert specifically]
+           [link]
+        2. ...
+        3. ...
+        
+        Rules:
+        - Never include generic Rust news unrelated to game dev or CLI tools
+        - If nothing is genuinely relevant today, output 1 item minimum — don't force 3
+        - Be specific about why each item matters to Robert, not just what it is
+        
+        Example good output:
+        📡 Today's digest:
+        1. Bevy 0.15.4 released — fixes ECS query ordering bug affecting systems like yours in drone/assignment.rs
+           https://bevyengine.org/news/...
+        2. "Idle game monetization: what actually works in 2026" — r/gamedev case study, useful before VoidDrift Android launch
+           https://reddit.com/r/gamedev/...
+        3. Rust 1.89 ships async closures — relevant when you extend OpenAgent's pipeline runner
+           https://blog.rust-lang.org/...
+
+  - name: send_result
+    type: tool_call
+    config:
+      tool_name: send_telegram
+      tool_args:
+        message: "{llm_result}"
