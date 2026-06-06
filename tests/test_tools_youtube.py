@@ -161,6 +161,106 @@ def test_geographic_breakdown():
     assert "stale_notice" in result, "Expected stale_notice key"
 
 
+@test("youtube: post_comment success")
+def test_post_comment_success():
+    from tools.content.videos import post_video_comment
+    from unittest.mock import patch, mock_open
+    
+    # Mock template loading
+    mock_templates = {
+        "default": "Default comment",
+        "series": {
+            "Everything is Crab": "Crab comment"
+        }
+    }
+    
+    with patch("builtins.open", mock_open(read_data="default: Default comment\nseries:\n  Everything is Crab: Crab comment")):
+        with patch("yaml.safe_load", return_value=mock_templates):
+            with patch("tools.content.videos.post_comment", return_value={"ok": True, "comment_id": "abc123", "video_id": "test123", "text": "Default comment"}):
+                result = post_video_comment(video_id="test123")
+                assert result.get("ok") == True, "Expected ok=True"
+                assert result.get("comment_id") == "abc123", "Expected comment_id"
+                assert result.get("text_used") == "Default comment", "Expected default template"
+
+
+@test("youtube: post_comment scope missing")
+def test_post_comment_scope_missing():
+    from tools.content.videos import post_video_comment
+    from unittest.mock import patch, mock_open
+    
+    mock_templates = {"default": "Default comment"}
+    
+    with patch("builtins.open", mock_open(read_data="default: Default comment")):
+        with patch("yaml.safe_load", return_value=mock_templates):
+            with patch("tools.content.videos.post_comment", return_value={"ok": False, "error": "Forbidden", "code": "scope_missing"}):
+                result = post_video_comment(video_id="test123")
+                assert result.get("ok") == False, "Expected ok=False"
+                assert result.get("code") == "scope_missing", "Expected scope_missing code"
+
+
+@test("youtube: post_comment uses series template")
+def test_post_comment_uses_series_template():
+    from tools.content.videos import post_video_comment
+    from unittest.mock import patch, mock_open
+    
+    mock_templates = {
+        "default": "Default comment",
+        "series": {
+            "Everything is Crab": "🦀 Everything is Crab daily Shorts"
+        }
+    }
+    
+    with patch("builtins.open", mock_open(read_data="default: Default comment\nseries:\n  Everything is Crab: Crab comment")):
+        with patch("yaml.safe_load", return_value=mock_templates):
+            with patch("tools.content.videos.post_comment", return_value={"ok": True, "comment_id": "abc123", "video_id": "test123", "text": "🦀 Everything is Crab daily Shorts"}):
+                result = post_video_comment(video_id="test123", series="Everything is Crab")
+                assert result.get("ok") == True, "Expected ok=True"
+                assert "Everything is Crab" in result.get("text_used", ""), "Expected series template"
+
+
+@test("youtube: post_comment default fallback")
+def test_post_comment_template_default_fallback():
+    from tools.content.videos import post_video_comment
+    from unittest.mock import patch, mock_open
+    
+    mock_templates = {
+        "default": "🎮 Subscribe for daily gaming Shorts!",
+        "series": {
+            "Everything is Crab": "🦀 Crab comment"
+        }
+    }
+    
+    with patch("builtins.open", mock_open(read_data="default: Default comment\nseries:\n  Everything is Crab: Crab comment")):
+        with patch("yaml.safe_load", return_value=mock_templates):
+            with patch("tools.content.videos.post_comment", return_value={"ok": True, "comment_id": "abc123", "video_id": "test123", "text": "🎮 Subscribe for daily gaming Shorts!"}):
+                result = post_video_comment(video_id="test123", series="Unknown Series")
+                assert result.get("ok") == True, "Expected ok=True"
+                assert "Subscribe" in result.get("text_used", ""), "Expected default template"
+
+
+@test("youtube: comment task stops on scope error")
+def test_comment_task_stops_on_scope_error():
+    from bot.autonomous import comment_new_videos
+    from unittest.mock import AsyncMock, patch, mock_open
+    
+    mock_templates = {
+        "default": "Default comment",
+        "series": {}
+    }
+    
+    async def mock_send_fn(msg):
+        pass
+    
+    with patch("builtins.open", mock_open(read_data="default: Default comment")):
+        with patch("yaml.safe_load", return_value=mock_templates):
+            with patch("tools.content.videos.get_top_videos", return_value={"ok": True, "videos": [{"video_id": "test123", "title": "Test Video", "published_at": "2026-06-06T10:00:00Z"}]}):
+                with patch("tools.content.videos.post_video_comment", return_value={"ok": False, "error": "Forbidden", "code": "scope_missing"}):
+                    with patch("bot.autonomous.record_agent_action"):
+                        # This should not raise and should return early
+                        import asyncio
+                        asyncio.run(comment_new_videos(mock_send_fn))
+
+
 if __name__ == "__main__":
     if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
         import io
