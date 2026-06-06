@@ -87,7 +87,7 @@ from .repo.analysis import analyze_code_quality, analyze_dependencies, find_oppo
 from .repo.synthesis import inspect_repo, generate_strategic_analysis
 from .repo.directive import read_current_state, elaborate_task, generate_directive
 from .system.shell import run_named_command, execute_shell, list_named_commands
-from .browser.playwright_base import browser_navigate, browser_get_text, browser_screenshot, setup_profile
+from .browser.playwright_base import browser_navigate, browser_get_text, browser_screenshot, setup_profile, check_profile_validity, list_profile_status
 from .browser.itch_tools import itch_post_devlog, itch_get_game_page
 from .browser.youtube_studio import pin_youtube_comment
 
@@ -2988,6 +2988,41 @@ TOOL_REGISTRY = {
                         }
                     },
                     "required": ["video_id", "comment_id"]
+                }
+            }
+        }
+    },
+    "check_profile_validity": {
+        "fn": check_profile_validity,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "check_profile_validity",
+                "description": "Test if a saved browser profile is still valid by attempting a simple navigation. Returns validity status and reason.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "site": {
+                            "type": "string",
+                            "description": "Site profile name (e.g., 'itch', 'youtube_studio')"
+                        }
+                    },
+                    "required": ["site"]
+                }
+            }
+        }
+    },
+    "list_profile_status": {
+        "fn": list_profile_status,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "list_profile_status",
+                "description": "Check validity of all saved browser profiles. Returns list with status for each profile.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
                 }
             }
         }

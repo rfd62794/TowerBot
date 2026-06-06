@@ -381,6 +381,35 @@ async def budget_status_check(send_fn):
         logger.error(f"Budget status check failed: {e}")
 
 
+async def profile_health_check(send_fn):
+    """
+    Weekly task: check all browser profiles are still valid.
+    Notify immediately if any have expired.
+    """
+    try:
+        from tools.browser.playwright_base import list_profile_status
+        status = list_profile_status()
+        profiles = status.get("profiles", [])
+
+        if not profiles:
+            await send_fn("🔑 No browser profiles set up yet. RDP into Tower and run setup_profile_itch and setup_profile_youtube.")
+            return
+
+        expired = [p for p in profiles if not p.get("valid")]
+        if expired:
+            sites = ", ".join(p["site"] for p in expired)
+            await send_fn(
+                f"⚠️ Browser profiles expired: {sites}\n"
+                f"RDP into Tower and run: run_named_command('setup_profile_{expired[0]['site']}')",
+                urgent=True
+            )
+        else:
+            logger.info(f"[profiles] all {len(profiles)} profiles valid")
+
+    except Exception as e:
+        logger.warning(f"[profile_health_check] failed: {e}")
+
+
 async def request_approval(
     action_type: str,
     summary: str,

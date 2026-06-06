@@ -1,9 +1,9 @@
 # Current State
 
-## Phase 32a — Playwright Browser Automation ✅ DONE
+## Phase 32a — Playwright Browser Automation + Smart Profile Management ✅ DONE
 
 **Status**: Complete
-**Test Floor**: 590/1 (584 from Phase 31e + 6 new Playwright tests, 1 pre-existing failure)
+**Test Floor**: 593/1 (584 from Phase 31e + 9 new Playwright tests, 1 pre-existing failure)
 
 ### What Was Built
 
@@ -20,6 +20,8 @@
   - `browser_screenshot(url, site=None)`: Screenshot URL, return base64 encoded image
   - `setup_profile(site)`: Interactive browser login to save site session profile (headed mode)
   - `_get_profile(site)`: Load storageState for a site, returns None if not found
+  - `check_profile_validity(site)`: Test if profile is still valid by navigating to test URL
+  - `list_profile_status()`: Check validity of all saved profiles
   - All tools wrap entire body in try/except (never raise to caller)
   - All browser contexts closed before function returns (even on error)
 
@@ -35,23 +37,42 @@
   - Uses YouTube Studio comment management UI (actions not available via API)
   - Logs full error on selector failures (DOM changes frequent)
 
-- **tools/registry.py**: Registered 7 new tools:
+- **tools/registry.py**: Registered 9 new tools:
   - `browser_navigate`, `browser_get_text`, `browser_screenshot`, `setup_profile`
+  - `check_profile_validity`, `list_profile_status`
   - `itch_post_devlog`, `itch_get_game_page`, `pin_youtube_comment`
   - All tools include full OpenAI function schema with descriptions and parameters
 
 - **config/routes.yaml**: Added `browser` route:
   - Model: openrouter/free
-  - Tools: all 7 new browser tools
+  - Tools: all 9 new browser tools
   - Description: "Browser automation and web interaction"
 
-- **tests/test_playwright_base.py**: New test file with 6 test anchors:
+- **tools/system/shell.py**: Added 3 named commands for profile management:
+  - `setup_profile_itch`: Run via RDP on Tower, opens headed browser for itch.io login
+  - `setup_profile_youtube`: Run via RDP on Tower, opens headed browser for YouTube Studio login
+  - `check_profiles`: Check validity of all saved browser profiles
+
+- **bot/autonomous.py**: Added `profile_health_check()` task:
+  - Weekly task (Monday 9AM) to check all browser profiles
+  - Notifies immediately if any profiles have expired
+  - Guides user to re-run setup_profile via RDP
+
+- **config/tasks.yaml**: Registered `profile_health_check`:
+  - Schedule: cron "0 9 * * 1" (Monday 9AM)
+  - Enabled: true
+  - Description: "Check all Playwright browser profiles are still valid, notify if expired"
+
+- **tests/test_playwright_base.py**: New test file with 9 test anchors:
   - `test_browser_navigate_success` — mocks playwright, verifies ok: True with url and title
   - `test_browser_navigate_no_profile_still_works` — verifies site=None works without profile
   - `test_browser_navigate_failure` — verifies exception handling returns ok: False with error
   - `test_get_profile_missing` — verifies returns None and logs warning when profile missing
   - `test_get_profile_exists` — verifies returns dict with storage_state path when profile exists
   - `test_itch_post_devlog_no_profile` — verifies helpful error when itch profile missing
+  - `test_check_profile_validity_no_profile` — verifies returns valid: False when no profile file
+  - `test_list_profile_status_empty` — verifies returns empty list with message when no profiles
+  - `test_check_profile_validity_handles_exception` — verifies exception handling returns ok: False
 
 - **.gitignore**: Added `config/playwright_profiles/` to gitignore
   - Profile JSON files contain authentication cookies (must not be committed)
@@ -79,6 +100,11 @@
 - Profile naming: `{site}.json` (e.g., `itch.json`, `youtube_studio.json`)
 - `_get_profile()` returns `{"storage_state": path}` or None if missing
 - Missing profile logs warning and returns None (tools check and return helpful error)
+- `check_profile_validity()` tests profile by navigating to site-specific test URL
+- `list_profile_status()` checks all profiles and returns validity status
+- Profile validity detected by checking if navigation redirects to login page
+- Login indicators: "login", "signin", "sign-in", "accounts.google", "itch.io/login"
+- Weekly autonomous task checks profile health and notifies on expiry
 
 **itch.io Tools:**
 - `itch_post_devlog()`: Uses dashboard URL `/dashboard/game/{game_id}/edit/devlog/new`
@@ -101,29 +127,34 @@
 ### Test Floor
 
 - **Previous**: 584/1 (Phase 31e)
-- **Current**: 590/1
-- **New Tests**: 6 (test_playwright_base.py)
+- **Current**: 593/1
+- **New Tests**: 9 (test_playwright_base.py)
 - **Status**: All new tests passing, deploy safe
 
 ### Completion Criteria
 
-- [x] `verify_result.txt` shows target floor (590/1), 0 new failures
+- [x] `verify_result.txt` shows target floor (593/1), 0 new failures
 - [x] `playwright` package imports without error
 - [x] `browser_navigate("https://example.com")` returns `ok: True` with title
-- [x] All 7 new tools visible in `list_all_tools` output
+- [x] All 9 new tools visible in `list_all_tools` output
 - [x] `config/playwright_profiles/` in .gitignore confirmed
 - [x] `docs/state/current.md` updated
+- [x] Named commands `setup_profile_itch`, `setup_profile_youtube`, `check_profiles` registered
+- [x] `profile_health_check` task registered in config/tasks.yaml
 - [ ] Committed to main, Tower deployed
-- [ ] Manual test: `setup_profile("itch")` launches headed browser, saves profile JSON
+- [ ] Manual test: `setup_profile("itch")` launches headed browser via RDP, saves profile JSON
 
 ### Next Steps
 
-**Manual Testing Required:**
-1. Run `setup_profile("itch")` from Python shell on Tower, verify headed browser opens
-2. Log in to itch.io manually, press Enter, verify `itch.json` saved
-3. Same for `setup_profile("youtube_studio")` and YouTube Studio login
-4. Copy profile JSON files to Tower (gitignored — manual transfer)
-5. Test `browser_navigate("https://example.com")` with real browser (not mocked)
+**Manual Testing Required (via RDP on Tower):**
+1. RDP into Tower via Tailscale
+2. Stop PrivyBot service: `nssm stop PrivyBot`
+3. Run `setup_profile_itch` named command, verify headed browser opens in RDP session
+4. Log in to itch.io manually, press Enter, verify `itch.json` saved locally
+5. Same for `setup_profile_youtube` and YouTube Studio login
+6. Start PrivyBot service: `nssm start PrivyBot`
+7. Run `check_profiles` named command to verify profile status
+8. Test `browser_navigate("https://example.com")` with real browser (not mocked)
 
 **Future Enhancements:**
 - Separate PrivybotPlaywright NSSM service for persistent browser (performance)
@@ -131,8 +162,9 @@
 - Generalize `itch_get_game_page()` to accept game URL parameter
 - Add more YouTube Studio actions (reply to comment, delete comment)
 - Add browser tools for other platforms (Twitter/X, LinkedIn, Play Store)
+- Profile auto-refresh on expiry detection
 
-Phase 32a delivers core Playwright browser automation infrastructure. The system allows PrivyBot to execute web actions on platforms without APIs (itch.io, YouTube Studio) using saved login sessions. Per-call browser lifecycle ensures safety and simplicity, while the profile system enables persistent authentication across sessions.
+Phase 32a delivers core Playwright browser automation infrastructure with smart profile management. The system allows PrivyBot to execute web actions on platforms without APIs (itch.io, YouTube Studio) using saved login sessions. Per-call browser lifecycle ensures safety and simplicity, while the profile system enables persistent authentication across sessions. Smart profile validity checking and weekly health checks ensure profiles remain functional, with RDP-based setup eliminating manual file transfers.
 
 ---
 

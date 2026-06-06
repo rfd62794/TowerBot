@@ -29,6 +29,21 @@ NAMED_COMMANDS = {
     "privy_pull":      {"command": "git pull",                 "cwd": "C:/Github/PrivyBot", "description": "Pull latest PrivyBot changes"},
     "privy_log":       {"command": "git log --oneline -10",    "cwd": "C:/Github/PrivyBot", "description": "Last 10 commits"},
     "tower_processes": {"command": "tasklist | findstr python", "cwd": None,                "description": "Running Python processes"},
+    "setup_profile_itch": {
+        "command": r".venv\Scripts\python.exe -c \"from tools.browser.playwright_base import setup_profile; r = setup_profile('itch'); print(r)\"",
+        "cwd": "C:/Github/PrivyBot",
+        "description": "Set up itch.io browser profile — run via RDP on Tower, browser will open for login"
+    },
+    "setup_profile_youtube": {
+        "command": r".venv\Scripts\python.exe -c \"from tools.browser.playwright_base import setup_profile; r = setup_profile('youtube_studio'); print(r)\"",
+        "cwd": "C:/Github/PrivyBot",
+        "description": "Set up YouTube Studio browser profile — run via RDP on Tower, browser will open for login"
+    },
+    "check_profiles": {
+        "command": r".venv\Scripts\python.exe -c \"from tools.browser.playwright_base import list_profile_status; import json; print(json.dumps(list_profile_status(), indent=2))\"",
+        "cwd": "C:/Github/PrivyBot",
+        "description": "Check validity of all saved browser profiles"
+    },
 }
 
 
