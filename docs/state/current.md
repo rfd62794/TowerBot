@@ -1,83 +1,69 @@
 # Current State
 
-## Phase 32b — Canonical System Templates for Output Quality ✅ DONE
+## Phase 32b — Base Prompt System for Output Quality ✅ DONE
 
 **Status**: Complete
-**Test Floor**: 599/0 (594 from Phase 32a + 5 new canonical template tests, clean floor)
+**Test Floor**: 599/0 (594 from Phase 32a + 5 new prompts system tests, clean floor)
 
 ### What Was Built
 
-- **templates/canonical/system_base.yaml**: Base identity context injected into all LLM calls
-  - PrivyBot identity and Robert Floyd Dugger context
-  - Project list: VoidDrift, PrivyBot, OpenAgent, ContentEngine, TeleseroAdmin2026
-  - Content pillars: Everything is Crab (~58%), Dune: Awakening (~28%)
-  - Identity transformation title guidance
+- **templates/canonical/base_prompts.yaml**: Single YAML file with 7 prompt context blocks
+  - `base_identity`: PrivyBot identity, Robert Floyd Dugger context, projects, content pillars
+  - `signal_over_noise`: Output quality directive — lead with what changed, one action only
+  - `rfd_content_frame`: Content generation frame — identity transformation titles, RFD structure
+  - `one_thing`: Single-action decision directive — specific, actionable, data-backed
+  - `tool_priority`: Tool selection order — memory first, lightweight APIs, no duplicate calls
+  - `approval_gate`: Safety directive for external actions — draft, approve, execute, report
+  - `research_synthesis`: Research synthesis directive — project-specific, surprising only, 300 words max
 
-- **templates/canonical/signal_over_noise.yaml**: Output quality directive
-  - Lead with what CHANGED or MATTERS, not what you found
-  - One recommended action, not a list of options
-  - Stay silent if nothing actionable
+- **infra/prompts.py**: New prompt loader and injection system
+  - `load_prompts()`: Loads base_prompts.yaml with UTF-8 encoding, module-level cache
+  - `get_prompts_for_task(task_type)`: Returns concatenated prompt blocks for task type
+  - `get_all_prompt_keys()`: Returns list of all available prompt block keys
+  - `TASK_PROMPT_MAP`: Maps 8 task types to prompt block combinations
+    - `default`: base_identity only
+    - `briefing`: base_identity + signal_over_noise + one_thing
+    - `research`: base_identity + tool_priority + research_synthesis
+    - `content`: base_identity + rfd_content_frame + signal_over_noise
+    - `action`: base_identity + approval_gate
+    - `planning`: base_identity + one_thing + signal_over_noise
+    - `monitoring`: base_identity + signal_over_noise
+    - `skill_review`: base_identity + signal_over_noise
 
-- **templates/canonical/rfd_content_frame.yaml**: Content generation frame
-  - Identity transformation title pattern: "[Game] — [what the game made you into/realize/become]"
-  - Blog draft structure: MOMENT → SURPRISE → STRUGGLE → LESSON → NEXT
-  - One specific scene, not a summary
+- **bot/autonomous.py**: Prompt injection into autonomous task execution
+  - Added `_get_task_type(task_name)`: Maps task names to prompt types
+  - Modified `run_template_task()`: Injects context before sending to LLM
+  - Context injection wrapped in try/except — never crashes task execution
+  - Format: `{context}\n\n---\n\n{prefix}{persona}\n\n{prompt}`
 
-- **templates/canonical/one_thing_decision.yaml**: Single-action decision directive
-  - Answer with ONE thing only when asked what to focus on
-  - Must be: specific, actionable, data-backed, time-bounded
+- **bot/autonomous.py**: Fixed self-direction loop deprecated function calls
+  - Removed import of `get_upcoming_tasks` from `tools.productivity.goals` (doesn't exist)
+  - Replaced with `list_google_tasks()` filtered for today and tomorrow
+  - Fixed: `upcoming_tasks` now uses list comprehension with date filtering
 
-- **templates/canonical/tool_priority.yaml**: Tool selection order to reduce API calls
-  - Memory and local state first
-  - Lightweight APIs before browser automation
-  - Check content_seen before surfacing content
-  - Never call the same tool twice in one task
+- **tests/test_prompts_system.py**: New test file with 5 tests
+  - `test_load_prompts_returns_dict`: Verifies loader returns dict with 7 expected keys
+  - `test_get_prompts_for_briefing`: Verifies briefing returns concatenated blocks
+  - `test_get_prompts_for_unknown_type`: Verifies fallback to default
+  - `test_get_prompts_returns_empty_on_missing_file`: Verifies graceful handling
+  - `test_get_all_prompt_keys_returns_seven`: Verifies all 7 keys available
 
-- **templates/canonical/approval_gate.yaml**: Safety directive for external actions
-  - Draft action explicitly before execution
-  - Send for YES/NO approval via request_approval()
-  - Execute only after YES received
-  - Report what was done after execution
-
-- **templates/canonical/research_synthesis.yaml**: Research synthesis directive
-  - Connect findings to Robert's actual projects specifically
-  - Surface what's surprising, skip what's expected
-  - End with one clear next action
-  - Maximum 300 words total
-
-- **bot/task_runner.py**: Template injection system
-  - Added `load_canonical_templates()` to load templates from `templates/canonical/`
-  - Added `_inject_canonical_templates()` to inject relevant templates based on task type
-  - Injection logic:
-    - `system_base`: always injected for all task types
-    - `planner`/`reporter`: signal_over_noise + one_thing_decision
-    - `creator`: rfd_content_frame
-    - `planner`: tool_priority + research_synthesis
-    - `creator`/`planner`: approval_gate
-  - UTF-8 encoding support for template files
-
-- **tests/test_canonical_templates.py**: New test file with 5 tests
-  - `test_system_base_always_injected`: Verifies base identity in all tasks
-  - `test_planner_gets_research_templates`: Verifies tool_priority and research_synthesis for planner
-  - `test_reporter_gets_output_templates`: Verifies signal_over_noise and one_thing for reporter
-  - `test_creator_gets_content_frame`: Verifies rfd_content_frame for creator
-  - `test_approval_gate_injected`: Verifies approval_gate for action tasks
-
-- **scripts/verify.py**: Added `test_canonical_templates.py` to test suite
+- **scripts/verify.py**: Added `test_prompts_system.py` to test suite
+- **bot/task_runner.py**: Reverted canonical template injection (moved to infra/prompts.py)
 
 ### Impact
 
-All autonomous tasks now have consistent identity context and output quality directives. The system_base template ensures PrivyBot always knows who it's talking about and Robert's current projects. Task-type-specific templates guide the LLM toward appropriate behavior (e.g., planners get research synthesis directives, creators get content frame).
+All autonomous tasks now have consistent identity context and output quality directives injected at runtime. The base_prompts.yaml consolidates all prompt blocks into a single file for easier maintenance. The infra/prompts.py module provides a clean separation between prompt definitions and task execution logic. Self-direction loop now uses correct Google Tasks API functions.
 
 ### Manual Testing
 
-No manual testing required — templates are injected automatically by task_runner.py during task resolution. Test coverage verifies injection works correctly for all task types.
+No manual testing required — prompts are injected automatically by autonomous.py during task execution. Test coverage verifies loader and injection work correctly.
 
 ### Future Enhancements
 
-- Add more canonical templates as patterns emerge (e.g., error handling, debugging)
-- Consider template versioning for A/B testing different prompt strategies
-- Add template-specific tests for each new canonical template
+- Add more prompt blocks as patterns emerge (e.g., error handling, debugging)
+- Consider prompt versioning for A/B testing different strategies
+- Add prompt-specific tests for each new block
 
 ---
 
