@@ -375,6 +375,403 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(str(e), code="exception")
 
+    def useless_fact(self) -> dict:
+        """
+        Get a random interesting fact from Useless Facts API.
+
+        Returns:
+            Dict with fact text and source URL
+        """
+        try:
+            resp = httpx.get("https://uselessfacts.jsph.pl/random.json?language=en", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return self.success({
+                "fact": data.get("text", ""),
+                "source": data.get("source_url", ""),
+                "source": data.get("source", "uselessfacts.jsph.pl")
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Useless Facts API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch useless fact: {e}")
+
+    def number_fact(self, number: int = None, fact_type: str = "trivia") -> dict:
+        """
+        Get a fact about a number from Numbers API.
+
+        Args:
+            number: Number to get fact about (default: random)
+            fact_type: Type of fact — trivia, math, date, year (default: trivia)
+
+        Returns:
+            Dict with fact text, number, and type
+        """
+        try:
+            if number is None:
+                url = f"http://numbersapi.com/random/{fact_type}"
+            else:
+                url = f"http://numbersapi.com/{number}/{fact_type}"
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            return self.success({
+                "fact": resp.text,
+                "number": number,
+                "type": fact_type
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Numbers API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch number fact: {e}")
+
+    def random_quote(self) -> dict:
+        """
+        Get a random quote from Quotable API.
+
+        Returns:
+            Dict with quote content, author, and tags
+        """
+        try:
+            resp = httpx.get("https://api.quotable.io/random", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return self.success({
+                "content": data.get("content", ""),
+                "author": data.get("author", ""),
+                "tags": data.get("tags", []),
+                "authorSlug": data.get("authorSlug", "")
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Quotable API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch quote: {e}")
+
+    def wiki_random(self) -> dict:
+        """
+        Get a random Wikipedia article summary.
+
+        Returns:
+            Dict with title, extract, and URL
+        """
+        try:
+            resp = httpx.get("https://en.wikipedia.org/api/rest_v1/page/random/summary", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return self.success({
+                "title": data.get("title", ""),
+                "extract": data.get("extract", ""),
+                "url": data.get("content_urls", {}).get("desktop", {}).get("page", ""),
+                "lang": data.get("lang", "en")
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Wikipedia API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch random Wikipedia article: {e}")
+
+    def spacex_latest_launch(self) -> dict:
+        """
+        Get the latest SpaceX launch data.
+
+        Returns:
+            Dict with launch name, date, success status, and details
+        """
+        try:
+            resp = httpx.get("https://api.spacexdata.com/v4/launches/latest", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            return self.success({
+                "name": data.get("name", ""),
+                "date_utc": data.get("date_utc", ""),
+                "success": data.get("success", None),
+                "details": data.get("details", ""),
+                "rocket": data.get("rocket", ""),
+                "flight_number": data.get("flight_number", None)
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"SpaceX API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch SpaceX launch data: {e}")
+
+    def country_info(self, name: str = None) -> dict:
+        """
+        Get country information from REST Countries API.
+
+        Args:
+            name: Country name (optional, if not provided returns random country)
+
+        Returns:
+            Dict with country data including name, capital, region, population, etc.
+        """
+        try:
+            if name:
+                url = f"https://restcountries.com/v3.1/name/{name}"
+            else:
+                url = "https://restcountries.com/v3.1/all"
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            if not data:
+                return self.error(f"Country '{name}' not found" if name else "No countries found")
+            if not name:
+                data = [data[0]]  # Return just first country if all
+            country = data[0]
+            return self.success({
+                "name": country.get("name", {}).get("common", ""),
+                "official_name": country.get("name", {}).get("official", ""),
+                "capital": country.get("capital", []),
+                "region": country.get("region", ""),
+                "subregion": country.get("subregion", ""),
+                "population": country.get("population", 0),
+                "area": country.get("area", 0),
+                "languages": country.get("languages", {}),
+                "currencies": country.get("currencies", {}),
+                "flags": country.get("flags", {})
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"REST Countries API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch country info: {e}")
+
+    def cratesio_info(self, crate_name: str) -> dict:
+        """
+        Get Rust crate information from crates.io API.
+
+        Args:
+            crate_name: Name of the Rust crate
+
+        Returns:
+            Dict with crate data including name, version, description, downloads, etc.
+        """
+        try:
+            url = f"https://crates.io/api/v1/crates/{crate_name}"
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            crate = data.get("crate", {})
+            return self.success({
+                "name": crate.get("name", ""),
+                "version": crate.get("newest_version", ""),
+                "description": crate.get("description", ""),
+                "downloads": crate.get("downloads", 0),
+                "homepage": crate.get("homepage", ""),
+                "repository": crate.get("repository", "")
+            })
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return self.error(f"Crate '{crate_name}' not found on crates.io")
+            return self.error(f"crates.io API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch crate info: {e}")
+
+    def hackernews_search(self, query: str, limit: int = 10) -> dict:
+        """
+        Search Hacker News via Algolia API.
+
+        Args:
+            query: Search query
+            limit: Maximum results to return (default 10)
+
+        Returns:
+            Dict with search results including title, url, points, author, etc.
+        """
+        try:
+            url = "http://hn.algolia.com/api/v1/search"
+            params = {"query": query, "tags": "story", "hitsPerPage": limit}
+            resp = httpx.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            hits = data.get("hits", [])
+            results = []
+            for hit in hits:
+                results.append({
+                    "title": hit.get("title", ""),
+                    "url": hit.get("url", ""),
+                    "points": hit.get("points", 0),
+                    "author": hit.get("author", ""),
+                    "created_at": hit.get("created_at_i", 0),
+                    "objectID": hit.get("objectID", "")
+                })
+            return self.success({
+                "query": query,
+                "count": len(results),
+                "results": results
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Hacker News API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to search Hacker News: {e}")
+
+    def usgs_earthquake(self, magnitude: float = None, limit: int = 10) -> dict:
+        """
+        Get recent earthquake data from USGS API.
+
+        Args:
+            magnitude: Minimum magnitude filter (optional)
+            limit: Maximum results to return (default 10)
+
+        Returns:
+            Dict with earthquake data including magnitude, location, time, etc.
+        """
+        try:
+            url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson"
+            resp = httpx.get(url, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            features = data.get("features", [])
+            results = []
+            for feature in features[:limit]:
+                props = feature.get("properties", {})
+                mag = props.get("mag", 0)
+                if magnitude and mag < magnitude:
+                    continue
+                geometry = feature.get("geometry", {}).get("coordinates", [])
+                results.append({
+                    "magnitude": mag,
+                    "place": props.get("place", ""),
+                    "time": props.get("time", 0),
+                    "url": props.get("url", ""),
+                    "latitude": geometry[1] if len(geometry) > 1 else 0,
+                    "longitude": geometry[0] if len(geometry) > 0 else 0
+                })
+            return self.success({
+                "count": len(results),
+                "results": results
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"USGS API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch earthquake data: {e}")
+
+    def iss_location(self) -> dict:
+        """
+        Get current International Space Station location from Open Notify API.
+
+        Returns:
+            Dict with ISS latitude, longitude, and timestamp
+        """
+        try:
+            resp = httpx.get("http://api.open-notify.org/iss-now.json", timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            pos = data.get("iss_position", {})
+            return self.success({
+                "latitude": pos.get("latitude", 0),
+                "longitude": pos.get("longitude", 0),
+                "timestamp": data.get("timestamp", 0)
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Open Notify API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch ISS location: {e}")
+
+    def open_library_search(self, query: str, limit: int = 5) -> dict:
+        """
+        Search for books via Open Library API.
+
+        Args:
+            query: Search query (title, author, or subject)
+            limit: Maximum results to return (default 5)
+
+        Returns:
+            Dict with book data including title, author, year, and cover URL
+        """
+        try:
+            url = f"https://openlibrary.org/search.json"
+            params = {"q": query, "limit": limit}
+            resp = httpx.get(url, params=params, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            docs = data.get("docs", [])
+            results = []
+            for doc in docs:
+                results.append({
+                    "title": doc.get("title", ""),
+                    "author": doc.get("author_name", []),
+                    "first_publish_year": doc.get("first_publish_year", ""),
+                    "cover_id": doc.get("cover_i", ""),
+                    "key": doc.get("key", "")
+                })
+            return self.success({
+                "query": query,
+                "count": len(results),
+                "results": results
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"Open Library API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to search Open Library: {e}")
+
+    def boardgame_search(self, query: str, limit: int = 5) -> dict:
+        """
+        Search for board games via BoardGameGeek API.
+
+        Args:
+            query: Search query (game name)
+            limit: Maximum results to return (default 5)
+
+        Returns:
+            Dict with game data including name, year, rating, and description
+        """
+        try:
+            url = f"https://boardgamegeek.com/xmlapi2/search"
+            params = {"query": query, "type": "boardgame"}
+            resp = httpx.get(url, params=params, timeout=15)
+            resp.raise_for_status()
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(resp.text)
+            items = root.findall("item")
+            results = []
+            for item in items[:limit]:
+                results.append({
+                    "id": item.get("id", ""),
+                    "name": item.findtext("name[@type='primary']", ""),
+                    "yearpublished": item.findtext("yearpublished", "")
+                })
+            return self.success({
+                "query": query,
+                "count": len(results),
+                "results": results
+            })
+        except httpx.HTTPStatusError as e:
+            return self.error(f"BoardGameGeek API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to search board games: {e}")
+
+    def lichess_user(self, username: str) -> dict:
+        """
+        Get Lichess user profile data.
+
+        Args:
+            username: Lichess username
+
+        Returns:
+            Dict with user data including rating, games played, and account info
+        """
+        try:
+            url = f"https://lichess.org/api/user/{username}"
+            resp = httpx.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            perfs = data.get("perfs", {})
+            return self.success({
+                "username": data.get("id", ""),
+                "count": data.get("count", {}),
+                "perfs": {
+                    "bullet": perfs.get("bullet", {}).get("rating", 0),
+                    "blitz": perfs.get("blitz", {}).get("rating", 0),
+                    "rapid": perfs.get("rapid", {}).get("rating", 0),
+                    "classical": perfs.get("classical", {}).get("rating", 0)
+                },
+                "created_at": data.get("createdAt", ""),
+                "seen_at": data.get("seenAt", "")
+            })
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return self.error(f"User '{username}' not found on Lichess")
+            return self.error(f"Lichess API error: {e}")
+        except Exception as e:
+            return self.error(f"Failed to fetch Lichess user data: {e}")
+
 
 # Module-level instance
 _search = SearchTools()
@@ -523,3 +920,162 @@ def jina_read(url: str, timeout: int = 30) -> dict:
         Dict with url, content
     """
     return _search.jina_read(url, timeout)
+
+
+def useless_fact() -> dict:
+    """
+    Get a random interesting fact from Useless Facts API.
+
+    Returns:
+        Dict with fact text and source URL
+    """
+    return _search.useless_fact()
+
+
+def number_fact(number: int = None, fact_type: str = "trivia") -> dict:
+    """
+    Get a fact about a number from Numbers API.
+
+    Args:
+        number: Number to get fact about (default: random)
+        fact_type: Type of fact — trivia, math, date, year (default: trivia)
+
+    Returns:
+        Dict with fact text, number, and type
+    """
+    return _search.number_fact(number, fact_type)
+
+
+def random_quote() -> dict:
+    """
+    Get a random quote from Quotable API.
+
+    Returns:
+        Dict with quote content, author, and tags
+    """
+    return _search.random_quote()
+
+
+def wiki_random() -> dict:
+    """
+    Get a random Wikipedia article summary.
+
+    Returns:
+        Dict with title, extract, and URL
+    """
+    return _search.wiki_random()
+
+
+def spacex_latest_launch() -> dict:
+    """
+    Get the latest SpaceX launch data.
+
+    Returns:
+        Dict with launch name, date, success status, and details
+    """
+    return _search.spacex_latest_launch()
+
+
+def country_info(name: str = None) -> dict:
+    """
+    Get country information from REST Countries API.
+
+    Args:
+        name: Country name (optional, if not provided returns random country)
+
+    Returns:
+        Dict with country data including name, capital, region, population, etc.
+    """
+    return _search.country_info(name)
+
+
+def cratesio_info(crate_name: str) -> dict:
+    """
+    Get Rust crate information from crates.io API.
+
+    Args:
+        crate_name: Name of the Rust crate
+
+    Returns:
+        Dict with crate data including name, version, description, downloads, etc.
+    """
+    return _search.cratesio_info(crate_name)
+
+
+def hackernews_search(query: str, limit: int = 10) -> dict:
+    """
+    Search Hacker News via Algolia API.
+
+    Args:
+        query: Search query
+        limit: Maximum results to return (default 10)
+
+    Returns:
+        Dict with search results including title, url, points, author, etc.
+    """
+    return _search.hackernews_search(query, limit)
+
+
+def usgs_earthquake(magnitude: float = None, limit: int = 10) -> dict:
+    """
+    Get recent earthquake data from USGS API.
+
+    Args:
+        magnitude: Minimum magnitude filter (optional)
+        limit: Maximum results to return (default 10)
+
+    Returns:
+        Dict with earthquake data including magnitude, location, time, etc.
+    """
+    return _search.usgs_earthquake(magnitude, limit)
+
+
+def iss_location() -> dict:
+    """
+    Get current International Space Station location from Open Notify API.
+
+    Returns:
+        Dict with ISS latitude, longitude, and timestamp
+    """
+    return _search.iss_location()
+
+
+def open_library_search(query: str, limit: int = 5) -> dict:
+    """
+    Search for books via Open Library API.
+
+    Args:
+        query: Search query (title, author, or subject)
+        limit: Maximum results to return (default 5)
+
+    Returns:
+        Dict with book data including title, author, year, and cover URL
+    """
+    return _search.open_library_search(query, limit)
+
+
+def boardgame_search(query: str, limit: int = 5) -> dict:
+    """
+    Search for board games via BoardGameGeek API.
+
+    Args:
+        query: Search query (game name)
+        limit: Maximum results to return (default 5)
+
+    Returns:
+        Dict with game data including name, year, rating, and description
+    """
+    return _search.boardgame_search(query, limit)
+
+
+def lichess_user(username: str) -> dict:
+    """
+    Get Lichess user profile data.
+
+    Args:
+        username: Lichess username
+
+    Returns:
+        Dict with user data including rating, games played, and account info
+    """
+    return _search.lichess_user(username)
