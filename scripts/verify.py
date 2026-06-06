@@ -83,6 +83,7 @@ def _load_and_run(path: str) -> tuple[int, int]:
 def run_all():
     total_passed = 0
     total_failed = 0
+    total_skipped = 0
 
     for test_file in TEST_FILES:
         p, f = _load_and_run(test_file)
@@ -91,7 +92,7 @@ def run_all():
 
     print()
     total = total_passed + total_failed
-    print(f"{total_passed}/{total} passed.", end=" ")
+    print(f"{total_passed} passed, {total_failed} failed, {total_skipped} skipped")
 
     if total_failed == 0:
         print("Deploy safe.")
