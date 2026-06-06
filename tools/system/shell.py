@@ -21,7 +21,7 @@ BLOCKED_PATTERNS = [
 ]
 
 NAMED_COMMANDS = {
-    "privy_tests":     {"command": "uv run python scripts/verify.py", "cwd": "C:/Github/PrivyBot", "description": "Run PrivyBot test suite", "timeout": 300},
+    "privy_tests":     {"command": r".venv\Scripts\python.exe scripts\verify.py", "cwd": "C:/Github/PrivyBot", "description": "Run PrivyBot verify.py test suite", "timeout": 300},
     "list_services":   {"command": "nssm list",                "cwd": None,                 "description": "List NSSM services"},
     "restart_privy":   {"command": "nssm restart PrivyBot",    "cwd": None,                 "description": "Restart PrivyBot service"},
     "restart_mcp":     {"command": "nssm restart PrivybotMCP", "cwd": None,                 "description": "Restart PrivyBot MCP service"},
