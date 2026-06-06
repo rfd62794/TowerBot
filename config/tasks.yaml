@@ -115,3 +115,16 @@ profile_health_check:
   cron: "0 9 * * 1"    # Monday 9AM
   enabled: true
   description: "Check all Playwright browser profiles are still valid, notify if expired"
+
+# --- WEEKLY FINDS DIGEST ---
+weekly_finds:
+  schedule: cron
+  cron: "0 7 * * 0"    # Sunday 7AM (before skill_review at 6AM runs first)
+  enabled: true
+  description: "Digest of the week's most interesting research findings from all background tasks"
+
+# --- DEEP DIVE (MANUAL) ---
+deep_dive:
+  schedule: manual
+  enabled: true
+  description: "On-demand deep dive into a specific topic — triggered by self-direction loop via Google Task"
