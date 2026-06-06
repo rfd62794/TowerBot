@@ -10,7 +10,7 @@ from infra.memory_manager import memory_manager
 VALID_LAYERS = {"technical", "project", "personal", "business", "content"}
 
 
-def tool_save_memory(key: str, content: str = None, value: str = None, layer: str = "project") -> dict:
+def tool_save_memory(key: str, content: str = None, layer: str = "project", value: str = None) -> dict:
     actual_content = content or value or ""
     if layer not in VALID_LAYERS:
         return {"status": "error", "reason": f"invalid layer '{layer}'"}
