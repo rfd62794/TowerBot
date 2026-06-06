@@ -76,12 +76,29 @@ def _load_and_run(path: str) -> tuple[int, int]:
         spec = importlib.util.spec_from_file_location("_test_module", full_path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        return mod.run_all()
+        if hasattr(mod, 'run_all'):
+            return mod.run_all()
+        else:
+            return _run_pytest_file(full_path)
     except SystemExit:
         return 0, 0  # test chose to skip
     except Exception as e:
         print(f"  [CRASH] {path}: {e}")
         return 0, 1
+
+
+def _run_pytest_file(path: str) -> tuple[int, int]:
+    import subprocess
+    import re
+    result = subprocess.run(
+        ["uv", "run", "pytest", path, "--tb=short", "-q", "--no-header"],
+        capture_output=True, text=True, cwd=_root
+    )
+    output = result.stdout + result.stderr
+    print(output)
+    passed = int(m.group(1)) if (m := re.search(r'(\d+) passed', output)) else 0
+    failed = int(m.group(1)) if (m := re.search(r'(\d+) failed', output)) else 0
+    return passed, failed
 
 
 def run_all():
