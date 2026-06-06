@@ -371,11 +371,19 @@ async def _chat(model: str, messages: list, tools, allow_rotation: bool = True):
 async def _execute(thread_id: str, name: str, args: dict) -> dict:
     # Update thinking thread with tool name
     set_thinking_tool(name)
-    
+
     # Tool registry tools first
     if name in TOOL_REGISTRY:
         tool_fn = TOOL_REGISTRY[name]["fn"]
-        r = tool_fn(**args)
+
+        # Filter to only known parameters from schema (hardening against LLM hallucinations)
+        schema_props = (TOOL_REGISTRY[name]["definition"]["function"]
+                       .get("parameters", {})
+                       .get("properties", {})
+                       .keys())
+        filtered_args = {k: v for k, v in args.items() if k in schema_props}
+
+        r = tool_fn(**filtered_args)
         if r is None:
             r = {"error": f"Tool {name} returned None"}
         elif not isinstance(r, dict):

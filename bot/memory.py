@@ -28,8 +28,11 @@ def tool_retire_memory(key: str, reason: str) -> dict:
     return {"status": "retired", "key": key, "reason": reason}
 
 
-def tool_get_memories(query: str) -> dict:
-    results = memory_manager.search(query, limit=5)
+def tool_get_memories(query: str = None, q: str = None, **kwargs) -> dict:
+    actual_query = query or q or ""
+    if not actual_query:
+        return {"ok": False, "error": "query required"}
+    results = memory_manager.search(actual_query, limit=5)
     if not results:
         return {"status": "empty", "count": 0}
     return {"status": "found", "count": len(results), "memories": results}
