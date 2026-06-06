@@ -8,13 +8,13 @@ logger = logging.getLogger("privy.content")
 def already_served(source: str, external_id: str) -> bool:
     """Returns True if this item was already sent to Telegram."""
     try:
-        rows = _exec(
+        row = _exec(
             "SELECT served FROM content_seen WHERE source=? AND external_id=?",
             (source, str(external_id))
-        )
-        if not rows:
+        ).fetchone()
+        if row is None:
             return False
-        return bool(rows[0]["served"])
+        return bool(row["served"])
     except Exception as e:
         logger.warning(f"[content_seen] already_served failed: {e}")
         return False
