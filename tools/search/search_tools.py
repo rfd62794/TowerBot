@@ -279,8 +279,21 @@ class SearchTools(BaseTool):
             Dict with query, subreddit, count, and results
         """
         raw = reddit_api.search_reddit(query, subreddit, limit=limit)
-        if raw.get("_live_failed"):
+
+        # If Reddit returns error (403, blocked, etc.), fall back to DDG
+        if raw.get("_live_failed") or not raw.get("ok", True):
+            logger.info("[reddit_search] Reddit unavailable, falling back to DDG")
+            ddg_query = f"site:reddit.com {query}"
+            if subreddit:
+                ddg_query = f"site:reddit.com/r/{subreddit} {query}"
+            fallback = ddg_api.search_web(ddg_query, max_results=limit)
+            if fallback.get("ok"):
+                fallback["source"] = "ddg_fallback"
+                fallback["note"] = "Reddit API unavailable, results via DDG"
+                return fallback
+            # Both failed — return original Reddit error
             return self.error("Reddit search unavailable", code="api_failed")
+
         results = raw.get("results", [])
         return self.success({
             "query": query,

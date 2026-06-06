@@ -93,6 +93,21 @@ def test_reddit_search():
     assert "stale_notice" in result, "Expected stale_notice key"
 
 
+@test("search: reddit_search falls back to DDG when Reddit fails")
+def test_reddit_search_falls_back_to_ddg():
+    from unittest.mock import patch
+    from tools.search.search_tools import reddit_search
+    from api.web.reddit_api import reddit_api
+
+    # Mock Reddit API to return error
+    with patch.object(reddit_api, 'search_reddit', return_value={"_live_failed": True, "ok": False}):
+        result = reddit_search("test query", subreddit="r/test", limit=3)
+        # Should have DDG fallback source marker
+        assert result.get("source") == "ddg_fallback", f"Expected source='ddg_fallback', got {result.get('source')}"
+        assert result.get("note") == "Reddit API unavailable, results via DDG", f"Expected fallback note, got {result.get('note')}"
+        assert result.get("ok") == True, "Expected DDG fallback to succeed"
+
+
 @test("search: get_weather returns temp_f")
 def test_weather():
     from tools.search.search_tools import get_weather
