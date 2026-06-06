@@ -14,7 +14,8 @@ logger = logging.getLogger("privy.ollama")
 
 # VRAM requirements per model in GB
 VRAM_REQUIREMENTS_GB = {
-    "gemma3:4b":        3.5,
+    "gemma4:e4b":       9.6,    # Tool-capable model, primary for Tower
+    "gemma3:4b":        3.5,    # Legacy, weak at tool schemas
     "qwen2.5:3b":       2.5,
     "qwen2.5:7b":       4.0,
     "qwen2.5-coder:7b": 4.0,
@@ -257,10 +258,10 @@ class OllamaSwapManager:
             "messages": messages,
             "stream": False,
         }
-        
-        # Tools are intentionally omitted — Ollama always returns tool_calls=[]
-        # so tool execution routes through OpenRouter regardless. Passing OpenAI
-        # tool schemas to gemma3:4b causes a 400 Bad Request.
+
+        # gemma4:e4b supports tool schemas natively — include tools if provided
+        if tools:
+            payload["tools"] = tools
 
         try:
             # Run blocking requests in thread pool
