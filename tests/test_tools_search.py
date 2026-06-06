@@ -322,13 +322,17 @@ def test_useless_fact_error():
 @test("number_fact: returns fact, number, and type keys")
 def test_number_fact_success():
     from tools.search.search_tools import number_fact
-    result = number_fact(42, "trivia")
-    if result.get("ok") == True:
-        assert "fact" in result, "Expected 'fact' key on success"
-        assert "number" in result, "Expected 'number' key on success"
-        assert "type" in result, "Expected 'type' key on success"
-    else:
-        assert "error" in result, "Expected 'error' key on failure"
+    from unittest.mock import patch, MagicMock
+    mock_response = MagicMock()
+    mock_response.text = "42 is the answer to life, the universe, and everything."
+    with patch("tools.search.search_tools.httpx.get", return_value=mock_response):
+        result = number_fact(42, "trivia")
+        if result.get("ok") == True:
+            assert "fact" in result, "Expected 'fact' key on success"
+            assert "number" in result, "Expected 'number' key on success"
+            assert "type" in result, "Expected 'type' key on success"
+        else:
+            assert "error" in result, "Expected 'error' key on failure"
 
 
 @test("number_fact: handles API error gracefully")
