@@ -77,7 +77,7 @@ def test_named_command_resolves_and_executes():
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs["shell"] is True
         assert call_kwargs["cwd"] == "C:/Github/PrivyBot"
-        assert "uv run python scripts/verify.py" in call_args[0]
+        assert r".venv\Scripts\python.exe scripts\verify.py" in call_args[0]
         assert call_kwargs["timeout"] == 300
 
 
