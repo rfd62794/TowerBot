@@ -23,8 +23,18 @@ def browser_navigate(url: str, site: str = None) -> dict:
         from playwright.sync_api import sync_playwright
         profile = _get_profile(site) if site else {}
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(**(profile or {}))
+            browser = p.chromium.launch(
+                headless=True,
+                channel="chrome",
+                args=["--disable-blink-features=AutomationControlled"]
+            )
+            context = browser.new_context(
+                **(profile or {}),
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+            )
+            context.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
             page = context.new_page()
             page.goto(url, timeout=30000)
             result = {"ok": True, "url": page.url, "title": page.title()}
@@ -40,8 +50,18 @@ def browser_get_text(url: str, selector: str, site: str = None) -> dict:
         from playwright.sync_api import sync_playwright
         profile = _get_profile(site) if site else {}
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(**(profile or {}))
+            browser = p.chromium.launch(
+                headless=True,
+                channel="chrome",
+                args=["--disable-blink-features=AutomationControlled"]
+            )
+            context = browser.new_context(
+                **(profile or {}),
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+            )
+            context.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
             page = context.new_page()
             page.goto(url, timeout=30000)
             element = page.locator(selector).first
@@ -59,8 +79,18 @@ def browser_screenshot(url: str, site: str = None) -> dict:
         from playwright.sync_api import sync_playwright
         profile = _get_profile(site) if site else {}
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(**(profile or {}))
+            browser = p.chromium.launch(
+                headless=True,
+                channel="chrome",
+                args=["--disable-blink-features=AutomationControlled"]
+            )
+            context = browser.new_context(
+                **(profile or {}),
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+            )
+            context.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
             page = context.new_page()
             page.goto(url, timeout=30000)
             img_bytes = page.screenshot()
@@ -80,8 +110,17 @@ def setup_profile(site: str) -> dict:
         PROFILES_DIR.mkdir(parents=True, exist_ok=True)
         profile_path = PROFILES_DIR / f"{site}.json"
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=False)
-            context = browser.new_context()
+            browser = p.chromium.launch(
+                headless=False,
+                channel="chrome",
+                args=["--disable-blink-features=AutomationControlled"]
+            )
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+            )
+            context.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
             page = context.new_page()
             page.goto("https://www.google.com")
             input(f"Log into {site} manually, then press Enter to save session...")
@@ -110,8 +149,18 @@ def check_profile_validity(site: str) -> dict:
         url = test_urls.get(site, "https://www.google.com")
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(**profile)
+            browser = p.chromium.launch(
+                headless=True,
+                channel="chrome",
+                args=["--disable-blink-features=AutomationControlled"]
+            )
+            context = browser.new_context(
+                **profile,
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+            )
+            context.add_init_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
             page = context.new_page()
             page.goto(url, timeout=15000)
             current_url = page.url
