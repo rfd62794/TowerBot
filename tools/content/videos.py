@@ -185,7 +185,7 @@ class VideoTools(BaseTool):
             if text is None:
                 template_path = "config/comment_templates.yaml"
                 try:
-                    with open(template_path, "r") as f:
+                    with open(template_path, "r", encoding="utf-8") as f:
                         templates = yaml.safe_load(f)
                     
                     if series and series in templates.get("series", {}):
