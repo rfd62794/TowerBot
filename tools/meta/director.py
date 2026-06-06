@@ -114,9 +114,10 @@ def start_chain(template_name: str,
                 result = runner.run(chain_id, template["steps"])
                 # Log to agent_actions for unified history
                 from infra.db.autonomous import record_agent_action
+                from infra.utils import safe_serialize
                 record_agent_action(
                     task_name=template_name,
-                    result=json.dumps(result),
+                    result=safe_serialize(result),
                     duration_ms=0,
                     source="template"
                 )

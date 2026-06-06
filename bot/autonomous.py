@@ -14,6 +14,7 @@ from bot.task_runner import resolve_task, get_all_resolved_tasks, get_task_model
 from infra.model_router import route
 from infra.prompts import get_prompts_for_task
 from infra.db.autonomous import record_agent_action, get_recent_task_actions
+from infra.utils import safe_serialize, notify, get_task_type
 from infra.db.system_metrics import record_system_snapshot
 from infra.db.bot_state import get_dev_mode
 from infra.db.task_queue import get_due_tasks, mark_running, mark_complete, mark_failed
@@ -27,27 +28,6 @@ from infra.db.chains import create_chain
 logger = logging.getLogger("privy.autonomous")
 
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-
-
-def _get_task_type(task_name: str) -> str:
-    """Map task name to prompt type for context injection."""
-    type_map = {
-        "morning_briefing":         "briefing",
-        "mid_day_checkin":          "briefing",
-        "bedtime_summary":          "briefing",
-        "content_decision_prompt":  "content",
-        "content_gap_detector":     "content",
-        "blog_structure_generator": "content",
-        "research_request":         "research",
-        "tech_digest":              "research",
-        "hn_monitor":               "monitoring",
-        "community_opportunity_scout": "monitoring",
-        "opportunity_capture":      "monitoring",
-        "debt_followup":            "planning",
-        "weekly_accountability":    "planning",
-        "skill_review":             "skill_review",
-    }
-    return type_map.get(task_name, "default")
 
 
 async def system_watchdog(send_fn):
@@ -364,7 +344,7 @@ async def _check_and_run_background_task(send_fn):
         # Log to agent_actions
         record_agent_action(
             task_name="background_task",
-            result=str(result)[:500],
+            result=safe_serialize(result)[:500],
             duration_ms=0,
             source="background_pool"
         )
@@ -463,7 +443,7 @@ async def request_approval(
         f"_(expires in {timeout_minutes} min — ID: {approval_id})_"
     )
 
-    await _notify(message)
+    await notify(message, send_fn)
     logger.info(f"[approval] requested: {action_type} (ID: {approval_id})")
     return True
 
@@ -560,15 +540,6 @@ IDLE_TASKS = [
     # Utility
     "Use list_google_tasks() to find the oldest overdue task. Draft a one-paragraph completion plan for it.",
 ]
-
-
-async def _notify(message: str, send_fn, urgent: bool = False) -> None:
-    """Send immediate Telegram notification from autonomous task."""
-    try:
-        prefix = "🔴 " if urgent else "💡 "
-        await send_fn(f"{prefix}{message}")
-    except Exception as e:
-        logger.warning(f"[autonomous] notification failed: {e}")
 
 
 def record_system_snapshot_task():
@@ -717,7 +688,7 @@ async def run_autonomous_task(task_name: str, send_fn):
             if any(kw in result.lower() for kw in task['urgent_on']):
                 urgent = 1
 
-        record_agent_action(task_name, result, duration_ms, urgent)
+        record_agent_action(task_name, safe_serialize(result), duration_ms, urgent)
         logger.info(f"Task {task_name} completed in {duration_ms}ms")
 
         # Send urgent notification via Telegram
@@ -744,7 +715,7 @@ async def run_autonomous_task(task_name: str, send_fn):
                         thread_id="autonomous_fallback",
                         max_iter=10
                     )
-                    record_agent_action("fallback", fallback_result)
+                    record_agent_action("fallback", safe_serialize(fallback_result))
                     logger.info(f"Fallback micro-task triggered by {task_name}")
 
     except Exception as e:
@@ -826,7 +797,7 @@ async def process_delegation_queue(send_fn) -> None:
             # Mirror to agent_actions for unified history
             record_agent_action(
                 task_name=task_name,
-                result=result,
+                result=safe_serialize(result),
                 duration_ms=duration_ms,
                 source="delegated",
                 source_task_id=task["id"]
@@ -1109,14 +1080,14 @@ async def comment_new_videos(send_fn):
         # Log result to agent_actions
         duration_ms = 0  # Not tracking duration for this task
         result_msg = f"Posted {comments_posted}/{len(recent_videos)} comments"
-        record_agent_action("comment_new_videos", result_msg, duration_ms, 0)
+        record_agent_action("comment_new_videos", safe_serialize(result_msg), duration_ms, 0)
 
         if comments_posted > 0:
             await send_fn(f"💬 Posted {comments_posted} comments on new videos")
 
     except Exception as e:
         logger.error(f"comment_new_videos task failed: {e}")
-        record_agent_action("comment_new_videos", f"ERROR: {str(e)}", 0, 0)
+        record_agent_action("comment_new_videos", safe_serialize(f"ERROR: {str(e)}"), 0, 0)
 
 
 async def run_scheduled_template(template_name: str, send_fn):
@@ -1168,10 +1139,9 @@ async def run_scheduled_template(template_name: str, send_fn):
         logger.info(f"Chain {chain_id} completed: {result.get('status', 'unknown')}")
 
         # Log to agent_actions for unified history
-        import json
         record_agent_action(
             task_name=template_name,
-            result=json.dumps(result),
+            result=safe_serialize(result),
             duration_ms=0,
             source="template"
         )
@@ -1195,7 +1165,7 @@ async def run_scheduled_template(template_name: str, send_fn):
                 )
         elif template_name == "blog_scaffold":
             draft_title = result.get("title", "New draft") if isinstance(result, dict) else "New draft"
-            await _notify(f"📝 Blog draft ready: {draft_title} — review and edit before publishing", send_fn)
+            await notify(f"📝 Blog draft ready: {draft_title} — review and edit before publishing", send_fn)
 
         # Send result if template has send_result flag
         if template.get("send_result", False):
@@ -1295,7 +1265,7 @@ async def _check_and_run_idle_task() -> None:
         try:
             result = await run_template_task("idle_task", prompt_override=task_prompt)
             if result and result.get("ok"):
-                await _notify(f"💭 {result.get('summary', task_prompt[:80])}")
+                await notify(f"💭 {result.get('summary', task_prompt[:80])}", send_fn)
         except Exception as e:
             logger.warning(f"[idle] task failed: {e}")
     except Exception as e:
