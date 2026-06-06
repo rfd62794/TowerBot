@@ -300,7 +300,8 @@ async def self_direction_loop(send_fn):
     """
     try:
         from tools.repo.directive import read_current_state
-        from tools.productivity.goals import get_tasks_today, get_upcoming_tasks
+        from tools.productivity.google_tasks import list_google_tasks
+        from tools.productivity.goals import get_upcoming_tasks
         from tools.communication.gmail import gmail_tools
         from tools.games.metrics import _games
         from tools.meta.delegation import delegation_tools
@@ -314,7 +315,10 @@ async def self_direction_loop(send_fn):
             return
 
         # Read tasks
-        tasks_today = get_tasks_today()
+        all_tasks = list_google_tasks()
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+        tasks_today = [t for t in all_tasks if t.get("due_date") == today and t.get("status") != "completed"]
         upcoming_tasks = get_upcoming_tasks(hours=24)
 
         # Read inbox summary
@@ -553,6 +557,15 @@ async def run_scheduled_template(template_name: str, send_fn):
 
         result = runner.run(chain_id, template["steps"])
         logger.info(f"Chain {chain_id} completed: {result.get('status', 'unknown')}")
+
+        # Log to agent_actions for unified history
+        import json
+        record_agent_action(
+            task_name=template_name,
+            result=json.dumps(result),
+            duration_ms=0,
+            source="template"
+        )
 
         # Send result if template has send_result flag
         if template.get("send_result", False):
