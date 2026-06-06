@@ -30,14 +30,14 @@ def _reset_fetch_rate_limit():
         pass
 
 
-def test_decorator(name):
+def _test_decorator(name):
     def wrapper(fn):
         fn.__name__ = name
         TESTS.append((name, fn))
         return fn
     return wrapper
 
-test = test_decorator
+test = _test_decorator
 
 TESTS = []
 
