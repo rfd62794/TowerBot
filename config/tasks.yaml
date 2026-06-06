@@ -101,3 +101,10 @@ hn_monitor:
   cron: "0 */2 * * *"    # Every 2 hours
   enabled: true
   description: "Watch HN for Rust game dev, Bevy, idle games, or Python CLI posts >50 points. Deduplicate via content_seen."
+
+# --- SELF-IMPROVEMENT ---
+skill_review:
+  schedule: cron
+  cron: "0 6 * * 0"    # Sunday 6AM
+  enabled: true
+  description: "Analyze last 7 days of agent_actions. Propose improvements, new templates, and drops."
