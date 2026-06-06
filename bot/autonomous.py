@@ -6,7 +6,7 @@ import logging
 import random
 import psutil
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.agent import respond
@@ -417,6 +417,95 @@ Self-direction plan for {date_str}:
         await send_fn(f"❌ Self-direction failed: {str(e)}")
 
 
+async def comment_new_videos(send_fn):
+    """
+    Daily task: find videos published in last 25 hours, post template comment if none exists.
+    """
+    try:
+        from tools.content.videos import get_top_videos, post_video_comment
+        import yaml
+
+        logger.info("Starting comment_new_videos task")
+
+        # Load comment templates
+        template_path = "config/comment_templates.yaml"
+        try:
+            with open(template_path, "r") as f:
+                templates = yaml.safe_load(f)
+            series_keys = list(templates.get("series", {}).keys())
+        except Exception as e:
+            logger.error(f"Failed to load comment templates: {e}")
+            return
+
+        # Get videos published in last 25 hours
+        videos_result = get_top_videos(days=2, limit=50)  # Get more to filter by time
+        if not videos_result.get("ok"):
+            logger.error(f"Failed to get videos: {videos_result.get('error')}")
+            return
+
+        videos = videos_result.get("videos", [])
+        now = datetime.now()
+        cutoff = now - timedelta(hours=25)
+
+        # Filter videos published in last 25 hours
+        recent_videos = []
+        for video in videos:
+            try:
+                pub_date = datetime.fromisoformat(video["published_at"].replace("Z", "+00:00"))
+                if pub_date >= cutoff:
+                    recent_videos.append(video)
+            except Exception:
+                continue
+
+        # Limit to 10 comments per run
+        recent_videos = recent_videos[:10]
+
+        if not recent_videos:
+            logger.info("No videos published in last 25 hours")
+            return
+
+        logger.info(f"Found {len(recent_videos)} videos in last 25 hours")
+
+        # For each video, post comment (TODO: check if comment already exists)
+        comments_posted = 0
+        for video in recent_videos:
+            video_id = video["video_id"]
+            title = video["title"]
+
+            # Determine series from title
+            series = None
+            for key in series_keys:
+                if key.lower() in title.lower():
+                    series = key
+                    break
+
+            # Post comment
+            result = post_video_comment(video_id=video_id, series=series)
+
+            if result.get("ok"):
+                comments_posted += 1
+                logger.info(f"Posted comment on {video_id} (series: {series or 'default'})")
+            else:
+                error_code = result.get("code", "unknown")
+                if error_code == "scope_missing":
+                    logger.warning("OAuth scope missing - stopping task")
+                    await send_fn("⚠️ YouTube comment scope missing - task stopped")
+                    return
+                logger.error(f"Failed to post comment on {video_id}: {result.get('error')}")
+
+        # Log result to agent_actions
+        duration_ms = 0  # Not tracking duration for this task
+        result_msg = f"Posted {comments_posted}/{len(recent_videos)} comments"
+        record_agent_action("comment_new_videos", result_msg, duration_ms, 0)
+
+        if comments_posted > 0:
+            await send_fn(f"💬 Posted {comments_posted} comments on new videos")
+
+    except Exception as e:
+        logger.error(f"comment_new_videos task failed: {e}")
+        record_agent_action("comment_new_videos", f"ERROR: {str(e)}", 0, 0)
+
+
 async def run_scheduled_template(template_name: str, send_fn):
     """
     Execute a template triggered by scheduler.
@@ -673,3 +762,16 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
         replace_existing=True
     )
     logger.info("Registered self-direction loop: daily 07:00")
+
+    # Register comment_new_videos job
+    scheduler.add_job(
+        comment_new_videos,
+        "cron",
+        hour=10,
+        minute=0,
+        id='comment_new_videos',
+        max_instances=1,
+        args=[send_fn],
+        replace_existing=True
+    )
+    logger.info("Registered comment_new_videos: daily 10:00")

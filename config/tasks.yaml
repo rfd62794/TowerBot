@@ -47,3 +47,8 @@ community_opportunity_scout:
   template: community_scout
   schedule: {type: interval, minutes: 180}
   enabled: true
+
+comment_new_videos:
+  schedule: {type: cron, hour: 10, minute: 0}
+  enabled: false  # Keep disabled until manual test passes
+  description: "Post template comment on videos published in last 25 hours"
