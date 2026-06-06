@@ -92,10 +92,16 @@ def run_all():
         total_passed += p
         total_failed += f
 
-    sys.stdout.flush()
-    print(f"\n{total_passed} passed, {total_failed} failed, {total_skipped} skipped")
-    print("Deploy safe." if total_failed == 0 else "Deploy blocked.")
-    sys.stdout.flush()
+    summary = f"\n{total_passed} passed, {total_failed} failed, {total_skipped} skipped"
+    verdict = "Deploy safe." if total_failed == 0 else "Deploy blocked."
+
+    result_path = os.path.join(_root, "verify_result.txt")
+    with open(result_path, "w") as f:
+        f.write(summary + "\n")
+        f.write(verdict + "\n")
+
+    print(summary)
+    print(verdict)
     sys.exit(0 if total_failed == 0 else 1)
 
 if __name__ == "__main__":
