@@ -57,6 +57,17 @@ def _trend(current: int, prior: int) -> str:
     return f"{sign}{rounded}%"
 
 
+def _hours_ago(date_str: str) -> int:
+    """Calculate hours ago from ISO date string."""
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+        hours = (datetime.now() - dt).total_seconds() / 3600
+        return int(hours)
+    except Exception:
+        return 999  # Return large number if parsing fails
+
+
 async def morning_briefing(send_fn) -> None:
     """
     Send daily morning briefing with YouTube channel data.
@@ -235,6 +246,74 @@ async def morning_briefing(send_fn) -> None:
                 msg += f"\n\n{temp}°F, {condition}, South Florida."
         except Exception as e:
             logger.debug(f"Weather check failed: {e}")
+
+        # Add Google Tasks due today
+        try:
+            from tools.productivity.google_tasks import list_google_tasks
+            from datetime import date
+            tasks = list_google_tasks()
+            today = date.today().isoformat()
+            due_today = [t for t in tasks.get("tasks", [])
+                         if t.get("due_date", "").startswith(today)
+                         and t.get("status") != "completed"]
+            if due_today:
+                msg += "\n\n📋 *Tasks due today:*"
+                for t in due_today[:5]:
+                    msg += f"\n  • {t.get('title','')}"
+        except Exception as e:
+            logger.debug(f"Google Tasks check failed: {e}")
+
+        # Add overnight findings from autonomous tasks
+        try:
+            from infra.db.autonomous import get_overnight_actions
+            actions = get_overnight_actions()
+            if actions:
+                msg += "\n\n🔍 *Overnight:*"
+                for a in actions[:3]:
+                    result_preview = str(a.get("result",""))[:100]
+                    msg += f"\n  • [{a.get('task_name','')}] {result_preview}"
+        except Exception as e:
+            logger.debug(f"Overnight actions check failed: {e}")
+
+        # Add current platform stats (itch.io)
+        try:
+            from tools.games.metrics import get_itch_stats
+            itch = get_itch_stats()
+            if itch.get("ok"):
+                games = itch.get("games", [])
+                if games:
+                    msg += "\n\n🎮 *itch.io:*"
+                    for g in games[:2]:
+                        msg += f"\n  • {g.get('title','')}: {g.get('views',0)} views · {g.get('downloads',0)} plays"
+        except Exception as e:
+            logger.debug(f"itch.io stats check failed: {e}")
+
+        # Add commit digest (last 24 hours)
+        try:
+            from tools.search.search_tools import get_recent_commits
+            commits = get_recent_commits(limit=10)
+            recent = [c for c in commits.get("commits", [])
+                      if _hours_ago(c.get("date","")) <= 24]
+            if recent:
+                msg += f"\n\n💻 *{len(recent)} commit(s) yesterday:*"
+                for c in recent[:3]:
+                    msg += f"\n  • [{c.get('repo','')}] {c.get('message','')[:80]}"
+        except Exception as e:
+            logger.debug(f"Commit digest check failed: {e}")
+
+        # Add weekly mirror (Monday only)
+        try:
+            if datetime.now().weekday() == 0:  # Monday
+                from infra.db.schema import _exec
+                week_actions = _exec(
+                    "SELECT task_name, COUNT(*) as count FROM agent_actions WHERE ran_at >= datetime('now','-7 days') GROUP BY task_name"
+                ).fetchall()
+                if week_actions:
+                    msg += "\n\n📊 *Last week:*"
+                    for row in week_actions[:5]:
+                        msg += f"\n  • {row['task_name']}: {row['count']} run(s)"
+        except Exception as e:
+            logger.debug(f"Weekly mirror check failed: {e}")
 
         # Add weekly focus
         try:

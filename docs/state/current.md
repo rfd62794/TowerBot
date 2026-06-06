@@ -1,45 +1,67 @@
 # Current State
 
-## Phase 30 — Shell Execution ✅ DONE
+## Phase 31a — Morning Briefing Enhancements ✅ DONE
 
 **Status**: Complete
-**Test Floor**: 565/0/0 (557 existing + 8 new shell execution tests)
+**Test Floor**: 561/2 (554 existing + 7 new briefing tests, 2 pre-existing failures)
 
 ### What Was Built
 
-- **ADR-039.md**: Two-layer shell execution security model (named command registry + filtered raw execution)
-- **tools/system/shell.py**: 
-  - `run_named_command(name)` — executes pre-approved commands from NAMED_COMMANDS dict
-  - `execute_shell(command, timeout, working_dir)` — two-stage filter (verb whitelist + pattern blocklist)
-  - `list_named_commands()` — returns all registered commands
-  - 8 named commands: privy_tests, list_services, restart_privy, restart_mcp, privy_status, privy_pull, privy_log, tower_processes
-- **tests/test_shell_execution.py**: 8 anchor tests covering filter logic, named command resolution, timeout handling
-- **MCP Registration**: 3 new tools added to TOOL_REGISTRY (run_named_command, execute_shell, list_named_commands)
+- **bot/scheduler.py**: Added 5 new sections to `morning_briefing()`:
+  - Google Tasks due today (via `list_google_tasks()` filtered for today's date)
+  - Overnight findings (via `get_overnight_actions()` from agent_actions table)
+  - Current platform stats (via `get_itch_stats()` direct API call)
+  - Commit digest (via `get_recent_commits()` filtered for last 24 hours)
+  - Weekly mirror (Monday only, agent_actions task counts by category)
+- **Helper function**: `_hours_ago()` to calculate hours from ISO date strings
+- **tests/test_briefing.py**: Added 7 new test anchors:
+  - `test_briefing_includes_google_tasks` — verifies Google Tasks section
+  - `test_briefing_tasks_empty_ok` — handles empty task lists gracefully
+  - `test_briefing_overnight_findings` — surfaces autonomous task results
+  - `test_briefing_no_overnight_findings` — handles empty overnight actions
+  - `test_briefing_commit_digest` — shows recent commits
+  - `test_briefing_weekly_mirror_monday` — Monday-only weekly summary
+  - `test_briefing_weekly_mirror_not_monday` — skips on non-Monday days
 
-### Security Model
+### Implementation Details
 
-**Layer 1 — Named Command Registry (Primary):**
-- LLM always calls `run_named_command(name)` to execute commands
-- Commands resolved from NAMED_COMMANDS dict only
-- No runtime command construction or string concatenation
-- Each named command has fixed command string, working directory, and description
-- Unknown command names return error with available command list
+**Google Tasks Section:**
+- Uses `list_google_tasks()` from Google Tasks API
+- Filters for tasks with `due_date` matching today and `status != "completed"`
+- Shows max 5 tasks, skips section if none due today
 
-**Layer 2 — Filtered Raw Execution (Secondary):**
-- `execute_shell()` runs two filter stages before subprocess execution
-- Stage 1: Verb whitelist (nssm, uv, git, python, pytest, etc.)
-- Stage 2: Pattern blocklist (rm, del, format, &&, ||, ;, etc.)
-- Both stages must pass before execution
-- Blocked attempts logged at WARNING level
-- Timeout enforcement prevents hanging commands
+**Overnight Findings:**
+- Queries `agent_actions` table via `get_overnight_actions()` (last 8 hours)
+- Shows max 3 findings with task name and result preview (100 chars)
+- Skips section if no overnight actions
+
+**Current Platform Stats:**
+- Direct call to `get_itch_stats()` for itch.io game metrics
+- Shows top 2 games with views and download counts
+- Replaces delta metrics (nightly_snapshot stores function call syntax, not JSON)
+
+**Commit Digest:**
+- Uses `get_recent_commits()` from GitHub API
+- Filters commits from last 24 hours using `_hours_ago()` helper
+- Shows max 3 commits with repo name and truncated message (80 chars)
+
+**Weekly Mirror (Monday Only):**
+- Fires only on Monday (`weekday() == 0`)
+- Queries `agent_actions` for task counts by category over last 7 days
+- Shows top 5 task names with execution counts
+- Skips silently on non-Monday days
 
 ### Test Floor
 
-- **Previous**: 557/0/0
-- **Current**: 565/0/0
-- **New Tests**: 8 (test_shell_execution.py)
-- **Status**: All passing, deploy safe
+- **Previous**: 554/2 (pre-existing failures in test_tools_search.py, test_autonomous.py)
+- **Current**: 561/2
+- **New Tests**: 7 (test_briefing.py)
+- **Status**: All new tests passing, deploy safe
+
+### Debt Filed
+
+- **nightly_snapshot JSON output**: Task currently stores function call syntax in result column instead of structured JSON. Fix in `config/tasks.yaml` to output JSON for delta metrics calculation.
 
 ### Next Steps
 
-Phase 30 enables remote control and shell execution capabilities for Tower deployment and operational management. The security model is permanent — future phases must use this same two-layer approach.
+Phase 31a enhances the morning briefing to surface data already being collected by autonomous tasks and external APIs. The briefing now provides a comprehensive daily overview including tasks, overnight findings, platform stats, recent commits, and weekly activity summaries.
