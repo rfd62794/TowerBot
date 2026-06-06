@@ -1,0 +1,85 @@
+name: content_decision_prompt
+description: One recording recommendation based on data
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 1440  # Daily at 9AM
+
+steps:
+  - name: get_commits
+    type: tool_call
+    config:
+      tool_name: get_recent_commits
+      tool_args:
+        days: 2
+      result_key: commits
+
+  - name: get_top_videos
+    type: tool_call
+    config:
+      tool_name: get_top_videos
+      tool_args:
+        days: 7
+        limit: 10
+      result_key: videos
+
+  - name: get_itch_stats
+    type: tool_call
+    config:
+      tool_name: get_itch_stats
+      tool_args: {}
+      result_key: itch
+
+  - name: make_recommendation
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        You are PrivyBot, Robert's AI assistant. Robert is an indie developer and daily YouTube Shorts creator.
+        
+        Your job: produce ONE specific recording recommendation for today, backed by data.
+        
+        Recent commits (last 48 hours):
+        {tool_result[commits]}
+        
+        Top videos this week:
+        {tool_result[videos]}
+        
+        itch.io stats:
+        {tool_result[itch]}
+        
+        Output format: ONE Telegram message, max 4 lines.
+        Line 1: The recommendation (what to record today and why)
+        Line 2: Data that supports it
+        Line 3: Suggested title using the identity transformation pattern if applicable
+        Line 4: Optional — what to avoid today
+        
+        Rules:
+        - Never say "you might want to" or "consider". Be direct.
+        - If EIC or Dune are outperforming, recommend them.
+        - If VoidDrift shipped a feature, flag it as content-worthy.
+        - If nothing is clearly winning, recommend EIC — it's the proven pillar.
+        - One recommendation only. Not a list.
+        
+        Examples:
+        
+        Input: commits=["fix factory drone visibility in economy/process.rs"], top_video="Dune: Awakening — a stranger flew me home (385 views, 92.2% retention)", itch={plays: 12, views: 34}
+        Good output:
+        🎮 Record Dune: Awakening today.
+        "A stranger flew me home" hit 92.2% retention — highest on the channel. Algorithm is pushing Dune.
+        Suggested title: "Dune: Awakening — [visceral moment from today's session]"
+        Skip VoidDrift today — the drone fix is too small for content.
+        
+        Input: commits=[], top_video="Everything is Crab — the game told me what I became (597 views, 66.3%)", itch={plays: 45, views: 180}
+        Good output:
+        🎮 Record Everything is Crab today.
+        "The game told me what I became" is your top performer this week at 597 views. EIC identity titles are converting.
+        Suggested title: "Everything is Crab — [what the game turned you into this session]"
+        No commits to cover — pure content session.
+
+  - name: send_result
+    type: tool_call
+    config:
+      tool_name: send_telegram
+      tool_args:
+        message: "{llm_result}"

@@ -1,0 +1,92 @@
+name: opportunity_capture
+description: Find threads where Robert's expertise adds value
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 180  # Every 3 hours
+
+steps:
+  - name: get_incremental_games
+    type: tool_call
+    config:
+      tool_name: get_subreddit_feed
+      tool_args:
+        subreddit: incremental_games
+        feed: hot
+        limit: 20
+      result_key: incremental
+
+  - name: get_bevy
+    type: tool_call
+    config:
+      tool_name: get_subreddit_feed
+      tool_args:
+        subreddit: bevy
+        feed: hot
+        limit: 10
+      result_key: bevy
+
+  - name: get_hn_bevy
+    type: tool_call
+    config:
+      tool_name: hackernews_search
+      tool_args:
+        query: Bevy game engine
+        limit: 5
+      result_key: hn_bevy
+
+  - name: find_opportunities
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        You are PrivyBot. Robert makes VoidDrift (Rust/Bevy idle game), OpenAgent (Python CLI on PyPI),
+        and publishes daily YouTube Shorts about indie games.
+        
+        r/incremental_games feed:
+        {tool_result[incremental]}
+        
+        r/bevy feed:
+        {tool_result[bevy]}
+        
+        Hacker News Bevy search:
+        {tool_result[hn_bevy]}
+        
+        Find threads that match ANY of these:
+        - Someone asking for idle/incremental game recommendations
+        - Someone struggling with Bevy that Robert could answer
+        - Someone discussing Python automation/CLI tools
+        - A thread where VoidDrift or OpenAgent would be a natural mention
+        
+        Threshold: only notify if upvotes >= 20 OR the thread is highly relevant.
+        
+        Output format (only if threshold met):
+        🎯 [subreddit] [title] — [upvotes] upvotes
+        Why: [one sentence on why Robert should engage]
+        Link: [url]
+        
+        If nothing meets threshold: output nothing. Silence is correct.
+        
+        Rules:
+        - Never recommend self-promotion posts or subreddits that ban self-promotion
+        - Only surface threads where genuine expertise adds value, not just spam
+        - Max 2 opportunities per run
+        
+        Examples:
+        
+        Input: thread={title: "What idle games can I play while I work? Something relaxing but with depth", subreddit: "incremental_games", upvotes: 340, url: "https://reddit.com/r/incremental_games/xyz"}
+        Good output:
+        🎯 r/incremental_games — "What idle games can I play while I work?" — 340 upvotes
+        Why: Direct VoidDrift use case — idle space mining, no sprites, Rust-built. Natural fit.
+        Link: https://reddit.com/r/incremental_games/xyz
+        
+        Input: thread={title: "My Bevy app crashes on startup after 0.15 update", subreddit: "bevy", upvotes: 12, url: "https://reddit.com/r/bevy/abc"}
+        Good output: ""
+        Reason: Under 20 upvote threshold, skip silently
+
+  - name: send_result
+    type: tool_call
+    config:
+      tool_name: send_telegram
+      tool_args:
+        message: "{llm_result}"

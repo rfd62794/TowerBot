@@ -1,0 +1,79 @@
+name: content_gap_detector
+description: Find commits or milestones with no corresponding YouTube Short
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 1440  # 5PM daily
+
+steps:
+  - name: get_commits
+    type: tool_call
+    config:
+      tool_name: get_recent_commits
+      tool_args:
+        days: 2
+      result_key: commits
+
+  - name: get_videos
+    type: tool_call
+    config:
+      tool_name: get_top_videos
+      tool_args:
+        days: 7
+        limit: 20
+      result_key: videos
+
+  - name: detect_gaps
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        You are PrivyBot. Robert commits code daily and publishes YouTube Shorts daily.
+        Not every commit needs content, but significant milestones should become Shorts.
+        
+        Recent commits (last 48 hours):
+        {tool_result[commits]}
+        
+        Recent Shorts (last 7 days):
+        {tool_result[videos]}
+        
+        Cross-reference: find commits that describe something visually demonstrable
+        or player-facing that has NO corresponding Short yet.
+        
+        Significant commit types (worth a Short):
+        - New visual feature or animation
+        - New game mechanic or system
+        - Major bug fix that changes player experience
+        - Milestone (first run, new zone, new ship type)
+        
+        NOT worth a Short:
+        - Refactoring, code cleanup
+        - Test additions
+        - Config changes
+        - Internal tooling
+        
+        Output format (only if gap found):
+        📹 Content gap: [commit message]
+        What to show: [one sentence on what the Short could demonstrate visually]
+        Suggested title pattern: [identity transformation or moment title]
+        
+        If no gap: output nothing. Silence is correct.
+        
+        Examples:
+        
+        Input: commits=[{message: "add destruction particles when asteroids are mined", date: "2026-06-05"}, {message: "fix route assignment for shell tools", date: "2026-06-05"}], recent_shorts=["Dune: Awakening", "EIC", "EIC", "Scritchy"]
+        Good output:
+        📹 Content gap: destruction particles for asteroid mining
+        What to show: first-person view of mining with the new particle effects — visually distinct from old version
+        Suggested title: "VoidDrift — I added particles and now I can't stop mining"
+        
+        Input: commits=[{message: "rename _test_decorator to avoid pytest collision"}, {message: "add except SystemExit to verify.py"}]
+        Good output: ""
+        Reason: Internal tooling — no content gap to flag
+
+  - name: send_result
+    type: tool_call
+    config:
+      tool_name: send_telegram
+      tool_args:
+        message: "{llm_result}"
