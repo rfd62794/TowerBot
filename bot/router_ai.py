@@ -37,6 +37,7 @@ KEYWORD_ROUTE_MAP: dict[str, str] = {
     "milestone": "goals", "focus": "goals",
     "steam": "steam",
     "reddit": "voidrift", "commit": "code", "commits": "code",
+    "run": "system", "command": "system", "shell": "system", "execute": "system",
 }
 
 
