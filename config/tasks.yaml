@@ -94,3 +94,10 @@ weekly_accountability:
   schedule: {type: cron, hour: 8, minute: 0, day_of_week: 1}
   enabled: true
   description: "Numbers vs goals for last week — commits, Shorts, blog posts, itch.io sessions"
+
+# --- HACKER NEWS MONITOR ---
+hn_monitor:
+  template: hn_monitor
+  schedule: {type: cron, minute: 0, hour: "*/2"}
+  enabled: true
+  description: "Watch HN for posts about Rust game dev, Bevy, idle games, or Python CLI tools with >50 points"

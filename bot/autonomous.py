@@ -25,6 +25,15 @@ from infra.db.chains import create_chain
 
 logger = logging.getLogger("privy.autonomous")
 
+# Idle task pool — fallback tasks when no autonomous work is queued
+IDLE_TASKS = [
+    "Search HN for anything about Rust ECS patterns and summarize the top result",
+    "Check if any of Robert's recent YouTube videos have comments worth responding to",
+    "Review the oldest open Google Task and draft a completion plan",
+    "Search for new Bevy community showcase posts and find one worth sharing",
+    "Check if VoidDrift appears in any new itch.io collections or lists",
+]
+
 
 async def _notify(message: str, send_fn, urgent: bool = False) -> None:
     """Send immediate Telegram notification from autonomous task."""
@@ -663,6 +672,52 @@ def setup_template_scheduler(scheduler: AsyncIOScheduler, send_fn):
     logger.info(f"Template scheduler registered {scheduled_count} jobs")
 
 
+async def check_and_run_idle_task(send_fn):
+    """
+    Idle detection and fallback task execution.
+
+    Checks if no autonomous task has run in the last 90 minutes.
+    If idle, randomly picks a task from IDLE_TASKS and executes it.
+    Short tasks (2-3 tool calls max), result to Telegram only if interesting.
+    """
+    try:
+        # Check when the last task ran
+        recent_actions = get_recent_task_actions(limit=1)
+        if not recent_actions:
+            # No actions recorded yet, consider idle
+            logger.info("[idle] No recent actions found, running idle task")
+            should_run_idle = True
+        else:
+            last_action = recent_actions[0]
+            last_run = datetime.fromisoformat(last_action["ran_at"])
+            idle_threshold = datetime.now() - timedelta(minutes=90)
+            should_run_idle = last_run < idle_threshold
+
+        if not should_run_idle:
+            logger.debug("[idle] Recent activity detected, skipping idle task")
+            return
+
+        # Pick random task from IDLE_TASKS
+        task_prompt = random.choice(IDLE_TASKS)
+        logger.info(f"[idle] Running idle task: {task_prompt[:50]}...")
+
+        # Execute the task using the agent
+        result = await respond(task_prompt, send_fn=send_fn)
+
+        # Log to agent_actions
+        record_agent_action(
+            task_name="idle_task",
+            result=str(result)[:500],  # Truncate to avoid huge strings
+            duration_ms=0,
+            source="idle"
+        )
+
+        logger.info(f"[idle] Idle task completed")
+
+    except Exception as e:
+        logger.error(f"[idle] Idle task failed: {e}")
+
+
 def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     """
     Register autonomous tasks with APScheduler.
@@ -708,6 +763,18 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
             )
             day_str = f" day {schedule['day_of_week']}" if 'day_of_week' in schedule else ""
             logger.info(f"Registered cron task: {task_name} at {schedule['hour']:02d}:{schedule['minute']:02d}{day_str}")
+
+    # Register idle detection job (runs every 30 minutes)
+    scheduler.add_job(
+        check_and_run_idle_task,
+        "interval",
+        minutes=30,
+        args=[send_fn],
+        id="idle_detection",
+        max_instances=1,
+        replace_existing=True,
+    )
+    logger.info("Registered idle detection job: check_and_run_idle_task every 30min")
 
     # Register delegation queue poll
     scheduler.add_job(

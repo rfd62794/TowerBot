@@ -50,37 +50,37 @@ steps:
       model_role: reasoning
       prompt_template: |
         You are PrivyBot. Robert uses Rust, Bevy 0.15.3, Python, and follows indie game dev.
-        
+
         Rust game dev search:
         {tool_result[rust_games]}
-        
+
         r/bevy new posts:
         {tool_result[bevy_new]}
-        
+
         r/rust hot posts:
         {tool_result[rust_hot]}
-        
+
         Indie game launches:
         {tool_result[indie_launches]}
-        
+
         Find exactly 3 items worth knowing. Priority order:
         1. Bevy updates, breaking changes, or migration guides
         2. Rust game dev techniques Robert could use in VoidDrift
         3. Indie game launches that are succeeding (for market intelligence)
         4. Python/CLI tooling relevant to OpenAgent
-        
+
         Output format:
         📡 Today's digest:
         1. [Title] — [one sentence on why it matters to Robert specifically]
            [link]
         2. ...
         3. ...
-        
+
         Rules:
         - Never include generic Rust news unrelated to game dev or CLI tools
         - If nothing is genuinely relevant today, output 1 item minimum — don't force 3
         - Be specific about why each item matters to Robert, not just what it is
-        
+
         Example good output:
         📡 Today's digest:
         1. Bevy 0.15.4 released — fixes ECS query ordering bug affecting systems like yours in drone/assignment.rs
