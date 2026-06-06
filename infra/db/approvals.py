@@ -27,11 +27,12 @@ def create_approval(action_type: str, summary: str, payload: dict,
 def get_pending_approval(approval_id: int) -> dict | None:
     """Get a pending approval by ID."""
     try:
-        rows = _exec(
+        cur = _exec(
             "SELECT * FROM action_approvals WHERE id=? AND status='pending'",
             (approval_id,)
         )
-        return dict(rows[0]) if rows else None
+        row = cur.fetchone()
+        return dict(row) if row else None
     except Exception as e:
         logger.warning(f"[approvals] get_pending_approval failed: {e}")
         return None
@@ -54,14 +55,25 @@ def expire_stale_approvals() -> int:
     """Mark expired pending approvals. Returns count expired."""
     try:
         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        # First count how many will be expired
         cur = _exec(
-            "UPDATE action_approvals SET status='expired' "
-            "WHERE status='pending' AND expires_at < ? RETURNING id",
-            (now,),
-            commit=True
+            "SELECT COUNT(*) as count FROM action_approvals "
+            "WHERE status='pending' AND expires_at < ?",
+            (now,)
         )
-        rows = cur.fetchall()
-        return len(rows) if rows else 0
+        row = cur.fetchone()
+        count = row["count"] if row else 0
+
+        # Then update them
+        if count > 0:
+            _exec(
+                "UPDATE action_approvals SET status='expired' "
+                "WHERE status='pending' AND expires_at < ?",
+                (now,),
+                commit=True
+            )
+
+        return count
     except Exception as e:
         logger.warning(f"[approvals] expire_stale_approvals failed: {e}")
         return 0
