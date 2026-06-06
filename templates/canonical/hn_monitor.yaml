@@ -1,0 +1,96 @@
+name: hn_monitor
+description: Watch HN for posts about Rust game dev, Bevy, idle games, or Python CLI tools with >50 points
+version: "1.0"
+trigger:
+  type: schedule
+  interval_minutes: 120  # Every 2 hours
+
+steps:
+  - name: search_rust_games
+    type: tool_call
+    config:
+      tool_name: hackernews_search
+      tool_args:
+        query: Rust game development
+        limit: 10
+      result_key: rust_games
+
+  - name: search_bevy
+    type: tool_call
+    config:
+      tool_name: hackernews_search
+      tool_args:
+        query: Bevy engine
+        limit: 10
+      result_key: bevy_posts
+
+  - name: search_idle_games
+    type: tool_call
+    config:
+      tool_name: hackernews_search
+      tool_args:
+        query: idle games
+        limit: 10
+      result_key: idle_games
+
+  - name: search_python_cli
+    type: tool_call
+    config:
+      tool_name: hackernews_search
+      tool_args:
+        query: Python CLI tools
+        limit: 10
+      result_key: python_cli
+
+  - name: filter_and_curate
+    type: llm_call
+    config:
+      model_role: reasoning
+      prompt_template: |
+        You are PrivyBot. Watch HackerNews for breakout posts relevant to Robert's work.
+
+        Rust game dev search:
+        {tool_result[rust_games]}
+
+        Bevy engine search:
+        {tool_result[bevy_posts]}
+
+        Idle games search:
+        {tool_result[idle_games]}
+
+        Python CLI tools search:
+        {tool_result[python_cli]}
+
+        Filter criteria:
+        - Only posts with >50 points (HN moves fast, 50+ is genuinely notable)
+        - Topics: Rust game dev, Bevy, idle games, Python CLI tools
+        - Exclude generic Rust news unrelated to game dev or CLI tools
+        - Exclude posts already seen (check objectID against content_seen)
+
+        For each qualifying post, check if already served using already_served(source="hackernews", external_id=objectID).
+        Only include posts where already_served returns False.
+
+        Output format (if any qualifying posts found):
+        🔥 HN Breakout:
+        [Title] — [points] points — [one sentence on why it matters to Robert]
+        [link]
+
+        If no qualifying posts found, output:
+        (no breakout posts this cycle)
+
+        Rules:
+        - Maximum 1 post per run (high signal, low noise)
+        - Only send if genuinely notable (>50 points AND relevant)
+        - Mark as served using mark_served(source="hackernews", external_id=objectID, title=title, url=url) after including
+
+        Example good output:
+        🔥 HN Breakout:
+        "Bevy 0.16 ships with new renderer" — 87 points — major release may have breaking changes for VoidDrift
+        https://news.ycombinator.com/item?id=123456
+
+  - name: send_result
+    type: tool_call
+    config:
+      tool_name: send_telegram
+      tool_args:
+        message: "{llm_result}"
