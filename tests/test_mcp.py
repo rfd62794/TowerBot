@@ -49,8 +49,12 @@ def test_mcp_tool_listing_returns_schema():
     """list_tools() returns MCP schema for exposed tools."""
     from infra.mcp.server import list_tools
     import asyncio
+    import logging
 
     async def run_test():
+        # Suppress logger warnings during test to avoid stdout interference
+        logging.getLogger("privy.mcp").setLevel(logging.ERROR)
+
         tools = await list_tools()
 
         assert isinstance(tools, list), "Expected list of tools"
@@ -82,8 +86,8 @@ def test_mcp_tool_execution_calls_correct_fn():
 
         assert isinstance(result, list), "Expected list of results"
         assert len(result) == 1, "Expected single result"
-        assert result[0]["type"] == "text", "Expected text type"
-        assert "text" in result[0], "Expected text content"
+        assert result[0].type == "text", "Expected text type"
+        assert result[0].text is not None, "Expected text content"
 
     asyncio.run(run_test())
 
