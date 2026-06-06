@@ -155,22 +155,23 @@ def test_check_profile_validity_no_profile():
 @test("playwright: list_profile_status empty")
 def test_list_profile_status_empty():
     """No profiles directory → returns empty list with message."""
-    with patch("tools.browser.playwright_base.PROFILES_DIR", Path("/nonexistent")):
-        with patch("tools.browser.playwright_base.PROFILES_DIR.glob", return_value=[]):
-            from tools.browser.playwright_base import list_profile_status
-            result = list_profile_status()
+    mock_dir = MagicMock()
+    mock_dir.glob.return_value = []
+    with patch("tools.browser.playwright_base.PROFILES_DIR", mock_dir):
+        from tools.browser.playwright_base import list_profile_status
+        result = list_profile_status()
 
-            assert result["ok"] is True
-            assert result["profiles"] == []
-            assert "message" in result
-            assert "No profiles found" in result["message"]
+        assert result["ok"] is True
+        assert result["profiles"] == []
+        assert "message" in result
+        assert "No profiles found" in result["message"]
 
 
 @test("playwright: check_profile_validity handles exception")
 def test_check_profile_validity_handles_exception():
     """Mock playwright raises → returns ok: False, valid: False."""
     with patch("playwright.sync_api.sync_playwright") as mock_sync:
-        mock_sync.side_effect = Exception("Playwright error")
+        mock_sync.return_value.__enter__.side_effect = Exception("Playwright error")
 
         from tools.browser.playwright_base import check_profile_validity
         result = check_profile_validity("test_site")
