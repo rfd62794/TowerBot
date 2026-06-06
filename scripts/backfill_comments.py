@@ -8,21 +8,21 @@ load_dotenv()
 from infra.db import init_db
 init_db()
 
-from api.google.youtube_api import YouTubeAPI
+from api.google.youtube_api import youtube_api
 from tools.content.videos import post_video_comment
 import yaml
 
-youtube = YouTubeAPI()
+youtube = youtube_api._build_data_client()
 
 # Get uploads playlist ID
-channel = youtube.youtube.channels().list(part="contentDetails", mine=True).execute()
+channel = youtube.channels().list(part="contentDetails", mine=True).execute()
 uploads_id = channel["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
 
 # Get all videos
 videos = []
 page_token = None
 while True:
-    resp = youtube.youtube.playlistItems().list(
+    resp = youtube.playlistItems().list(
         part="snippet", playlistId=uploads_id,
         maxResults=50, pageToken=page_token
     ).execute()
@@ -36,13 +36,13 @@ while True:
         break
 
 # Get channel ID to check existing comments
-me = youtube.youtube.channels().list(part="id", mine=True).execute()
+me = youtube.channels().list(part="id", mine=True).execute()
 my_channel_id = me["items"][0]["id"]
 
 posted = 0
 skipped = 0
 for v in videos:
-    threads = youtube.youtube.commentThreads().list(
+    threads = youtube.commentThreads().list(
         part="snippet", videoId=v["id"], maxResults=20
     ).execute()
     owner_commented = any(
