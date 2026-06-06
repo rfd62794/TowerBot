@@ -42,7 +42,7 @@ triggers:
 
 routes:
   chat:
-    model: ollama/gemma3:4b
+    model: ollama/gemma4:e4b
     tools: []
     description: "General conversation, greetings, simple questions requiring no data"
 

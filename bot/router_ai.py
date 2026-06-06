@@ -1,6 +1,6 @@
 """Intent classifier — routes user messages to focused tool subsets.
 
-ADR-036: Ollama/gemma3:4b classifies intent. Agent gets 3-7 focused tools
+ADR-036: Ollama/gemma4:e4b classifies intent. Agent gets 3-7 focused tools
 instead of 30+. Plain text messages only; slash commands bypass this entirely.
 """
 
@@ -120,7 +120,7 @@ def get_model_for_routes(routes: list[str]) -> str:
     """
     for route in routes:
         model = ROUTES.get(route, {}).get("model", "")
-        if model and model != "ollama/gemma3:4b":
+        if model and model != "ollama/gemma4:e4b":
             return model
     return ROUTES.get(routes[0] if routes else "chat", {}).get(
         "model", "openrouter/free"
