@@ -60,9 +60,10 @@ async def check_for_updates(send_fn) -> str:
 
     # Save before dying
     from infra.db.autonomous import record_agent_action
+    from infra.utils import safe_serialize
     record_agent_action(
         "auto_update",
-        f"Updated {local[:7]} → {remote[:7]}",
+        safe_serialize(f"Updated {local[:7]} → {remote[:7]}"),
         duration_ms=0
     )
     await send_fn(f"✅ Updated to {remote[:7]} — restarting...")
