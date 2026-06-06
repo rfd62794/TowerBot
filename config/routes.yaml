@@ -211,6 +211,8 @@ routes:
       - browser_get_text
       - browser_screenshot
       - setup_profile
+      - check_profile_validity
+      - list_profile_status
       - itch_post_devlog
       - itch_get_game_page
       - pin_youtube_comment
