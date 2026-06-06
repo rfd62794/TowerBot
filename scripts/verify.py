@@ -68,15 +68,18 @@ TEST_FILES = [
 
 
 def _load_and_run(path: str) -> tuple[int, int]:
-    """Load a test module and run its tests. Returns (passed, failed)."""
     full_path = os.path.join(_root, path)
     if not os.path.exists(full_path):
-        print(f"  ⚠ {path}: file not found, skipping")
+        print(f"  [missing]  {path}")
         return 0, 0
-    spec = importlib.util.spec_from_file_location("_test_module", full_path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod.run_all()
+    try:
+        spec = importlib.util.spec_from_file_location("_test_module", full_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.run_all()
+    except Exception as e:
+        print(f"  [CRASH] {path}: {e}")
+        return 0, 1
 
 
 def run_all():
