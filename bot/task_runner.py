@@ -61,7 +61,6 @@ def resolve_task(task_name: str) -> dict:
     tasks = load_tasks()
     templates = load_templates()
     task_types = load_task_types()
-    canonical_templates = load_canonical_templates()
 
     if task_name not in tasks:
         raise ValueError(f"Task not found: {task_name}")
@@ -92,11 +91,6 @@ def resolve_task(task_name: str) -> dict:
     except KeyError as e:
         raise ValueError(f"Missing param for template {template_name}: {e}")
 
-    # Inject canonical templates based on task type
-    injected_context = _inject_canonical_templates(type_name, canonical_templates)
-    if injected_context:
-        prompt = f"{injected_context}\n\n{prompt}"
-
     return {
         "name": task_name,
         "schedule": task_config["schedule"],
@@ -110,45 +104,6 @@ def resolve_task(task_name: str) -> dict:
         "urgent_on": task_type.get("urgent_on", []),
         "save_to_memory": task_type.get("save_to_memory", False),
     }
-
-
-def _inject_canonical_templates(task_type: str, canonical_templates: dict) -> str:
-    """
-    Inject relevant canonical templates based on task type.
-
-    Returns concatenated context string, or empty string if no templates apply.
-    """
-    # Always inject system_base
-    injected = []
-    if "system_base" in canonical_templates:
-        injected.append(canonical_templates["system_base"]["content"])
-
-    # Task-type-specific injections
-    if task_type in ["planner", "reporter"]:
-        # Morning briefing and planning: signal_over_noise + one_thing_decision
-        if "signal_over_noise" in canonical_templates:
-            injected.append(canonical_templates["signal_over_noise"]["content"])
-        if "one_thing_decision" in canonical_templates:
-            injected.append(canonical_templates["one_thing_decision"]["content"])
-
-    if task_type == "creator":
-        # Content tasks: rfd_content_frame
-        if "rfd_content_frame" in canonical_templates:
-            injected.append(canonical_templates["rfd_content_frame"]["content"])
-
-    if task_type == "planner":
-        # Research/planning: tool_priority + research_synthesis
-        if "tool_priority" in canonical_templates:
-            injected.append(canonical_templates["tool_priority"]["content"])
-        if "research_synthesis" in canonical_templates:
-            injected.append(canonical_templates["research_synthesis"]["content"])
-
-    if task_type in ["creator", "planner"]:
-        # Action tasks: approval_gate
-        if "approval_gate" in canonical_templates:
-            injected.append(canonical_templates["approval_gate"]["content"])
-
-    return "\n\n".join(injected)
 
 
 def get_all_resolved_tasks() -> list[dict]:
