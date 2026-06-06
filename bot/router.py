@@ -10,6 +10,9 @@ import time
 import subprocess
 import sys
 import os
+import logging
+
+logger = logging.getLogger("privy.router")
 
 from bot.agent import respond, get_last_model
 from infra.db import (
@@ -486,11 +489,76 @@ def handle_history() -> str:
     return "\n".join(lines)
 
 
+async def _handle_approval_reply(message_text: str) -> bool:
+    """
+    Check if incoming message is a YES/NO approval reply.
+    Returns True if handled, False if not an approval reply.
+    """
+    from infra.db.approvals import get_latest_pending, resolve_approval
+    import json
+
+    text = message_text.strip().upper()
+    if text not in ("YES", "NO"):
+        return False
+
+    pending = get_latest_pending()
+    if not pending:
+        return False  # No pending approval — not our message
+
+    approval_id = pending["id"]
+    payload = json.loads(pending["payload"])
+    action_type = pending["action_type"]
+
+    if text == "YES":
+        resolve_approval(approval_id, "approved")
+        logger.info(f"[approval] approved: {action_type} (ID: {approval_id})")
+        await _execute_approved_action(action_type, payload)
+        await report("approval_result", action=action_type, result="approved")
+    else:
+        resolve_approval(approval_id, "rejected")
+        logger.info(f"[approval] rejected: {action_type} (ID: {approval_id})")
+        await report("approval_result", action=action_type, result="rejected")
+
+    return True
+
+
+async def _execute_approved_action(action_type: str, payload: dict) -> None:
+    """Route approved action to correct execution function."""
+    try:
+        if action_type == "post_video_comment":
+            from tools.content.videos import post_video_comment
+            post_video_comment(
+                video_id=payload.get("video_id"),
+                series=payload.get("series"),
+                text=payload.get("text")
+            )
+        elif action_type == "update_video_description":
+            # wire to YouTube API videos.update when built
+            logger.info(f"[approval] update_video_description not yet implemented")
+        elif action_type == "publish_blog_draft":
+            from tools.communication.blog import schedule_blog_post
+            schedule_blog_post(post_id=payload.get("post_id"))
+        elif action_type == "send_email":
+            # wire to Gmail send when built
+            logger.info(f"[approval] send_email not yet implemented")
+        elif action_type == "community_reply":
+            # wire to Playwright Reddit reply when built
+            logger.info(f"[approval] community_reply not yet implemented")
+        else:
+            logger.warning(f"[approval] unknown action_type: {action_type}")
+    except Exception as e:
+        logger.error(f"[approval] execution failed for {action_type}: {e}")
+
+
 async def route(chat_id: int, text: str) -> str:
     if not text or not text.strip():
         return "Say something."
 
     text = text.strip()
+
+    # Check for approval reply BEFORE normal routing
+    if await _handle_approval_reply(text):
+        return "Approval processed."
 
     if text == "/new" or text.startswith("/new"):
         await handle_new(chat_id)

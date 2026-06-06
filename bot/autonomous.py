@@ -370,7 +370,7 @@ async def budget_status_check(send_fn):
     try:
         from bot.model_manager import get_budget_status
         status = get_budget_status()
-        
+
         if status.get("approaching_cap", False):
             msg = f"⚠️ Budget alert: {status.get('quota_used_today', 0):.4f}/{status.get('daily_cap', 0.25)} used"
             await send_fn(msg)
@@ -379,6 +379,42 @@ async def budget_status_check(send_fn):
             logger.debug(f"Budget status OK: {status.get('quota_used_today', 0):.4f} used")
     except Exception as e:
         logger.error(f"Budget status check failed: {e}")
+
+
+async def request_approval(
+    action_type: str,
+    summary: str,
+    payload: dict,
+    timeout_minutes: int = 30
+) -> bool:
+    """
+    Send approval request to Telegram. Waits for YES/NO reply.
+    Returns True if approval created successfully, False otherwise.
+    Maximum one pending approval at a time.
+    """
+    from infra.db.approvals import create_approval, get_latest_pending
+
+    # Check for existing pending approval
+    existing = get_latest_pending()
+    if existing:
+        logger.warning(f"[approval] skipped: pending approval already exists (ID: {existing['id']})")
+        return False
+
+    approval_id = create_approval(action_type, summary, payload, timeout_minutes)
+    if not approval_id:
+        logger.warning(f"[approval] failed to create approval record for {action_type}")
+        return False
+
+    message = (
+        f"🔔 *Action requested:* {action_type}\n"
+        f"{summary}\n\n"
+        f"Reply *YES* to execute, *NO* to skip\n"
+        f"_(expires in {timeout_minutes} min — ID: {approval_id})_"
+    )
+
+    await _notify(message)
+    logger.info(f"[approval] requested: {action_type} (ID: {approval_id})")
+    return True
 
 # Background task pool — proactive lightweight work that runs constantly
 # Separate from idle fallback. These run every 10 minutes regardless of scheduled tasks.
@@ -1041,7 +1077,17 @@ async def run_scheduled_template(template_name: str, send_fn):
             if upvotes >= 20:
                 title = result.get("title", "New thread")
                 url = result.get("url", "")
-                await _notify(f"Community opportunity: {title} ({upvotes} upvotes) — {url}", send_fn)
+                subreddit = result.get("subreddit", "unknown")
+                await request_approval(
+                    action_type="community_reply",
+                    summary=(
+                        f"r/{subreddit} — {title}\n"
+                        f"{upvotes} upvotes\n"
+                        f"Draft reply: mention VoidDrift as relevant to '{title}'\n"
+                        f"Link: {url}"
+                    ),
+                    payload={"url": url, "title": title, "subreddit": subreddit}
+                )
         elif template_name == "blog_scaffold":
             draft_title = result.get("title", "New draft") if isinstance(result, dict) else "New draft"
             await _notify(f"📝 Blog draft ready: {draft_title} — review and edit before publishing", send_fn)

@@ -353,6 +353,17 @@ CREATE TABLE IF NOT EXISTS content_seen (
     used INTEGER DEFAULT 0,
     UNIQUE(source, external_id)
 );
+
+CREATE TABLE IF NOT EXISTS action_approvals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action_type TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    resolved_at TIMESTAMP
+);
 """
 
 _conn: sqlite3.Connection | None = None
