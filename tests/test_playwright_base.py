@@ -133,10 +133,51 @@ def test_itch_post_devlog_no_profile():
     with patch("tools.browser.itch_tools._get_profile", return_value=None):
         from tools.browser.itch_tools import itch_post_devlog
         result = itch_post_devlog(123, "Test Title", "Test Content")
-        
+
         assert result["ok"] is False
         assert "error" in result
         assert "No itch.io profile" in result["error"]
+
+
+@test("playwright: check_profile_validity no profile")
+def test_check_profile_validity_no_profile():
+    """No profile file → returns valid: False, reason: 'no profile file'."""
+    with patch("tools.browser.playwright_base._get_profile", return_value=None):
+        from tools.browser.playwright_base import check_profile_validity
+        result = check_profile_validity("test_site")
+
+        assert result["ok"] is True
+        assert result["valid"] is False
+        assert result["reason"] == "no profile file"
+        assert result["site"] == "test_site"
+
+
+@test("playwright: list_profile_status empty")
+def test_list_profile_status_empty():
+    """No profiles directory → returns empty list with message."""
+    with patch("tools.browser.playwright_base.PROFILES_DIR", Path("/nonexistent")):
+        with patch("tools.browser.playwright_base.PROFILES_DIR.glob", return_value=[]):
+            from tools.browser.playwright_base import list_profile_status
+            result = list_profile_status()
+
+            assert result["ok"] is True
+            assert result["profiles"] == []
+            assert "message" in result
+            assert "No profiles found" in result["message"]
+
+
+@test("playwright: check_profile_validity handles exception")
+def test_check_profile_validity_handles_exception():
+    """Mock playwright raises → returns ok: False, valid: False."""
+    with patch("playwright.sync_api.sync_playwright") as mock_sync:
+        mock_sync.side_effect = Exception("Playwright error")
+
+        from tools.browser.playwright_base import check_profile_validity
+        result = check_profile_validity("test_site")
+
+        assert result["ok"] is False
+        assert result["valid"] is False
+        assert "error" in result or "reason" in result
 
 
 if __name__ == "__main__":

@@ -108,3 +108,10 @@ skill_review:
   cron: "0 6 * * 0"    # Sunday 6AM
   enabled: true
   description: "Analyze last 7 days of agent_actions. Propose improvements, new templates, and drops."
+
+# --- PROFILE HEALTH CHECK ---
+profile_health_check:
+  schedule: cron
+  cron: "0 9 * * 1"    # Monday 9AM
+  enabled: true
+  description: "Check all Playwright browser profiles are still valid, notify if expired"

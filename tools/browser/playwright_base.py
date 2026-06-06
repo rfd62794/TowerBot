@@ -90,3 +90,63 @@ def setup_profile(site: str) -> dict:
         return {"ok": True, "profile_saved": str(profile_path)}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+def check_profile_validity(site: str) -> dict:
+    """
+    Test if a saved profile is still valid by attempting a simple navigation.
+    Returns: {ok, site, valid, reason}
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+        profile = _get_profile(site)
+        if not profile:
+            return {"ok": True, "site": site, "valid": False, "reason": "no profile file"}
+
+        test_urls = {
+            "itch": "https://itch.io/dashboard",
+            "youtube_studio": "https://studio.youtube.com",
+        }
+        url = test_urls.get(site, "https://www.google.com")
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(**profile)
+            page = context.new_page()
+            page.goto(url, timeout=15000)
+            current_url = page.url
+            browser.close()
+
+        # Check if redirected to login page
+        login_indicators = ["login", "signin", "sign-in", "accounts.google", "itch.io/login"]
+        redirected_to_login = any(ind in current_url.lower() for ind in login_indicators)
+
+        if redirected_to_login:
+            return {"ok": True, "site": site, "valid": False, "reason": "session expired — redirected to login"}
+        return {"ok": True, "site": site, "valid": True, "reason": "session active"}
+
+    except Exception as e:
+        return {"ok": False, "site": site, "valid": False, "reason": str(e)}
+
+
+def list_profile_status() -> dict:
+    """
+    Check validity of all saved profiles.
+    Returns: {ok, profiles: [{site, valid, reason, profile_path}]}
+    """
+    PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+    profiles = []
+    for profile_file in PROFILES_DIR.glob("*.json"):
+        site = profile_file.stem
+        status = check_profile_validity(site)
+        profiles.append({
+            "site": site,
+            "valid": status.get("valid", False),
+            "reason": status.get("reason", "unknown"),
+            "profile_path": str(profile_file)
+        })
+
+    if not profiles:
+        return {"ok": True, "profiles": [], "message": "No profiles found. Run setup_profile() via RDP on Tower."}
+
+    return {"ok": True, "profiles": profiles, "count": len(profiles)}
