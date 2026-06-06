@@ -281,6 +281,8 @@ class SearchTools(BaseTool):
         Returns:
             Dict with query, subreddit, count, and results
         """
+        if not query or not query.strip():
+            return self.error("Query cannot be empty", code="empty_query")
         raw = reddit_api.search_reddit(query, subreddit, limit=limit)
 
         # If Reddit returns error (403, blocked, etc.), fall back to DDG
