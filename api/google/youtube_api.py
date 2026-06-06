@@ -359,6 +359,34 @@ class YouTubeAPIHandler(BaseAPIHandler):
 
         return self.call("geography", params_hash, _live)
 
+    def post_comment(self, video_id: str, text: str) -> dict:
+        """
+        Post a top-level comment on a video.
+        Requires youtube.force-ssl OAuth scope.
+        Returns: {ok, comment_id, video_id, text}
+        """
+        try:
+            client = self._build_data_client()
+            request = client.commentThreads().insert(
+                part="snippet",
+                body={
+                    "snippet": {
+                        "videoId": video_id,
+                        "topLevelComment": {
+                            "snippet": {"textOriginal": text}
+                        }
+                    }
+                }
+            )
+            response = request.execute()
+            comment_id = response["id"]
+            return {"ok": True, "comment_id": comment_id, "video_id": video_id, "text": text}
+        except Exception as e:
+            from googleapiclient.errors import HttpError
+            if isinstance(e, HttpError) and e.resp.status == 403:
+                return {"ok": False, "error": "Forbidden — check youtube.force-ssl OAuth scope", "code": "scope_missing"}
+            return {"ok": False, "error": str(e), "code": "api_error"}
+
 
 # Module-level instance
 youtube_api = YouTubeAPIHandler()
@@ -407,6 +435,10 @@ def query_daily_views(start_date: str, end_date: str) -> dict:
 
 def query_geography(start_date: str, end_date: str) -> dict:
     return youtube_api.query_geography(start_date, end_date)
+
+
+def post_comment(video_id: str, text: str) -> dict:
+    return youtube_api.post_comment(video_id, text)
 
 
 # Backwards compat for internal functions used by other modules
