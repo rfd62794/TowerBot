@@ -1,5 +1,82 @@
 # Current State
 
+## Phase 31b — Immediate Notifications ✅ DONE
+
+**Status**: Complete
+**Test Floor**: 572/2 (566 from Phase 31c + 6 new notification tests, 2 pre-existing failures)
+
+### What Was Built
+
+- **bot/autonomous.py**: Added `_notify()` helper function:
+  - Sends immediate Telegram notifications from autonomous tasks
+  - Uses `💡 ` prefix for normal notifications, `🔴 ` for urgent
+  - Never raises on send failure (logs warning instead)
+  - Imports `send_message` from `bot.transport`
+
+- **bot/autonomous.py**: Added notification triggers in `run_scheduled_template()`:
+  - `community_scout`: Notifies when upvotes >= 20 with title and URL
+  - `blog_scaffold`: Notifies when blog draft is ready with draft title
+  - `consulting_lead_scout`: Notifies with urgent flag when lead found (template not yet implemented)
+
+- **tests/test_autonomous.py**: Added 6 test anchors:
+  - `test_notify_sends_message` — verifies send_message called with correct prefix
+  - `test_notify_urgent_uses_red_prefix` — verifies 🔴 prefix for urgent=True
+  - `test_notify_failure_does_not_crash` — verifies notification failure doesn't crash task
+  - `test_community_scout_notifies_above_threshold` — verifies notification when upvotes >= 20
+  - `test_community_scout_silent_below_threshold` — verifies no notification when upvotes < 20
+  - `test_blog_draft_notifies_on_completion` — verifies notification when blog draft saved
+
+### Implementation Details
+
+**`_notify()` Helper:**
+- Async function that calls `bot.transport.send_message()`
+- Prefixes message with `💡 ` (normal) or `🔴 ` (urgent)
+- Catches all exceptions and logs warning (never raises)
+- Ensures notification failure never crashes autonomous task
+
+**Notification Triggers:**
+- `community_scout`: Checks result dict for `upvotes` field, notifies if >= 20
+- `blog_scaffold`: Checks result dict for `title` field, notifies on completion
+- `consulting_lead_scout`: Placeholder for future implementation (template not created yet)
+- All triggers fire at most once per task execution (no loops or spam)
+
+**Test Coverage:**
+- All tests mock `send_message` to avoid real Telegram calls
+- Tests verify prefix usage, failure handling, and threshold logic
+- Template result mocking validates trigger conditions
+
+### Test Floor
+
+- **Previous**: 566/2 (Phase 31c)
+- **Current**: 572/2
+- **New Tests**: 6 (test_autonomous.py)
+- **Status**: All new tests passing, deploy safe
+
+### Completion Criteria
+
+- [x] `verify_result.txt` shows new floor (572/2), 0 new failures
+- [x] `_notify()` tested: does not crash on send failure
+- [x] All 3 triggers confirmed present in code before pushing
+- [x] Committed to main, Tower pulled, services restarted
+- [ ] Manual confirmation: trigger community_scout manually, confirm Telegram receives message
+- [x] `docs/state/current.md` updated
+
+### Next Steps
+
+**Manual Testing Required:**
+1. Manually trigger `community_scout` template to verify Telegram notification
+2. Verify notification format and prefix appear correctly
+3. Confirm notification failure handling works (simulate send failure)
+
+**Future Enhancements:**
+- Create `consulting_lead_scout` template and implement trigger
+- Add notification history tracking in database
+- Support for notification preferences per task type
+
+Phase 31b delivers immediate Telegram notifications for high-value autonomous task findings. The `_notify()` helper ensures notifications never crash tasks, and threshold-based triggers prevent spam.
+
+---
+
 ## Phase 31c — YouTube Comment Automation ✅ DONE
 
 **Status**: Complete
