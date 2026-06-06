@@ -96,9 +96,6 @@ from bot.memory import (
     tool_get_memories,
 )
 
-# Content deduplication tools
-from infra.db.content import already_served, mark_served
-
 # ─── Tool definitions ─────────────────────
 # One entry per tool.
 # Shape: {
@@ -2039,63 +2036,6 @@ TOOL_REGISTRY = {
                 },
             },
         },
-    },
-    # Content deduplication tools
-    "already_served": {
-        "fn": already_served,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "already_served",
-                "description": "WHEN: Checking if a content item (HN post, Reddit thread, etc.) was already sent to Telegram to avoid duplicates.\n\nRETURNS: bool — True if already served, False if not.\n\nDO NOT CALL: for non-content deduplication purposes. Only use in autonomous templates that surface external content.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "source": {
-                            "type": "string",
-                            "description": "Source identifier (e.g., 'hackernews', 'reddit', 'youtube', 'bevy')"
-                        },
-                        "external_id": {
-                            "type": "string",
-                            "description": "External unique ID (e.g., HN objectID, Reddit post ID, video ID)"
-                        }
-                    },
-                    "required": ["source", "external_id"]
-                }
-            }
-        }
-    },
-    "mark_served": {
-        "fn": mark_served,
-        "definition": {
-            "type": "function",
-            "function": {
-                "name": "mark_served",
-                "description": "WHEN: Marking a content item as sent to Telegram after including it in a digest or notification.\n\nRETURNS: None — upserts to content_seen table.\n\nDO NOT CALL: before actually sending the item. Only call after the item is included in output.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "source": {
-                            "type": "string",
-                            "description": "Source identifier (e.g., 'hackernews', 'reddit', 'youtube', 'bevy')"
-                        },
-                        "external_id": {
-                            "type": "string",
-                            "description": "External unique ID (e.g., HN objectID, Reddit post ID, video ID)"
-                        },
-                        "title": {
-                            "type": "string",
-                            "description": "Title of the content item"
-                        },
-                        "url": {
-                            "type": "string",
-                            "description": "URL of the content item"
-                        }
-                    },
-                    "required": ["source", "external_id", "title", "url"]
-                }
-            }
-        }
     },
     "get_memories": {
         "fn": tool_get_memories,
