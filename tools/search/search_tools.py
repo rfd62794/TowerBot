@@ -206,18 +206,24 @@ class SearchTools(BaseTool):
             "commits": result_commits
         }, stale_result=raw)
 
-    def web_search(self, query: str, max_results: int = 5) -> dict:
+    def web_search(self, query: str = None, max_results: int = 5,
+                   top_n: int = None, n: int = None, **kwargs) -> dict:
         """
         Search the web via DuckDuckGo.
 
         Args:
             query: Search query
             max_results: Maximum results to return
+            top_n: Alias for max_results (LLM hallucination)
+            n: Alias for max_results (LLM hallucination)
 
         Returns:
             Dict with query, count, and results
         """
-        raw = ddg_api.search_web(query, max_results)
+        actual_limit = top_n or n or max_results
+        if not query:
+            return self.error("query required", code="missing_query")
+        raw = ddg_api.search_web(query, actual_limit)
         if raw.get("_live_failed"):
             return self.error("Web search unavailable", code="api_failed")
         results = raw.get("results", [])
@@ -565,20 +571,25 @@ class SearchTools(BaseTool):
         except Exception as e:
             return self.error(f"Failed to fetch crate info: {e}")
 
-    def hackernews_search(self, query: str, limit: int = 10) -> dict:
+    def hackernews_search(self, query: str = None, limit: int = 10,
+                          top_n: int = None, **kwargs) -> dict:
         """
         Search Hacker News via Algolia API.
 
         Args:
             query: Search query
             limit: Maximum results to return (default 10)
+            top_n: Alias for limit (LLM hallucination)
 
         Returns:
             Dict with search results including title, url, points, author, etc.
         """
+        actual_limit = top_n or limit
+        if not query:
+            return self.error("query required", code="missing_query")
         try:
             url = "http://hn.algolia.com/api/v1/search"
-            params = {"query": query, "tags": "story", "hitsPerPage": limit}
+            params = {"query": query, "tags": "story", "hitsPerPage": actual_limit}
             resp = httpx.get(url, params=params, timeout=10)
             resp.raise_for_status()
             data = resp.json()
