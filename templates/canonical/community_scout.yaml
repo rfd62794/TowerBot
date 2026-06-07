@@ -52,6 +52,6 @@ steps:
     config:
       tool_name: save_memory
       tool_args:
-        key: "Community opportunities {timestamp}"
+        key: "community_opportunities_latest"
         content: "{llm_result}"
         layer: content

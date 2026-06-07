@@ -42,12 +42,15 @@ def call_groq(model: str, provider: str, prompt: str, **kwargs) -> str:
         response.raise_for_status()
         
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        choices = data.get("choices") or []
+        if not choices:
+            raise ValueError(f"Groq returned empty choices: {data}")
+        return choices[0]["message"]["content"]
         
     except httpx.HTTPStatusError as e:
         logger.error(f"Groq HTTP error: {e.response.status_code} - {e.response.text}")
         raise
-    except (KeyError, IndexError) as e:
+    except (KeyError, IndexError, TypeError) as e:
         logger.error(f"Invalid Groq response structure: {e}")
         raise
     except Exception as e:
@@ -85,12 +88,15 @@ def call_gemini(model: str, provider: str, prompt: str, **kwargs) -> str:
         response.raise_for_status()
         
         data = response.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        candidates = data.get("candidates") or []
+        if not candidates:
+            raise ValueError(f"Gemini returned empty candidates: {data}")
+        return candidates[0]["content"]["parts"][0]["text"]
         
     except httpx.HTTPStatusError as e:
         logger.error(f"Gemini HTTP error: {e.response.status_code} - {e.response.text}")
         raise
-    except (KeyError, IndexError) as e:
+    except (KeyError, IndexError, TypeError) as e:
         logger.error(f"Invalid Gemini response structure: {e}")
         raise
     except Exception as e:
@@ -133,12 +139,15 @@ def call_openrouter(model: str, provider: str, prompt: str, **kwargs) -> str:
         response.raise_for_status()
         
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        choices = data.get("choices") or []
+        if not choices:
+            raise ValueError(f"OpenRouter returned empty choices: {data}")
+        return choices[0]["message"]["content"]
         
     except httpx.HTTPStatusError as e:
         logger.error(f"OpenRouter HTTP error: {e.response.status_code} - {e.response.text}")
         raise
-    except (KeyError, IndexError) as e:
+    except (KeyError, IndexError, TypeError) as e:
         logger.error(f"Invalid OpenRouter response structure: {e}")
         raise
     except Exception as e:
