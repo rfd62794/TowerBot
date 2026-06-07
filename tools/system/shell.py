@@ -25,6 +25,8 @@ NAMED_COMMANDS = {
     "list_services":   {"command": "nssm list",                "cwd": None,                 "description": "List NSSM services"},
     "restart_privy":   {"command": "nssm restart PrivyBot",    "cwd": None,                 "description": "Restart PrivyBot service"},
     "restart_mcp":     {"command": "nssm restart PrivybotMCP", "cwd": None,                 "description": "Restart PrivyBot MCP service"},
+    "set_ollama_keepalive": {"command": r"nssm set OllamaServe AppEnvironmentExtra OLLAMA_KEEP_ALIVE=-1", "cwd": None, "description": "Set Ollama to keep models loaded indefinitely"},
+    "restart_ollama":  {"command": r"nssm restart OllamaServe", "cwd": None, "description": "Restart OllamaServe service"},
     "privy_status":    {"command": "git status",               "cwd": "C:/Github/PrivyBot", "description": "Git status for PrivyBot"},
     "privy_pull":      {"command": "git pull",                 "cwd": "C:/Github/PrivyBot", "description": "Pull latest PrivyBot changes"},
     "privy_log":       {"command": "git log --oneline -10",    "cwd": "C:/Github/PrivyBot", "description": "Last 10 commits"},
