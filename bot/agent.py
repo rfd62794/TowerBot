@@ -377,11 +377,15 @@ async def _execute(thread_id: str, name: str, args: dict) -> dict:
         tool_fn = TOOL_REGISTRY[name]["fn"]
 
         # Filter to only known parameters from schema (hardening against LLM hallucinations)
-        schema_props = (TOOL_REGISTRY[name]["definition"]["function"]
-                       .get("parameters", {})
-                       .get("properties", {})
-                       .keys())
+        schema_params = TOOL_REGISTRY[name]["definition"]["function"].get("parameters", {})
+        schema_props = schema_params.get("properties", {}).keys()
+        required_params = schema_params.get("required", [])
         filtered_args = {k: v for k, v in args.items() if k in schema_props}
+
+        # Check for missing required parameters
+        missing = [r for r in required_params if r not in filtered_args]
+        if missing:
+            return {"ok": False, "error": f"Missing required parameters: {missing}"}
 
         r = tool_fn(**filtered_args)
         if r is None:
