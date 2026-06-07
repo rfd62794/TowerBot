@@ -1151,6 +1151,9 @@ async def run_scheduled_template(template_name: str, send_fn):
         )
 
         result = runner.run(chain_id, template["steps"])
+        if result is None or not isinstance(result, dict):
+            logger.warning(f"[{template_name}] runner returned non-dict: {type(result)}")
+            return
         logger.info(f"Chain {chain_id} completed: {result.get('status', 'unknown')}")
 
         # Log to agent_actions for unified history
