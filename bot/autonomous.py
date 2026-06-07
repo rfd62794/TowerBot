@@ -1367,16 +1367,16 @@ def setup_autonomous_scheduler(scheduler: AsyncIOScheduler, send_fn):
     )
     logger.info("Registered idle detection job: _check_and_run_idle_task every 15min")
 
-    # Register 10-minute background task pool
+    # Register 25-minute background task pool
     scheduler.add_job(
         _check_and_run_background_task,
         "interval",
-        minutes=10,
+        minutes=25,
         id="background_task_checker",
         max_instances=1,
         args=[send_fn]
     )
-    logger.info("Registered background task pool: every 10 minutes")
+    logger.info("Registered background task pool: every 25 minutes")
 
     # Register delegation queue poll
     scheduler.add_job(
