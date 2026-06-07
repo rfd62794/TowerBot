@@ -44,13 +44,13 @@ steps:
         and publishes daily YouTube Shorts about indie games.
         
         r/incremental_games feed:
-        {tool_result[incremental]}
+        {incremental}
         
         r/bevy feed:
-        {tool_result[bevy]}
+        {bevy}
         
         Hacker News Bevy search:
-        {tool_result[hn_bevy]}
+        {hn_bevy}
         
         Find threads that match ANY of these:
         - Someone asking for idle/incremental game recommendations

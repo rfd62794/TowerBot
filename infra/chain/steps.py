@@ -57,7 +57,9 @@ def handle_tool_call(step: dict, payload: dict,
     except Exception as e:
         raise StepError(f"tool '{tool_name}' raised: {e}") from e
 
-    return {**payload, 'tool_result': result}
+    result_key = config.get('result_key', 'tool_result')
+    updated = {**payload, 'tool_result': result, result_key: result}
+    return updated
 
 
 def handle_llm_call(step: dict, payload: dict,
