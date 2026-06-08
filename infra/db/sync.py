@@ -13,6 +13,14 @@ import yaml
 from infra.db.schema import _exec
 
 
+def _connect(db_path: str) -> sqlite3.Connection:
+    """Open a SQLite connection with WAL-compatible settings."""
+    conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
+
 class SyncPolicy(Enum):
     SHARED = "shared"      # sync bidirectionally — memory, tasks, goals
     INSTANCE = "instance"  # never sync — logs, conversations, metrics
@@ -170,7 +178,7 @@ class DBSync:
         return policy
 
     def _get_table_columns(self, table_name: str) -> List[str]:
-        conn = sqlite3.connect(self.db_path)
+        conn = _connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute(f"PRAGMA table_info({table_name})")
         columns = [row[1] for row in cursor.fetchall()]
@@ -179,7 +187,7 @@ class DBSync:
 
     def get_table_inventory(self) -> Dict[str, Dict[str, Any]]:
         """Get all tables with their policies and row counts."""
-        conn = sqlite3.connect(self.db_path)
+        conn = _connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = [row[0] for row in cursor.fetchall()]
@@ -197,7 +205,7 @@ class DBSync:
         return inventory
 
     def _get_row_count(self, table_name: str) -> int:
-        conn = sqlite3.connect(self.db_path)
+        conn = _connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
         count = cursor.fetchone()[0]
@@ -246,7 +254,7 @@ class DBSync:
         return self.transport.send(payload, output_path)
 
     def _export_table_data(self, table_name: str) -> List[Dict[str, Any]]:
-        conn = sqlite3.connect(self.db_path)
+        conn = _connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(f"SELECT * FROM {table_name}")
@@ -301,7 +309,7 @@ class DBSync:
 
         report = {"added": 0, "updated": 0, "conflicts": 0, "table": table_name}
 
-        conn = sqlite3.connect(self.db_path)
+        conn = _connect(self.db_path)
         cursor = conn.cursor()
 
         for row in rows:
