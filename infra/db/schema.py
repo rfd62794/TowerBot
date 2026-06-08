@@ -379,6 +379,7 @@ def init_db(db_path: str = DB_PATH) -> None:
     if db_path != ":memory:":
         _conn.execute("PRAGMA journal_mode=WAL")
         _conn.execute("PRAGMA synchronous=NORMAL")
+        _conn.execute("PRAGMA busy_timeout=5000")
         _conn.commit()
 
     _conn.executescript(SCHEMA)
