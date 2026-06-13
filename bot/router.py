@@ -434,11 +434,7 @@ async def handle_deploy(chat_id: int) -> str:
 
 
 async def handle_update(chat_id: int) -> str:
-    """Handle /update command — trigger auto-update on production."""
-    instance_role = os.environ.get("INSTANCE_ROLE", "development")
-    if instance_role != "production":
-        return "⚠️ /update only available on production instances"
-
+    """Handle /update command — trigger auto-update."""
     async def send_fn(msg: str):
         await report("update_status", message=msg)
 
