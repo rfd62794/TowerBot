@@ -22,16 +22,16 @@ BLOCKED_PATTERNS = [
 
 NAMED_COMMANDS = {
     "privy_tests":     {"command": r".venv\Scripts\python.exe scripts\verify.py", "cwd": "C:/Github/PrivyBot", "description": "Run PrivyBot verify.py test suite", "timeout": 300},
-    "list_services":   {"command": "nssm list",                "cwd": None,                 "description": "List NSSM services"},
-    "restart_privy":   {"command": "nssm restart PrivyBot",    "cwd": None,                 "description": "Restart PrivyBot service"},
-    "restart_tailscale": {"command": "powershell Restart-Service -Name Tailscale -Force", "cwd": None, "description": "Restart Tailscale service on Tower"},
-    "restart_mcp":     {"command": "nssm restart PrivybotMCP", "cwd": None,                 "description": "Restart PrivyBot MCP service"},
+    "list_services":   {"command": "powershell Get-Service -Name Privy*,Ollama*,Tailscale* -ErrorAction SilentlyContinue", "cwd": None, "description": "List Privy/Ollama/Tailscale services"},
+    "restart_privy":   {"command": "powershell Restart-Service PrivyBot -Force",    "cwd": None, "description": "Restart PrivyBot service"},
+    "restart_tailscale": {"command": "powershell Restart-Service Tailscale -Force", "cwd": None, "description": "Restart Tailscale service on Tower"},
+    "restart_mcp":     {"command": "powershell Restart-Service PrivybotMCP -Force", "cwd": None, "description": "Restart PrivyBot MCP service"},
     "set_ollama_keepalive": {"command": r"nssm set OllamaServe AppEnvironmentExtra OLLAMA_KEEP_ALIVE=-1", "cwd": None, "description": "Set Ollama to keep models loaded indefinitely"},
-    "restart_ollama":  {"command": r"nssm restart OllamaServe", "cwd": None, "description": "Restart OllamaServe service"},
+    "restart_ollama":  {"command": "powershell Restart-Service OllamaServe -Force", "cwd": None, "description": "Restart OllamaServe service"},
     "privy_status":    {"command": "git status",               "cwd": "C:/Github/PrivyBot", "description": "Git status for PrivyBot"},
     "privy_pull":      {"command": "git pull",                 "cwd": "C:/Github/PrivyBot", "description": "Pull latest PrivyBot changes"},
     "privy_log":       {"command": "git log --oneline -10",    "cwd": "C:/Github/PrivyBot", "description": "Last 10 commits"},
-    "tower_processes": {"command": "tasklist | findstr python", "cwd": None,                "description": "Running Python processes"},
+    "tower_processes": {"command": "powershell Get-Process -Name python* -ErrorAction SilentlyContinue", "cwd": None, "description": "Running Python processes"},
     "setup_profile_itch": {
         "command": r".venv\Scripts\python.exe -c \"from tools.browser.playwright_base import setup_profile; r = setup_profile('itch'); print(r)\"",
         "cwd": "C:/Github/PrivyBot",
