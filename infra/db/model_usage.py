@@ -28,6 +28,8 @@ def record_model_call(
         error_code: HTTP error code if failed (429, 404, etc.)
         latency_ms: Request latency in milliseconds
     """
+    if model_id is None:
+        return
     _exec(
         """INSERT INTO model_usage 
            (model_id, provider, tokens_in, tokens_out, cost_usd, success, error_code, latency_ms)

@@ -15,6 +15,7 @@ import logging
 logger = logging.getLogger("privy.router")
 
 from bot.agent import respond, get_last_model
+from tools.system.shell import run_named_command
 from infra.db import (
     create_thread, list_memories, list_threads,
     get_last_stable_commit, get_last_deploy, get_deploy_history,
@@ -573,6 +574,15 @@ async def route(chat_id: int, text: str) -> str:
         return await handle_deploy(chat_id)
     if text == "/update" or text.startswith("/update"):
         return await handle_update(chat_id)
+    if text.startswith("/run "):
+        name = text[len("/run "):].strip()
+        result = run_named_command(name)
+        if result.get("success"):
+            out = (result.get("stdout") or "").strip()
+            return f"✅ {name}: {out[:400]}" if out else f"✅ {name}: done"
+        else:
+            err = result.get("error") or result.get("stderr") or "failed"
+            return f"❌ {name}: {err[:400]}"
     if text == "/rollback" or text.startswith("/rollback"):
         return await handle_rollback(chat_id)
     if text == "/history" or text.startswith("/history"):
