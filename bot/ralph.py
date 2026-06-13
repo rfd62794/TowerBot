@@ -4,6 +4,7 @@ Persistent async loop. Always on. Everything else is an interrupt.
 """
 import asyncio
 import logging
+import os
 import random
 from asyncio import PriorityQueue
 from typing import Optional
@@ -33,6 +34,9 @@ class Ralph:
 
     async def start(self):
         """Start RALPH. Call from bot startup alongside APScheduler and Telegram."""
+        if os.getenv("RALPH_ENABLED", "true").lower() == "false":
+            logger.info("[ralph] Disabled via RALPH_ENABLED=false — skipping")
+            return
         self.running = True
         logger.info("[ralph] Starting — persistent loop active")
         await self._main_loop()
