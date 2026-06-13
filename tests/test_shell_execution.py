@@ -106,13 +106,13 @@ def test_execute_shell_timeout_handled():
 
 @test("shell: list_named_commands returns all")
 def test_list_named_commands_returns_all():
-    """Returns dict with all 13 registered commands."""
+    """Returns dict with all 14 registered commands."""
     from tools.system.shell import list_named_commands
     result = list_named_commands()
     assert "commands" in result
-    assert len(result["commands"]) == 13
+    assert len(result["commands"]) == 14
     expected_commands = [
-        "privy_tests", "list_services", "restart_privy", "restart_mcp",
+        "privy_tests", "list_services", "restart_privy", "restart_tailscale", "restart_mcp",
         "set_ollama_keepalive", "restart_ollama",
         "privy_status", "privy_pull", "privy_log", "tower_processes",
         "setup_profile_itch", "setup_profile_youtube", "check_profiles"
