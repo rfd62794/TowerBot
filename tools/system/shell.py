@@ -24,6 +24,7 @@ NAMED_COMMANDS = {
     "privy_tests":     {"command": r".venv\Scripts\python.exe scripts\verify.py", "cwd": "C:/Github/PrivyBot", "description": "Run PrivyBot verify.py test suite", "timeout": 300},
     "list_services":   {"command": "nssm list",                "cwd": None,                 "description": "List NSSM services"},
     "restart_privy":   {"command": "nssm restart PrivyBot",    "cwd": None,                 "description": "Restart PrivyBot service"},
+    "restart_tailscale": {"command": "powershell Restart-Service -Name Tailscale -Force", "cwd": None, "description": "Restart Tailscale service on Tower"},
     "restart_mcp":     {"command": "nssm restart PrivybotMCP", "cwd": None,                 "description": "Restart PrivyBot MCP service"},
     "set_ollama_keepalive": {"command": r"nssm set OllamaServe AppEnvironmentExtra OLLAMA_KEEP_ALIVE=-1", "cwd": None, "description": "Set Ollama to keep models loaded indefinitely"},
     "restart_ollama":  {"command": r"nssm restart OllamaServe", "cwd": None, "description": "Restart OllamaServe service"},
