@@ -3,9 +3,6 @@
 import subprocess
 import os
 
-INSTANCE_ROLE = os.environ.get("INSTANCE_ROLE", "development")
-
-
 def trigger_restart():
     """Detached process survives service stop and handles restart."""
     # Restart PrivyBot
@@ -31,7 +28,8 @@ async def check_for_updates(send_fn) -> str:
     Returns:
         Status message string
     """
-    if INSTANCE_ROLE != "production":
+    instance_role = os.environ.get("INSTANCE_ROLE", "development")
+    if instance_role != "production":
         return "DONE: Skipped — not production instance"
 
     from infra.db.bot_state import get_dev_mode
@@ -46,7 +44,9 @@ async def check_for_updates(send_fn) -> str:
                             capture_output=True, text=True).stdout.strip()
 
     if local == remote:
-        return f"DONE: Already up to date ({local[:7]})"
+        await send_fn(f"✅ Already up to date ({local[:7]}) — restarting...")
+        trigger_restart()
+        return f"DONE: Already up to date ({local[:7]}) — restarting"
 
     # Behind — update
     await send_fn(f"🔄 Updating {local[:7]} → {remote[:7]}...")
