@@ -34,7 +34,7 @@ class Ralph:
 
     async def start(self):
         """Start RALPH. Call from bot startup alongside APScheduler and Telegram."""
-        if os.getenv("RALPH_ENABLED", "true").lower() == "false":
+        if os.getenv("RALPH_ENABLED", "false").lower() != "true":
             logger.info("[ralph] Disabled via RALPH_ENABLED=false — skipping")
             return
         self.running = True
