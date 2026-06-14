@@ -9,6 +9,8 @@ import asyncio
 import json
 import os
 import sys
+import threading
+import queue
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
 
@@ -41,16 +43,26 @@ def generate_jwt_token() -> str:
     return jwt.encode(payload, MCP_JWT_SECRET, algorithm="HS256")
 
 
-async def stdin_to_messages(session: aiohttp.ClientSession, headers: dict, endpoint_url: str):
-    """Read JSON-RPC from stdin and POST to messages endpoint."""
-    loop = asyncio.get_event_loop()
-    reader = asyncio.StreamReader()
-    protocol = asyncio.StreamReaderProtocol(reader)
-    await loop.connect_read_pipe(lambda: protocol, sys.stdin)
+def read_stdin_thread(message_queue: queue.Queue):
+    """Thread function to read from stdin and put messages in queue."""
+    try:
+        while True:
+            line = sys.stdin.readline()
+            if not line:
+                break
+            message = line.strip()
+            if message:
+                message_queue.put(message)
+    except Exception as e:
+        print(f"Stdin thread error: {e}", file=sys.stderr)
 
-    async for line in reader:
-        message = line.decode("utf-8").strip()
-        if message:
+
+async def process_stdin_queue(session: aiohttp.ClientSession, headers: dict, endpoint_url: str, message_queue: queue.Queue):
+    """Process messages from stdin queue and POST to messages endpoint."""
+    while True:
+        try:
+            # Non-blocking check for messages
+            message = message_queue.get_nowait()
             try:
                 # Validate it's JSON before sending
                 json.loads(message)
@@ -64,9 +76,15 @@ async def stdin_to_messages(session: aiohttp.ClientSession, headers: dict, endpo
                 pass
             except Exception as e:
                 print(f"Error sending message: {e}", file=sys.stderr)
+        except queue.Empty:
+            # No messages, sleep briefly
+            await asyncio.sleep(0.01)
+        except Exception as e:
+            print(f"Queue processing error: {e}", file=sys.stderr)
+            await asyncio.sleep(0.01)
 
 
-async def sse_to_stdout(session: aiohttp.ClientSession, headers: dict):
+async def sse_to_stdout(session: aiohttp.ClientSession, headers: dict, message_queue: queue.Queue = None):
     """Read SSE events, capture endpoint, forward JSON-RPC messages to stdout."""
     endpoint_url = None
 
@@ -85,13 +103,15 @@ async def sse_to_stdout(session: aiohttp.ClientSession, headers: dict):
                 if current_event_type == "endpoint":
                     # Capture the messages endpoint URL
                     endpoint_url = urljoin(BASE_URL, data)
-                    print(f"Proxy: Connected to {endpoint_url}", file=sys.stderr)
+                    print(f"Proxy: Connected to {endpoint_url}", file=sys.stderr, flush=True)
 
                 elif data:
                     # Only forward valid JSON-RPC messages
                     try:
-                        json.loads(data)
-                        print(data, flush=True)
+                        parsed = json.loads(data)
+                        # Check if it looks like a JSON-RPC response (has jsonrpc field)
+                        if isinstance(parsed, dict) and "jsonrpc" in parsed:
+                            print(data, flush=True)
                     except json.JSONDecodeError:
                         # Not valid JSON, skip (could be endpoint path, etc.)
                         pass
@@ -108,18 +128,25 @@ async def stdio_to_sse_bridge():
     token = generate_jwt_token()
     headers = {"Authorization": f"Bearer {token}"}
 
+    # Create queue for stdin messages
+    message_queue = queue.Queue()
+
+    # Start stdin reading thread
+    stdin_thread = threading.Thread(target=read_stdin_thread, args=(message_queue,), daemon=True)
+    stdin_thread.start()
+
     async with aiohttp.ClientSession() as session:
         # First, connect to SSE to get the endpoint
-        endpoint_url = await sse_to_stdout(session, headers)
+        endpoint_url = await sse_to_stdout(session, headers, message_queue)
 
         if not endpoint_url:
             print("Error: No endpoint received from SSE", file=sys.stderr)
             sys.exit(1)
 
-        # Then run both directions
+        # Run both directions
         await asyncio.gather(
-            stdin_to_messages(session, headers, endpoint_url),
-            sse_to_stdout(session, headers),
+            process_stdin_queue(session, headers, endpoint_url, message_queue),
+            sse_to_stdout(session, headers, message_queue),
             return_exceptions=True,
         )
 
