@@ -84,13 +84,11 @@ async def process_stdin_queue(session: aiohttp.ClientSession, headers: dict, end
             await asyncio.sleep(0.01)
 
 
-async def sse_to_stdout(session: aiohttp.ClientSession, headers: dict, message_queue: queue.Queue = None):
+async def sse_reader(resp, endpoint_event: asyncio.Event, endpoint_holder: list, headers: dict):
     """Read SSE events, capture endpoint, forward JSON-RPC messages to stdout."""
-    endpoint_url = None
+    current_event_type = None
 
-    async with session.get(SSE_URL, headers=headers) as resp:
-        current_event_type = None
-
+    try:
         async for line in resp.content:
             decoded = line.decode("utf-8").rstrip("\n\r")
 
@@ -103,7 +101,9 @@ async def sse_to_stdout(session: aiohttp.ClientSession, headers: dict, message_q
                 if current_event_type == "endpoint":
                     # Capture the messages endpoint URL
                     endpoint_url = urljoin(BASE_URL, data)
+                    endpoint_holder.append(endpoint_url)
                     print(f"Proxy: Connected to {endpoint_url}", file=sys.stderr, flush=True)
+                    endpoint_event.set()
 
                 elif data:
                     # Only forward valid JSON-RPC messages
@@ -119,8 +119,8 @@ async def sse_to_stdout(session: aiohttp.ClientSession, headers: dict, message_q
             elif decoded == "":
                 # Empty line marks end of event
                 current_event_type = None
-
-    return endpoint_url
+    except Exception as e:
+        print(f"SSE reader error: {e}", file=sys.stderr, flush=True)
 
 
 async def stdio_to_sse_bridge():
@@ -136,19 +136,31 @@ async def stdio_to_sse_bridge():
     stdin_thread.start()
 
     async with aiohttp.ClientSession() as session:
-        # First, connect to SSE to get the endpoint
-        endpoint_url = await sse_to_stdout(session, headers, message_queue)
+        # Single SSE connection
+        async with session.get(SSE_URL, headers=headers) as resp:
+            endpoint_event = asyncio.Event()
+            endpoint_holder = []
 
-        if not endpoint_url:
-            print("Error: No endpoint received from SSE", file=sys.stderr)
-            sys.exit(1)
+            # Start SSE reader in background
+            sse_task = asyncio.create_task(sse_reader(resp, endpoint_event, endpoint_holder, headers))
 
-        # Run both directions
-        await asyncio.gather(
-            process_stdin_queue(session, headers, endpoint_url, message_queue),
-            sse_to_stdout(session, headers, message_queue),
-            return_exceptions=True,
-        )
+            # Wait for endpoint
+            try:
+                await asyncio.wait_for(endpoint_event.wait(), timeout=10.0)
+            except asyncio.TimeoutError:
+                print("Error: No endpoint received from SSE within 10s", file=sys.stderr, flush=True)
+                sys.exit(1)
+
+            endpoint_url = endpoint_holder[0]
+
+            # Start stdin processor
+            stdin_task = asyncio.create_task(process_stdin_queue(session, headers, endpoint_url, message_queue))
+
+            # Wait for both tasks
+            try:
+                await asyncio.gather(sse_task, stdin_task, return_exceptions=True)
+            except Exception as e:
+                print(f"Bridge error: {e}", file=sys.stderr, flush=True)
 
 
 async def main():
