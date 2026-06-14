@@ -11,8 +11,12 @@ import os
 import sys
 import threading
 import queue
+import io
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
+
+# Force UTF-8 encoding for stdout to handle Unicode characters
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # Change to script directory so relative paths work
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
