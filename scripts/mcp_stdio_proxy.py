@@ -11,6 +11,9 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 
+# Change to script directory so relative paths work
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 import aiohttp
 import jwt
 from dotenv import load_dotenv
