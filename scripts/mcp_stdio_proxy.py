@@ -33,8 +33,9 @@ if not MCP_JWT_SECRET:
     print("Error: MCP_JWT_SECRET not found in .env", file=sys.stderr)
     sys.exit(1)
 
-BASE_URL = "http://localhost:8090"
-SSE_URL = f"{BASE_URL}/sse"
+# Read SSE URL from env var (set by wrapper) or default to localhost
+SSE_URL = os.getenv("MCP_SSE_URL", "http://localhost:8090/sse")
+BASE_URL = SSE_URL.replace("/sse", "")
 
 
 def generate_jwt_token() -> str:
