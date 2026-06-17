@@ -650,69 +650,7 @@ async def health_check(send_fn) -> None:
 
 
 async def run_scheduler(send_fn) -> None:
-    """
-    Run the scheduler with fixed tasks and hourly heartbeat.
-
-    Fixed tasks:
-    - 07:00: morning_briefing
-    - 23:59: nightly_summary (if implemented)
-
-    Heartbeat:
-    - Every 60 minutes: heartbeat_check
-    """
-    # Track which tasks have fired today
-    fired_today = {}
-    last_heartbeat = None
-    
+    """Maintenance mode — scheduler idle."""
+    logger.info("Scheduler: maintenance mode")
     while True:
-        now = datetime.now(EASTERN)
-        today_str = now.strftime("%Y-%m-%d")
-        
-        # Reset fired_today at midnight
-        if fired_today.get("date") != today_str:
-            fired_today = {"date": today_str}
-        
-        # Check fixed tasks
-        tasks = [
-            ("07:00", "morning_briefing", morning_briefing),
-            ("23:59", "nightly_summary", nightly_summary),
-        ]
-        
-        for time_str, task_name, task_fn in tasks:
-            if task_fn is None:
-                continue
-                
-            target = now.replace(
-                hour=int(time_str[:2]),
-                minute=int(time_str[3:]),
-                second=0,
-                microsecond=0
-            )
-            
-            # If target is in the past, move to tomorrow
-            if now >= target:
-                target += timedelta(days=1)
-            
-            # If we're within 1 minute of target and haven't fired today
-            if abs((now - target).total_seconds()) < 60 and task_name not in fired_today:
-                try:
-                    await task_fn(send_fn)
-                    fired_today[task_name] = True
-                    logger.info(f"Executed scheduled task: {task_name}")
-                except Exception as e:
-                    logger.error(f"Task {task_name} failed: {e}")
-        
-        # Heartbeat + health check — run every 60 minutes
-        if last_heartbeat is None or (now - last_heartbeat).total_seconds() >= 3600:
-            try:
-                await heartbeat_check(send_fn)
-                last_heartbeat = now
-            except Exception as e:
-                logger.error(f"Heartbeat failed: {e}")
-            try:
-                await health_check(send_fn)
-            except Exception as e:
-                logger.error(f"Health check failed: {e}")
-        
-        # Sleep for 1 minute before next check
-        await asyncio.sleep(60)
+        await asyncio.sleep(3600)
