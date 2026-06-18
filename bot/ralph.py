@@ -33,13 +33,10 @@ class Ralph:
         self._deep_dive_candidates: list[str] = []
 
     async def start(self):
-        """Start RALPH. Call from bot startup alongside APScheduler and Telegram."""
-        if os.getenv("RALPH_ENABLED", "false").lower() != "true":
-            logger.info("[ralph] Disabled via RALPH_ENABLED=false — skipping")
-            return
-        self.running = True
-        logger.info("[ralph] Starting — persistent loop active")
-        await self._main_loop()
+        """Maintenance mode — RALPH idle."""
+        logger.info("RALPH: maintenance mode")
+        while True:
+            await asyncio.sleep(3600)
 
     async def stop(self):
         self.running = False
