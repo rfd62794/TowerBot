@@ -6,7 +6,6 @@ Single responsibility: discover models and track throttles.
 """
 
 import os
-import asyncio
 import logging
 
 import httpx
@@ -50,6 +49,7 @@ MODEL_LIMITS = {
     
     # Google AI Studio free
     "google/gemini-2.0-flash": {"rpm": 15, "rpd": 1500},
+    "google/gemini-2.0-flash-lite": {"rpm": 15, "rpd": 1500},
     
     # Ollama local — no limits
     "ollama": {"rpm": None, "rpd": None},
@@ -217,36 +217,41 @@ def should_skip_model(model_id: str) -> tuple[bool, str]:
 def get_available_model() -> str | None:
     """
     Best available model with provider priority for TOOL CALLING:
-    1. Groq (primary — free, fast, reliable tool calls)
-    2. Gemini Direct (secondary — free, good structured output)
-    3. OpenRouter free models (tertiary — auto-routes across free models)
+    1. Gemini Direct (primary — free, fast, good structured output)
+    2. OpenRouter free models (secondary — auto-routes across free models)
+    3. Groq (tertiary — free, reliable but can throttle)
     4. OpenRouter paid (only when free exhausted and under daily cap)
-    5. Ollama (last resort — local, always available, weak at schemas)
+    5. Ollama DISABLED for generative inference — embeddings only via ChromaDB
     """
-    from api.local.ollama_api import ollama_api
-
     throttled = set(get_throttled_models())
 
-    # Priority 1: Groq (free, fast, reliable tool calls)
-    groq_model = "groq/llama-3.3-70b-versatile"
-    if groq_model not in throttled:
-        should_skip, skip_reason = should_skip_model(groq_model)
+    # Priority 1: Gemini Flash Lite (primary — free, faster, lighter)
+    gemini_lite = "google/gemini-2.0-flash-lite"
+    if gemini_lite not in throttled:
+        should_skip, skip_reason = should_skip_model(gemini_lite)
         if not should_skip:
-            return groq_model
+            return gemini_lite
 
-    # Priority 2: Gemini Direct (free, good structured output)
+    # Priority 1b: Gemini Flash (fallback — free, fast, good structured output)
     gemini_model = "google/gemini-2.0-flash"
     if gemini_model not in throttled:
         should_skip, skip_reason = should_skip_model(gemini_model)
         if not should_skip:
             return gemini_model
 
-    # Priority 3: OpenRouter free models (known-good first, openrouter/free last)
+    # Priority 2: OpenRouter free models (known-good first, openrouter/free last)
     for model_id in SEED_FREE_MODELS:
         if model_id not in throttled and model_id not in TOOL_INCOMPATIBLE:
             should_skip, skip_reason = should_skip_model(model_id)
             if not should_skip:
                 return model_id
+
+    # Priority 3: Groq (tertiary — free, reliable but can throttle)
+    groq_model = "groq/llama-3.3-70b-versatile"
+    if groq_model not in throttled:
+        should_skip, skip_reason = should_skip_model(groq_model)
+        if not should_skip:
+            return groq_model
 
     # Priority 4: OpenRouter paid (only when free exhausted and under daily cap)
     paid_model = os.getenv("OPENROUTER_PAID_MODEL")
@@ -254,19 +259,8 @@ def get_available_model() -> str | None:
         logger.info("[model] All free models exhausted — falling back to paid: %s", paid_model)
         return paid_model
 
-    # Priority 5: Ollama (last resort — local, always available, weak at schemas)
-    ollama_healthy = ollama_api.health_check()
-    logger.info("Checking Ollama as fallback: enabled=%s health=%s", ollama_api.enabled, ollama_healthy)
-    if ollama_healthy:
-        return f"ollama/{ollama_api.model}"
-    elif ollama_api.enabled and not ollama_api._starting:
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(ollama_api.ensure_running())
-            logger.info("[Ollama] Recovery started — no model available")
-        except RuntimeError:
-            pass  # no running loop (test context) — do not create the coroutine
-
+    # Ollama disabled for generative inference — embeddings only via ChromaDB
+    logger.warning("[model] No cloud models available — Ollama disabled for generative inference (embeddings only)")
     return None
 
 
