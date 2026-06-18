@@ -257,6 +257,7 @@ class OllamaSwapManager:
             "model": model_name,
             "messages": messages,
             "stream": False,
+            "keep_alive": -1,
         }
 
         # gemma4:e4b supports tool schemas natively — include tools if provided
@@ -347,6 +348,7 @@ class OllamaSwapManager:
                 }
             ],
             "stream": False,
+            "keep_alive": -1,
         }
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
