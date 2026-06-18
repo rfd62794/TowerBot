@@ -17,6 +17,7 @@ import asyncio
 import logging
 import sys
 import time
+from logging.handlers import TimedRotatingFileHandler
 
 # Windows cp1252 console fix: email snippets and other external data contain
 # Unicode chars (U+034F, →, etc.) that cp1252 can't encode, crashing StreamHandler.
@@ -55,7 +56,13 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
     level=logging.INFO,
     handlers=[
-        logging.FileHandler("logs/privy.log"),
+        TimedRotatingFileHandler(
+            "logs/privy.log",
+            when="h",
+            interval=1,
+            backupCount=24,
+            encoding="utf-8"
+        ),
         logging.StreamHandler(),
     ],
 )
