@@ -8,9 +8,11 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-config/client_secret.json
-config/youtube_token.json
-config/rfd_token.json
+**/client_secret*.json
+**/*token*.json
+**/credentials*.json
+.env.*
+!.env.example
 config/steam_catalog.json
 privy_chroma_db/*
 tower_initial_sync.json
