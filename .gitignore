@@ -16,4 +16,9 @@ venv/
 config/steam_catalog.json
 privy_chroma_db/*
 tower_initial_sync.json
-config/playwright_profiles/
+# Playwright storage state holds LIVE session cookies (Google SID, reddit_session,
+# itchio_token). Unrooted so it matches at ANY depth - the rooted form missed
+# config/config/playwright_profiles/, leaving live sessions one `git add -A` from
+# being committed (caught 2026-09-20).
+**/playwright_profiles/
+**/*storage_state*.json
