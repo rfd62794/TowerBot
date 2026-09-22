@@ -145,13 +145,14 @@ the finding that was inaccurate. And any refused command, verbatim.
 
 | Field | Value |
 |---|---|
-| Status | Approved |
+| Status | In progress |
 | Assigned to | devin |
-| Branch | - |
+| Branch | directive/privybot-auto-missing-roadmap-roadmap |
 | Base branch | - |
 | Policy | missing-roadmap |
 
 **Status log**
 - 2026-09-22 13:07 · backlog-policy · none → Queued — generated from a missing-roadmap finding authorised in backlog_policy.yaml
 - 2026-09-22 14:35 · robert-claude · Queued → Approved
+- 2026-09-22 14:35 · dispatcher · Approved → In progress — dispatched devin in C:\GitHub\.worktrees\PrivyBot--privybot-auto-missing-roadmap-roadmap; base origin/main (local main differs)
 <!-- queue:end -->
