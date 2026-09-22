@@ -1,5 +1,205 @@
 # PrivyBot Roadmap
 
+## Swarm roadmap
+
+Why these milestones: the deploy gate is currently closed — verify_result.txt
+records "586 passed, 18 failed — Deploy blocked", and bot/ralph.py plus
+bot/scheduler.py are committed as UTF-16 so the bot cannot even import them.
+The phase table below is also stale: docs/state/current.md shows work through
+Phase 33 shipped (semantic memory, MCP server, Playwright, approval gate,
+RALPH) that several phases here still list as planned. So the milestones first
+restore a green gate (M1), then finish the repo's own stated open work —
+Phase 12 DB hardening (M2), Phase 13 logging (M3) — and finally close out the
+Phase 11 typing remainder while resyncing the status docs (M4).
+
+```yaml roadmap
+status: draft            # draft | approved
+approved: ""             # "2026-09-22 Robert" once approved
+reviewed: "2026-09-22"   # last human or model review - the swarm re-plans when stale
+replan_after_days: 14    # reviewed older than this -> stale (default 14)
+stop_if: "PrivyBot stops running on Tower as Robert's daily assistant, or Robert retires the repo in favour of another system."
+revive_if: ""            # parked repos only: what would revive it
+milestones:
+  - id: M1
+    title: Restore a green verification floor so the deploy gate opens again
+    status: active       # pending | active | done | blocked
+    exit:                # all must hold for the milestone to be done
+      - test: "uv run python scripts/verify.py"   # documented gate; writes verify_result.txt
+    steps:
+      - id: M1.1
+        title: Re-encode bot/ralph.py and bot/scheduler.py from UTF-16 to UTF-8
+        kind: fix        # tests | docs | refactor | fix | feature | design
+        size: S          # S < 30 min | M one agent run | L = split it
+        value: 5         # 1-5, how much it moves the milestone
+        needs: []        # step ids in this roadmap that must be done first
+        status: pending  # pending | queued | done
+        directive: ""    # filled by the swarm when it creates one
+        detail: Both files were committed as UTF-16LE with a BOM in f9334f4 "Restore RALPH and scheduler from maintenance mode" (a PowerShell redirect artifact), so Python raises SyntaxError on import. That fails test_ralph.py (5 tests), test_scheduler.py and the test_core.py heartbeat tests. Re-save both files as UTF-8 with no logic change.
+        accept:
+          - test: "uv run pytest tests/test_ralph.py -q"
+          - grep: {path: "bot/ralph.py", pattern: "class Ralph"}
+      - id: M1.2
+        title: Triage the recorded verify failures and write them up in docs/state/current.md
+        kind: tests
+        size: M
+        value: 3
+        needs: ["M1.1"]
+        status: pending
+        directive: ""
+        detail: verify_result.txt records "586 passed, 18 failed — Deploy blocked" (written at cdc9bfe, before the UTF-16 regression landed). On a machine with .env and OAuth tokens present, run the gate, group the remaining failures by cause, and record them under a "Verify floor triage" heading in docs/state/current.md so each group can be dispatched separately.
+        accept:
+          - grep: {path: "docs/state/current.md", pattern: "Verify floor triage"}
+      - id: M1.3
+        title: Fix the triaged failure groups until the gate reports zero failures
+        kind: fix
+        size: M
+        value: 5
+        needs: ["M1.2"]
+        status: pending
+        directive: ""
+        detail: Fix each failure group the triage names — if triage finds more than two distinct groups, dispatch one directive per group instead of widening this step. The milestone exit re-runs the documented gate; it must print "Deploy safe."
+        accept:
+          - test: "uv run python scripts/verify.py"
+  - id: M2
+    title: Finish Phase 12 DB hardening (stated 40% remaining)
+    status: pending
+    exit:
+      - file: "infra/db/migrations.py"               # path exists
+      - grep: {path: "infra/db/migrations.py", pattern: "schema_migrations"}
+      - test: "uv run python scripts/verify.py"
+    steps:
+      - id: M2.1
+        title: Add schema_migrations table and a versioned migration runner
+        kind: feature
+        size: M
+        value: 4
+        needs: []
+        status: pending
+        directive: ""
+        detail: Phase 12 lists "Migration versioning (schema_migrations table, rollback SQL)" as remaining. Add infra/db/migrations.py — a runner that applies ordered migrations, records them in schema_migrations, and keeps rollback SQL per migration — wired into init_db so Tower picks up schema changes on deploy.
+        accept:
+          - file: "infra/db/migrations.py"
+          - grep: {path: "infra/db/migrations.py", pattern: "schema_migrations"}
+      - id: M2.2
+        title: Add the daily 3AM backup task retaining 7 days
+        kind: feature
+        size: M
+        value: 3
+        needs: []
+        status: pending
+        directive: ""
+        detail: Phase 12 lists "Backup mechanism (daily 3AM, retain 7 days)" as remaining; TOWER_DEPLOY.md only documents a manual PowerShell copy. Register a scheduled task in config/tasks.yaml that copies privy.db to a backups directory and prunes copies older than 7 days.
+        accept:
+          - grep: {path: "config/tasks.yaml", pattern: "backup"}
+      - id: M2.3
+        title: Add the weekly Sunday 4AM vacuum/cleanup task
+        kind: feature
+        size: S
+        value: 2
+        needs: []
+        status: pending
+        directive: ""
+        detail: Phase 12 lists "Vacuum/cleanup strategy (weekly Sunday 4AM)" as remaining. Register a weekly task in config/tasks.yaml that runs VACUUM plus the retention cleanups already implied by the history tables.
+        accept:
+          - grep: {path: "config/tasks.yaml", pattern: "vacuum"}
+      - id: M2.4
+        title: Add connection pooling, explicit transactions, and health checks to DBManager
+        kind: refactor
+        size: M
+        value: 4
+        needs: ["M2.1"]
+        status: pending
+        directive: ""
+        detail: Phase 12 lists a 5-connection pool, explicit BEGIN/COMMIT/ROLLBACK, and connection health checks as remaining. DBManager (infra/db/manager.py) already owns all DB access with retry — extend it there so callers keep a single owner. Do after M2.1 so migrations land on the final connection model.
+        accept:
+          - grep: {path: "infra/db/manager.py", pattern: "pool"}
+          - test: "uv run python scripts/verify.py"
+  - id: M3
+    title: Build the Phase 13 logging infrastructure
+    status: pending
+    exit:
+      - file: "infra/logging.py"
+      - grep: {path: "infra/logging.py", pattern: "trace_id"}
+      - file: "tests/test_logging.py"
+    steps:
+      - id: M3.1
+        title: Add structured JSON logging with daily rotation (30-day retention)
+        kind: feature
+        size: M
+        value: 4
+        needs: []
+        status: pending
+        directive: ""
+        detail: 'Phase 13 specifies structured logs: JSON with timestamp, level, trace_id, module, message; daily rotation retaining 30 days in logs/. loguru is already a dependency and privybot.py currently rotates hourly keeping 24 — build infra/logging.py as the single logging setup point and migrate call sites to it.'
+        accept:
+          - file: "infra/logging.py"
+      - id: M3.2
+        title: Add request tracing via async contextvars and performance metrics
+        kind: feature
+        size: M
+        value: 3
+        needs: ["M3.1"]
+        status: pending
+        directive: ""
+        detail: Phase 13 specifies trace_id via async contextvars plus API-call and tool-execution timing in ms. Thread a trace_id through the router and record durations on API and tool calls using the M3.1 logging module.
+        accept:
+          - grep: {path: "infra/logging.py", pattern: "trace_id"}
+      - id: M3.3
+        title: Add error aggregation and spike alerting
+        kind: feature
+        size: M
+        value: 3
+        needs: ["M3.1"]
+        status: pending
+        directive: ""
+        detail: Phase 13 specifies deduplicating similar errors and alerting on spikes. Add aggregation in infra/logging.py (or a sibling module) that notifies via the existing notify() path when an error signature spikes. Ship with tests per repo convention.
+        accept:
+          - file: "tests/test_logging.py"
+  - id: M4
+    title: Close out Phase 11 typing and resync the status docs
+    status: pending
+    exit:
+      - grep: {path: "docs/ROADMAP.md", pattern: "^\\| Phase 33"}
+      - test: "uv run python scripts/verify.py"
+    steps:
+      - id: M4.1
+        title: Add formal type hints across the api/ layer
+        kind: refactor
+        size: M
+        value: 3
+        needs: []
+        status: pending
+        directive: ""
+        detail: Phase 11's only remaining item is formal Python type hints (return annotations and parameter types) on API functions. Annotate api/_handler.py and the api/*/*_api.py handlers; no behaviour change. Prove coverage with tests/test_api_type_hints.py asserting inspect.signature return annotations on the annotated public functions.
+        accept:
+          - file: "tests/test_api_type_hints.py"
+          - test: "uv run pytest tests/test_api_type_hints.py -q"
+      - id: M4.2
+        title: Add formal type hints across the tools/ layer
+        kind: refactor
+        size: M
+        value: 3
+        needs: []
+        status: pending
+        directive: ""
+        detail: "The other half of Phase 11's remaining item: annotate tools/_tool.py and the tool functions across tools/ subpackages. Keep the enforced ok/stale_notice/error_code return shape. Prove coverage with tests/test_tools_type_hints.py asserting inspect.signature return annotations on the annotated public functions."
+        accept:
+          - file: "tests/test_tools_type_hints.py"
+          - test: "uv run pytest tests/test_tools_type_hints.py -q"
+      - id: M4.3
+        title: Resync ROADMAP statuses and outstanding-work.md with docs/state/current.md
+        kind: docs
+        size: S
+        value: 2
+        needs: []
+        status: pending
+        directive: ""
+        detail: 'The prose below predates Phases 30-33: semantic memory (infra/memory_manager.py), the MCP server (infra/mcp/), Playwright tools, the approval gate, and RALPH are all shipped, yet the phase table still reads 53% and Phase 15 still reads planned. Update the phase statuses, extend the Phase Progress Summary table through Phase 33, and reconcile docs/plans/outstanding-work.md checkboxes with docs/state/current.md — text updates only.'
+        accept:
+          - grep: {path: "docs/ROADMAP.md", pattern: "^\\| Phase 33"}
+          - grep: {path: "docs/plans/outstanding-work.md", pattern: "Phase 33|RALPH"}
+```
+
 ## Overview
 
 PrivyBot is built in 15 phases — from core infrastructure to intelligent personal assistant. Each phase builds on the previous while maintaining the primitive builder philosophy: Python 3.12, SQLite, asyncio, free LLMs, your own hardware, your own hands.
