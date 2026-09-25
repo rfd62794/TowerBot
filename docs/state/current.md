@@ -1,5 +1,49 @@
 # Current State
 
+## 2026-09-24 — Agent docs hardening + clean-worktree test floor measured
+
+**Status**: Docs pass complete (AGENTS.md added); deploy gate still closed.
+
+- `AGENTS.md` created at repo root: layout map, verified commands, conventions,
+  boundaries.
+- `bot/ralph.py` and `bot/scheduler.py` are still UTF-16LE — confirmed unimportable.
+- `uv run python scripts/verify.py` could not run in a bare worktree (no `.env`,
+  no OAuth tokens), so `verify_result.txt` ("586 passed, 18 failed") stays stale.
+- Measured floor in a clean worktree with `TELEGRAM_CHAT_ID=1`:
+  **`uv run pytest` → 521 passed / 156 failed** (677 collected). Without the env
+  var, collection aborts: `bot/transport.py` does `int(os.getenv("TELEGRAM_CHAT_ID"))`
+  at module import.
+
+**Verify floor triage** (failure groups from that run):
+
+1. **UTF-16 SyntaxError** — `bot/ralph.py`, `bot/scheduler.py` fail to import;
+   breaks test_ralph (5), test_scheduler, test_core heartbeat. = roadmap M1.1.
+2. **Missing credentials/env** — gmail/calendar/tasks OAuth token files absent,
+   `MCP_JWT_SECRET` unset, Steam/YouTube/WordPress keys absent: test_api,
+   test_gmail, test_google_calendar, test_google_tasks*, test_mcp,
+   test_tools_youtube, test_tools_games, test_wordpress*. Expected in a worktree
+   without secrets; not necessarily defects.
+3. **DB init ordering** — `AttributeError: 'NoneType'` on `schema._conn` in
+   test_db, test_polling, test_rate_limits: `verify.py` calls `init_db()` before
+   loading test files; bare pytest relies on conftest/fixture ordering and loses
+   the connection. Needs investigation (test_db fixture resets `schema._conn`).
+4. **Logic failures to triage** — test_agent_routing, test_ollama_routing,
+   test_delegation, test_deploy, test_memory seeding, test_model_usage,
+   test_utils deadline parse. Untriaged; may be env-dependent or real defects.
+
+**Next actions** (per `docs/ROADMAP.md` yaml block):
+
+1. M1 — restore a green gate: re-encode the two UTF-16 files (M1.1), triage the
+   failure groups above on a machine with full `.env` + tokens (M1.2), fix what
+   remains (M1.3).
+2. M2 — Phase 12 DB hardening: `infra/db/migrations.py` + `schema_migrations`,
+   daily backup task, weekly vacuum task, DBManager pooling/transactions/health.
+3. M3 — Phase 13 structured logging (JSON logs, trace_id, rotation, metrics).
+4. M4 — Phase 11 type-hint remainder; resync ROADMAP phase table and
+   `docs/plans/outstanding-work.md` with this file.
+
+---
+
 ## Phase 33 — RALPH: Persistent Always-On Overseer ✅ DONE
 
 **Status**: Complete
