@@ -62,7 +62,7 @@ directive drafted.
 
 | Field | Value |
 |---|---|
-| Status | In progress |
+| Status | Review |
 | Assigned to | devin |
 | Branch | directive/privybot-privybot-agent-docs-directive |
 | Base branch | - |
@@ -72,4 +72,5 @@ directive drafted.
 - 2026-09-21 · devin · none → Queued — AgentDocs wave 0: docs hardening before improvement
 - 2026-09-24 20:04 · devin-overseer (delegated) · Queued → Approved
 - 2026-09-24 23:05 · dispatcher · Approved → In progress — dispatched devin on personal-laptop in C:\GitHub\.worktrees\PrivyBot--privybot-privybot-agent-docs-directive; lane=strong; model=default; persona=steady-builder
+- 2026-09-24 23:13 · devin-overseer · In progress → Review — AGENTS.md added; docs/state/current.md refreshed with measured clean-worktree floor (pytest 521p/156f, TELEGRAM_CHAT_ID=1); successor drafted: docs/directives/PrivyBot_Pytest_Clean_Checkout.md. scripts/verify.py invocation was refused by sandbox — documented but unexecuted. [origin] spent: devin 1 min est. n/a
 <!-- queue:end -->
