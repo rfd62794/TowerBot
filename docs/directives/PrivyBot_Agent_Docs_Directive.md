@@ -62,12 +62,14 @@ directive drafted.
 
 | Field | Value |
 |---|---|
-| Status | Approved |
+| Status | In progress |
 | Assigned to | devin |
-| Branch | - |
+| Branch | directive/privybot-privybot-agent-docs-directive |
 | Base branch | - |
+| Base commit | 517018899bd488ad6cfe2713dcfd560893f08b97 |
 
 **Status log**
 - 2026-09-21 · devin · none → Queued — AgentDocs wave 0: docs hardening before improvement
 - 2026-09-24 20:04 · devin-overseer (delegated) · Queued → Approved
+- 2026-09-24 23:05 · dispatcher · Approved → In progress — dispatched devin on personal-laptop in C:\GitHub\.worktrees\PrivyBot--privybot-privybot-agent-docs-directive; lane=strong; model=default; persona=steady-builder
 <!-- queue:end -->
