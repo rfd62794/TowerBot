@@ -62,13 +62,12 @@ directive drafted.
 
 | Field | Value |
 |---|---|
-| Status | Queued |
+| Status | Approved |
 | Assigned to | devin |
 | Branch | - |
 | Base branch | - |
 
 **Status log**
 - 2026-09-21 · devin · none → Queued — AgentDocs wave 0: docs hardening before improvement
-  phases (Robert 2026-09-21 "go wide ... stronger documentation ... agents interpret as
-  they see fit"). Batch of 10, one per repo missing AGENTS.md.
+- 2026-09-24 20:04 · devin-overseer (delegated) · Queued → Approved
 <!-- queue:end -->
