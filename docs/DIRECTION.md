@@ -81,3 +81,40 @@ Ordered per the yaml roadmap block in docs/ROADMAP.md (drafted 2026-09-22):
 - docs/adr/ — architecture decision records (ADR-001 through ADR-040)
 - config/tasks.yaml — autonomous task schedule
 - scripts/verify.py + verify_result.txt — the deploy gate and last recorded floor
+
+---
+
+## Direction questionnaire (AI-drafted, unconfirmed - 2026-09-27)
+
+The six answers below are Claude's best guess from this file's own evidence
+(prose above), README/AGENTS/ROADMAP/state docs, git log and Portfolio's
+projects.yaml - not something Robert has answered yet. `answered` stays
+empty until he corrects or confirms them (`agentflow direction ask PrivyBot`,
+or `direction PrivyBot = <answer>` in chat, one field at a time).
+
+| Field | Confidence / note |
+|---|---|
+| `purpose` | HIGH |
+| `done_when` | HIGH |
+| `do_not` | HIGH |
+| `audience` | HIGH |
+| `hours_per_week` | GUESS - infra tier, ongoing maintenance, no stated budget. |
+| `stakes` | GUESS - private single-user bot, revertible via redeploy from git; but it runs live on Tower production and is Robert's daily assistant, so a case could be made for medium instead of low. |
+
+```yaml direction
+version: 1
+answered: ""
+purpose: "Robert's personal Telegram AI assistant on the Tower: routes messages to OpenRouter (free models first), holds conversation context and memory in SQLite, and runs autonomous background work (RALPH) - designed to cost nothing to run."
+done_when:
+  - "`uv run python scripts/verify.py` exits 0 and writes \"Deploy safe.\" (the deploy gate is currently blocked: verify_result.txt records 18 failures, and two source files are stuck as unparseable UTF-16)."
+  - "Phase 12 DB hardening (migrations, backups, connection pooling) and Phase 13 logging (structured JSON, trace_id) land."
+  - "docs/ROADMAP.md's phase table and docs/plans/outstanding-work.md resync with docs/state/current.md, which is ahead of both."
+do_not:
+  - "Never commit directly to main - it is Tower production."
+  - "Never enable RALPH by default - it is opt-in only via env var."
+  - "Never route generative inference to local Ollama - cloud only; Ollama is embeddings-only."
+  - "Never add paid dependencies - the project targets $0/month on free models and free APIs."
+audience: me
+hours_per_week: "<1"
+stakes: low
+```
