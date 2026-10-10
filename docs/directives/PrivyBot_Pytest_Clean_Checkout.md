@@ -56,6 +56,14 @@ Work on this directive's branch. Never touch `main`.
 Commands verified + results, files changed, commit hash(es), remaining failure
 groups after the fix.
 
+## Verification
+
+Red until this directive lands; the run's job is to make it green. Expect collection to succeed with no `.env` and no OAuth tokens, and no `NoneType` failures from `schema._conn`.
+
+```bash
+uv run pytest
+```
+
 <!-- queue:start -->
 ## Queue
 
