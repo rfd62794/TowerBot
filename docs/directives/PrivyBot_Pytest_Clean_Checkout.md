@@ -69,7 +69,7 @@ uv run pytest
 
 | Field | Value |
 |---|---|
-| Status | Draft |
+| Status | Queued |
 | Assigned to | devin |
 | Branch | - |
 | Base branch | - |
@@ -77,4 +77,5 @@ uv run pytest
 
 **Status log**
 - 2026-09-24 · devin · none → Draft — surfaced by PrivyBot_Agent_Docs_Directive run
+- 2026-10-10 08:05 · robert-claude-laptop · Draft → Queued — Laptop overseer 2026-10-10 08:1x: queued under Robert's "clear the queue fully / all approved".
 <!-- queue:end -->
