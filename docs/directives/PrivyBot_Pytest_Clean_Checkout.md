@@ -80,4 +80,5 @@ uv run pytest
 - 2026-10-10 08:05 · robert-claude-laptop · Draft → Queued — Laptop overseer 2026-10-10 08:1x: queued under Robert's "clear the queue fully / all approved".
 - 2026-10-10 08:08 · robert-claude-laptop · Queued → Approved
 - 2026-10-10 13:28 · dispatcher · Approved → In progress — dispatched devin-laptop on personal-laptop in C:\GitHub\.worktrees\PrivyBot--privybot-privybot-pytest-clean-checkout; lane=default; model=swe-2-high; persona=steady-builder; agent_id=01M4KDQYX5RAXQ08W90V06TA12
+- 2026-10-10 13:28 · dispatcher · worktree C:\GitHub\.worktrees\PrivyBot--privybot-privybot-pytest-clean-checkout; provisioned: uv sync --frozen
 <!-- queue:end -->
