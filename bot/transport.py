@@ -23,7 +23,7 @@ from bot.thinking import get_current_tool
 from bot.approval_router import is_approval_callback, handle_approval_callback
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID"))
+ALLOWED_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID") or 0)
 
 THINKING_MESSAGES = [
     "⚙️ Working...",

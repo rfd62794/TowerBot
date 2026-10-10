@@ -372,6 +372,8 @@ _lock = threading.Lock()
 
 def init_db(db_path: str = DB_PATH) -> None:
     global _conn
+    if _conn is not None:
+        _conn.close()
     _conn = sqlite3.connect(db_path, check_same_thread=False)
     _conn.row_factory = sqlite3.Row
 

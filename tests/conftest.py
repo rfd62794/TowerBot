@@ -14,3 +14,10 @@ from infra.db import init_db
 @pytest.fixture(scope="session", autouse=True)
 def initialize_db():
     init_db()
+
+
+@pytest.fixture(autouse=True)
+def _heal_db_conn():
+    from infra.db import schema
+    if schema._conn is None:
+        init_db()
