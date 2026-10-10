@@ -69,7 +69,7 @@ uv run pytest
 
 | Field | Value |
 |---|---|
-| Status | Review |
+| Status | Done |
 | Assigned to | devin-laptop |
 | Branch | directive/privybot-privybot-pytest-clean-checkout |
 | Base branch | - |
@@ -84,4 +84,5 @@ uv run pytest
 - 2026-10-10 13:28 · dispatcher · Approved → In progress — dispatched devin-laptop on personal-laptop in C:\GitHub\.worktrees\PrivyBot--privybot-privybot-pytest-clean-checkout; lane=default; model=swe-2-high; persona=steady-builder; agent_id=01M4KDQYX5RAXQ08W90V06TA12
 - 2026-10-10 13:28 · dispatcher · worktree C:\GitHub\.worktrees\PrivyBot--privybot-privybot-pytest-clean-checkout; provisioned: uv sync --frozen
 - 2026-10-10 13:44 · devin · In progress → Review — uv run pytest now collects and runs with no .env: 577p/100f unset, 576p/101f with TELEGRAM_CHAT_ID=1 (baseline 521/156). No NoneType or database-locked failures. Commit 4c72f18 on directive branch. [origin] spent: devin 10 min est. n/a
+- 2026-10-10 14:26 · robert-claude-laptop · Review → Done — note: TowerBot PR #4 merged to main 2026-10-10 (head 4c72f188): collection now works with TELEGRAM_CHAT_ID unset (defaults to 0, every chat gated as before), schema._conn healed, failures 156->100 with the remainder credential-dependent and out of scope; Sonnet review: goal met, no secrets; merged under Robert's permanent safe-merge rule with the credentialed-suite caveat recorded
 <!-- queue:end -->
