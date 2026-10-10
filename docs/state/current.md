@@ -1,5 +1,46 @@
 # Current State
 
+## 2026-10-10 — `uv run pytest` works in a clean checkout (directive landed)
+
+**Status**: Pytest-clean-checkout directive complete; new clean-worktree floor recorded.
+
+- `uv run pytest` now collects and runs all 677 tests with **no `.env` and no
+  `TELEGRAM_CHAT_ID`** — collection no longer aborts on `bot/transport.py`.
+- New clean-worktree floor:
+  **`uv run pytest` → 577 passed / 100 failed** (env var unset),
+  **576 passed / 101 failed** (`TELEGRAM_CHAT_ID=1`). Baseline was 521/156.
+- Fixes that landed:
+  - `bot/transport.py`: `ALLOWED_CHAT_ID` defaults to `0` when
+    `TELEGRAM_CHAT_ID` is unset (every chat gated; runtime behavior unchanged
+    when the var is set — `privybot.py` still requires it at startup).
+  - `tests/conftest.py`: new autouse `_heal_db_conn` fixture re-runs `init_db()`
+    before any test that finds `schema._conn` reset to `None` by a `test_db`
+    fixture teardown.
+  - `infra/db/schema.py`: `init_db()` now closes the previous connection before
+    replacing it. Leaked connections holding uncommitted write transactions
+    were locking `privy.db` (`sqlite3.OperationalError: database is locked`)
+    for every subsequent writer.
+- `AttributeError: 'NoneType'` and `database is locked` failures are gone;
+  `test_db`, `test_polling`, `test_delegation`, `test_deployments` are green.
+
+**Remaining failure groups** (~100, unchanged character):
+
+1. **UTF-16 SyntaxError** — `bot/ralph.py` + `bot/scheduler.py` still
+   unimportable (roadmap M1.1): test_briefing, test_ralph, parts of
+   test_core/test_scheduler.
+2. **Missing credentials/env** — gmail/calendar/tasks OAuth, `MCP_JWT_SECRET`,
+   Steam/YouTube/WordPress keys: test_api, test_gmail, test_google_*,
+   test_mcp, test_tools_youtube, test_tools_games, test_wordpress*.
+3. **`sys.modules` mock pollution** — `test_router.py` inserts
+   `sys.modules["infra.rate_limits"] = MagicMock()` at collection; the
+   `rate_limits` singleton import in test_rate_limits then returns a mock.
+4. **Env-dependent / untriaged** — test_agent_routing, test_ollama_routing,
+   test_deploy, test_memory seeding, test_model_usage, test_utils,
+   test_approval_gate, test_content_seen (writes to real `privy.db`, so it is
+   order/run-history sensitive).
+
+---
+
 ## 2026-09-24 — Agent docs hardening + clean-worktree test floor measured
 
 **Status**: Docs pass complete (AGENTS.md added); deploy gate still closed.
